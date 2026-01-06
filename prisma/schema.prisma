@@ -7,74 +7,79 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Product {
-  id          String        @id @default(uuid())
-  name        String
-  description String
-  price       Float
-  image       String
-  inStock     Boolean       @default(true)
-  category    String        @default("device") // 'device', 'sim', 'package'
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  Transaction Transaction[]
-}
-
-model DataPlan {
-  id          String        @id @default(uuid())
-  network     String        // MTN, AIRTEL, GLO
-  data        String        // e.g. 1GB
-  validity    String        // e.g. 30 Days
-  price       Float
-  planId      Int           // The Amigo Plan ID
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  Transaction Transaction[]
-}
-
 model Agent {
-  id               String        @id @default(uuid())
+  id               String   @id @default(uuid())
   firstName        String
   lastName         String
-  phone            String        @unique
-  pin              String        // 4-digit PIN
-  balance          Float         @default(0)
-  flwAccountNumber String?       // Virtual Account Number
+  phone            String   @unique
+  pin              String
+  balance          Decimal  @default(0)
+  flwAccountNumber String?
   flwBankName      String?
   flwAccountName   String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  transactions     Transaction[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  transactions Transaction[]
+  ledger       WalletLedger[]
 }
 
 model Transaction {
-  id             String    @id @default(uuid())
-  tx_ref         String    @unique
-  type           String    // 'ecommerce', 'data', 'wallet_funding'
-  status         String    // 'pending', 'paid', 'delivered', 'failed'
+  id             String   @id @default(uuid())
+  tx_ref         String   @unique
+  flutterwaveId  Int?     @unique
+  type           String
+  status         String
   phone          String
-  amount         Float
-  productId      String?
-  planId         String?
+  amount         Decimal
   agentId        String?
-  customerName   String?
-  deliveryState  String?
-  idempotencyKey String?   @unique
-  paymentData    Json?     // Full payload from Flutterwave
-  deliveryData   Json?     // Response from Amigo/Delivery info
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  planId         String?
+  productId      String?
+  idempotencyKey String?  @unique
+  paymentData    Json?
+  deliveryData   Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  product  Product?  @relation(fields: [productId], references: [id])
+  agent   Agent?   @relation(fields: [agentId], references: [id])
   dataPlan DataPlan? @relation(fields: [planId], references: [id])
-  agent    Agent?    @relation(fields: [agentId], references: [id])
+  product Product?  @relation(fields: [productId], references: [id])
 }
 
-model SystemMessage {
+model WalletLedger {
+  id            String   @id @default(uuid())
+  agentId       String
+  direction     String   // CREDIT / DEBIT
+  amount        Decimal
+  balanceBefore Decimal
+  balanceAfter  Decimal
+  reference     String
+  source        String
+  createdAt     DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id])
+}
+
+model DataPlan {
   id        String   @id @default(uuid())
-  content   String
-  type      String   // 'info', 'warning', 'alert'
-  isActive  Boolean  @default(true)
+  network   String
+  data      String
+  validity  String
+  price     Decimal
+  planId    Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  Transaction Transaction[]
+}
+
+model Product {
+  id        String   @id @default(uuid())
+  name      String
+  price     Decimal
+  category  String   @default("device")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  Transaction Transaction[]
 }
