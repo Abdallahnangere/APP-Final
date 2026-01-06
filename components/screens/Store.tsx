@@ -179,6 +179,8 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
   const upsellSim = availableSims.find(s => s.id === selectedSimId);
   const currentTotal = selectedProduct ? (selectedProduct.price + (upsellSim ? upsellSim.price : 0)) : 0;
 
+  const MotionDiv = motion.div as any;
+
   return (
     <div className="p-6 pb-32">
       <div className="flex items-center gap-3 mb-4">
@@ -219,7 +221,7 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
             {displayedProducts.length === 0 ? (
                 <div className="col-span-2 text-center text-slate-400 py-20 font-black uppercase tracking-widest text-[10px]">No Inventory Available</div>
             ) : displayedProducts.map((product) => (
-            <motion.div
+            <MotionDiv
                 key={product.id}
                 whileTap={{ scale: 0.96 }}
                 className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 flex flex-col cursor-pointer hover:shadow-2xl hover:shadow-slate-100 transition-all group"
@@ -232,7 +234,7 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
                 <div className="mt-auto">
                    <div className="font-black text-blue-600 text-sm tracking-tighter">{formatCurrency(product.price)}</div>
                 </div>
-            </motion.div>
+            </MotionDiv>
             ))}
         </div>
       )}
@@ -351,7 +353,7 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
              <div className="space-y-6">
                  {/* ... Existing Flutterwave UI ... */}
                  <div className="bg-orange-50 border-2 border-orange-100 p-8 rounded-[2.5rem] text-center relative overflow-hidden shadow-inner">
-                     {isPolling && <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} className="absolute top-4 right-4 text-[9px] text-orange-600 font-black uppercase tracking-widest flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Verifying</motion.div>}
+                     {isPolling && <MotionDiv animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} className="absolute top-4 right-4 text-[9px] text-orange-600 font-black uppercase tracking-widest flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Verifying</MotionDiv>}
                      <p className="text-[10px] text-orange-800 mb-2 font-black uppercase tracking-widest">Transfer EXACTLY</p>
                      <p className="text-5xl font-black text-orange-900 tracking-tighter">{formatCurrency(paymentDetails.amount)}</p>
                      <p className="text-[10px] text-orange-600 mt-3 font-bold uppercase tracking-wider">Gateway Secure Provisioning</p>

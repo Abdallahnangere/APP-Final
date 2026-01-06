@@ -31,14 +31,16 @@ export const Button: React.FC<ButtonProps> = ({
     destructive: "bg-red-50 text-red-600 hover:bg-red-100",
   };
 
+  const MotionButton = motion.button as any;
+
   return (
-    <motion.button
+    <MotionButton
       whileTap={{ scale: 0.96 }}
       className={cn(baseStyles, variants[variant], className)}
       disabled={isLoading || disabled}
       {...props}
     >
       {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : children}
-    </motion.button>
+    </MotionButton>
   );
 };

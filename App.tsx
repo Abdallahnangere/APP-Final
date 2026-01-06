@@ -28,6 +28,9 @@ const App: React.FC = () => {
     }
   };
 
+  const MotionDiv = motion.div as any;
+  const MotionMain = motion.main as any;
+
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 text-slate-900 dark:text-white font-sans selection:bg-slate-200 transition-colors duration-300">
       <AnimatePresence>
@@ -37,13 +40,13 @@ const App: React.FC = () => {
       <ToastContainer />
       
       {!showEntry && (
-          <motion.div
+          <MotionDiv
              initial={{ opacity: 0 }}
              animate={{ opacity: 1 }}
              transition={{ duration: 0.5 }}
           >
               <AnimatePresence mode="wait">
-                <motion.main
+                <MotionMain
                   key={activeTab}
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -52,10 +55,10 @@ const App: React.FC = () => {
                   className="pb-24 max-w-md mx-auto min-h-screen bg-white dark:bg-slate-900 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden relative"
                 >
                   {renderScreen()}
-                </motion.main>
+                </MotionMain>
               </AnimatePresence>
               <BottomTabs activeTab={activeTab} onChange={setActiveTab} />
-          </motion.div>
+          </MotionDiv>
       )}
     </div>
   );

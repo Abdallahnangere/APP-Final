@@ -40,11 +40,13 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal
       }
   };
 
+  const MotionDiv = motion.div as any;
+
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          <motion.div
+          <MotionDiv
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -52,7 +54,7 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal
             className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-md"
           />
           
-          <motion.div
+          <MotionDiv
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
@@ -130,14 +132,16 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal
                     </div>
                 </div>
             </div>
-          </motion.div>
+          </MotionDiv>
         </>
       )}
     </AnimatePresence>
   );
 };
 
-const ToggleItem = ({ icon: Icon, label, isActive, onToggle, activeColor = "bg-blue-600" }: any) => (
+const ToggleItem = ({ icon: Icon, label, isActive, onToggle, activeColor = "bg-blue-600" }: any) => {
+    const MotionDiv = motion.div as any;
+    return (
     <button onClick={onToggle} className="w-full flex items-center justify-between p-4 rounded-[1.75rem] bg-white border border-slate-100 shadow-sm active:scale-95 transition-all">
         <div className="flex items-center gap-4">
             <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-inner", isActive ? `${activeColor} text-white` : "bg-slate-100 text-slate-400")}>
@@ -146,10 +150,11 @@ const ToggleItem = ({ icon: Icon, label, isActive, onToggle, activeColor = "bg-b
             <span className="text-xs font-black text-slate-900 uppercase tracking-tight">{label}</span>
         </div>
         <div className={cn("w-12 h-7 rounded-full relative transition-colors p-1", isActive ? activeColor : "bg-slate-200")}>
-            <motion.div animate={{ x: isActive ? 20 : 0 }} className="w-5 h-5 bg-white rounded-full shadow-md" />
+            <MotionDiv animate={{ x: isActive ? 20 : 0 }} className="w-5 h-5 bg-white rounded-full shadow-md" />
         </div>
     </button>
-);
+    );
+};
 
 const MenuItem = ({ icon: Icon, label, subLabel, onClick }: any) => (
     <button onClick={onClick} className="w-full flex items-center gap-4 p-4 rounded-[1.75rem] bg-white border border-slate-100 shadow-sm hover:bg-slate-50 transition-all text-left group active:scale-95">

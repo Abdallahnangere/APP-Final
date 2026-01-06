@@ -181,6 +181,9 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
       }
   }
 
+  const MotionButton = motion.button as any;
+  const MotionDiv = motion.div as any;
+
   return (
     <div className="p-6 pb-32">
        <div className="flex items-center gap-3 mb-6">
@@ -195,7 +198,7 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
            <div className="space-y-4">
                <p className="text-slate-500 mb-4">Select Network Provider</p>
                {['MTN', 'AIRTEL', 'GLO'].map((net) => (
-                   <motion.button
+                   <MotionButton
                        key={net}
                        whileTap={{ scale: 0.98 }}
                        onClick={() => handleNetworkSelect(net as NetworkType)}
@@ -206,7 +209,7 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                            <img src={`/${net.toLowerCase()}.png`} alt={net} className="w-full h-full object-contain" />
                        </div>
                        <span className="z-10 text-slate-800">{net}</span>
-                   </motion.button>
+                   </MotionButton>
                ))}
            </div>
        ) : (
@@ -220,7 +223,7 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                </h2>
                <div className="grid gap-3">
                    {filteredPlans.map(plan => (
-                       <motion.div
+                       <MotionDiv
                            key={plan.id}
                            whileTap={{ scale: 0.99 }}
                            onClick={() => handlePlanSelect(plan)}
@@ -233,7 +236,7 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                            <div className="text-base font-semibold text-slate-900 bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
                                {formatCurrency(plan.price)}
                            </div>
-                       </motion.div>
+                       </MotionDiv>
                    ))}
                </div>
            </div>
@@ -295,7 +298,7 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
            {step === 'payment' && paymentDetails && !agent && (
                <div className="space-y-6">
                     <div className="bg-orange-50 border border-orange-100 p-6 rounded-2xl text-center relative overflow-hidden">
-                     {isPolling && <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} className="absolute top-2 right-2 text-[10px] text-orange-600 font-bold uppercase flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Detecting</motion.div>}
+                     {isPolling && <MotionDiv animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} className="absolute top-2 right-2 text-[10px] text-orange-600 font-bold uppercase flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Detecting</MotionDiv>}
                      <p className="text-sm text-orange-800 mb-2 font-medium">Transfer EXACTLY</p>
                      <p className="text-4xl font-black text-orange-900 tracking-tight">{formatCurrency(paymentDetails.amount)}</p>
                      <p className="text-xs text-orange-600 mt-2">to the account below</p>
