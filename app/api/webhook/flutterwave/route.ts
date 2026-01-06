@@ -7,31 +7,38 @@ export async function POST(req: Request) {
   const signature = req.headers.get('verif-hash');
 
   if (!secret || signature !== secret) {
+    console.error('[Webhook] ❌ Invalid signature', { signature });
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
   try {
     const body = await req.json();
-    const event = body.event;
-    const payload = body.data || body;
+    const event: string = body.event;
+    const payload: any = body.data || body;
 
-    if (!event || !event.toLowerCase().includes('completed')) {
+    // Only process completed events
+    if (!event?.toLowerCase().includes('completed')) {
+      console.log('[Webhook] Ignored non-completed event', { event });
       return NextResponse.json({ received: true });
     }
 
     const status = payload.status?.toLowerCase();
     if (!['successful', 'completed', 'success'].includes(status)) {
+      console.log('[Webhook] Ignored event due to status', { status });
       return NextResponse.json({ received: true });
     }
 
     const flutterwaveId = Number(payload.id);
     if (!flutterwaveId) {
-      console.error('[Webhook] ❌ Missing Flutterwave ID');
+      console.error('[Webhook] ❌ Missing Flutterwave ID', { payload });
       return NextResponse.json({ received: true });
     }
 
     const amount = Number(payload.settlement_amount || payload.amount);
-    if (amount <= 0) return NextResponse.json({ received: true });
+    if (amount <= 0) {
+      console.log('[Webhook] ❌ Ignored zero or negative amount', { amount });
+      return NextResponse.json({ received: true });
+    }
 
     const account_number =
       payload.account_number ||
@@ -45,9 +52,7 @@ export async function POST(req: Request) {
       payload.reference ||
       flutterwaveId.toString();
 
-    console.log(
-      `[Webhook] 🔔 ${event} | ₦${amount} | Acc:${account_number ?? 'N/A'} | FLW_ID:${flutterwaveId}`
-    );
+    console.log(`[Webhook] 🔔 ${event} | ₦${amount} | Acc:${account_number ?? 'N/A'} | FLW_ID:${flutterwaveId}`);
 
     // ===================================================================
     // PATH 1 — WALLET FUNDING (VIRTUAL ACCOUNT)
@@ -58,7 +63,7 @@ export async function POST(req: Request) {
       });
 
       if (!agent) {
-        console.error(`[Webhook] 🚨 Unclaimed deposit for ${account_number}`);
+        console.warn(`[Webhook] 🚨 Unclaimed deposit for ${account_number}`);
         return NextResponse.json({ received: true });
       }
 
@@ -72,19 +77,13 @@ export async function POST(req: Request) {
       }
 
       await prisma.$transaction(async (tx) => {
-        const freshAgent = await tx.agent.findUnique({
-          where: { id: agent.id }
-        });
-
-        if (!freshAgent) throw new Error('Agent disappeared');
+        const freshAgent = await tx.agent.findUnique({ where: { id: agent.id } });
+        if (!freshAgent) throw new Error('Agent disappeared during transaction');
 
         const balanceBefore = freshAgent.balance;
         const balanceAfter = balanceBefore + amount;
 
-        await tx.agent.update({
-          where: { id: agent.id },
-          data: { balance: balanceAfter }
-        });
+        await tx.agent.update({ where: { id: agent.id }, data: { balance: balanceAfter } });
 
         await tx.walletLedger.create({
           data: {
@@ -113,21 +112,21 @@ export async function POST(req: Request) {
         });
       });
 
+      console.log('[Webhook] ✅ Wallet funding processed', { agentId: account_number });
       return NextResponse.json({ received: true });
     }
 
     // ===================================================================
     // PATH 2 — CHECKOUT / DATA PURCHASE
     // ===================================================================
-    const transaction = await prisma.transaction.findUnique({
-      where: { tx_ref: reference }
-    });
-
+    const transaction = await prisma.transaction.findUnique({ where: { tx_ref: reference } });
     if (!transaction) {
+      console.warn('[Webhook] ❌ Transaction not found', { reference });
       return NextResponse.json({ received: true });
     }
 
     if (transaction.status === 'delivered') {
+      console.log('[Webhook] ♻️ Transaction already delivered', { reference });
       return NextResponse.json({ received: true });
     }
 
@@ -141,10 +140,7 @@ export async function POST(req: Request) {
     });
 
     if (transaction.type === 'data' && transaction.planId) {
-      const plan = await prisma.dataPlan.findUnique({
-        where: { id: transaction.planId }
-      });
-
+      const plan = await prisma.dataPlan.findUnique({ where: { id: transaction.planId } });
       if (plan) {
         const amigoRes = await callAmigoAPI(
           '/data/',
@@ -159,9 +155,7 @@ export async function POST(req: Request) {
 
         const success =
           amigoRes?.success &&
-          ['successful', 'delivered'].includes(
-            amigoRes.data?.status || amigoRes.data?.Status
-          );
+          ['successful', 'delivered'].includes(amigoRes.data?.status || amigoRes.data?.Status);
 
         if (success) {
           await prisma.transaction.update({
@@ -171,6 +165,9 @@ export async function POST(req: Request) {
               deliveryData: amigoRes.data
             }
           });
+          console.log('[Webhook] ✅ Data purchase delivered', { txRef: reference });
+        } else {
+          console.warn('[Webhook] ⚠️ Data purchase failed or pending', { txRef: reference, response: amigoRes });
         }
       }
     }
