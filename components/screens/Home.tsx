@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Smartphone, Wifi, Phone, FileText, MessageCircle, Bell, Menu, CheckCircle, Users, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import { Smartphone, Wifi, Phone, FileText, MessageCircle, Bell, Menu, ArrowRight, ShieldCheck, Users, Globe } from 'lucide-react';
 import { BottomSheet } from '../ui/BottomSheet';
 import { LegalDocs } from './LegalDocs';
 import { SideMenu } from '../SideMenu';
@@ -32,106 +32,110 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         onAgentLogin={() => { setIsMenuOpen(false); onNavigate('agent'); }}
       />
       
-      {/* 1. Ultra-Compact Header */}
-      <header className="px-6 pt-safe mt-4 mb-2 flex justify-between items-center shrink-0 z-20">
-         <div>
-            <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white font-black text-xs">SM</div>
-                <div>
-                    <h1 className="text-lg font-black tracking-tighter leading-none text-slate-900">SAUKI MART</h1>
-                    <p className="text-[9px] font-bold text-slate-400 tracking-widest uppercase">Premium Hub</p>
-                </div>
+      {/* 1. Updated Header */}
+      <header className="px-6 pt-safe mt-6 mb-4 flex justify-between items-start shrink-0 z-20">
+         <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200 border border-slate-50 p-1">
+                <img src="/logo.png" className="w-full h-full object-contain" alt="Sauki Logo" />
+            </div>
+            <div>
+                <h1 className="text-2xl font-black tracking-tighter leading-none text-slate-900 uppercase">SAUKI MART</h1>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-tight mt-1 max-w-[200px]">
+                    Subsidiary of Sauki Data Links<br/>
+                    <span className="text-blue-600">Government Certified SME by SMEDAN</span>
+                </p>
             </div>
          </div>
-         <button onClick={() => setIsMenuOpen(true)} className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 active:scale-90 transition-transform">
+         <button onClick={() => setIsMenuOpen(true)} className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg shadow-slate-100 border border-slate-50 active:scale-90 transition-transform mt-2">
              <Menu className="w-5 h-5 text-slate-900" />
          </button>
       </header>
 
-      {/* 2. Main Content - Flex-1 to occupy all remaining space */}
+      {/* 2. Main Content */}
       <div className="flex-1 flex flex-col px-5 pb-safe min-h-0">
             
-            {/* System Ticker */}
-            <div className="shrink-0 mb-3">
+            {/* Intelligent Ticker */}
+            <div className="shrink-0 mb-4">
                 {systemMessage ? (
-                    <div className={cn("overflow-hidden rounded-xl py-2 px-3 flex items-center shadow-sm border relative",
-                        systemMessage.type === 'alert' ? "bg-red-50 border-red-100 text-red-700" : "bg-blue-50 border-blue-100 text-blue-700"
+                    <div className={cn("overflow-hidden rounded-2xl py-3 px-4 flex items-center shadow-sm border relative backdrop-blur-sm",
+                        systemMessage.type === 'alert' ? "bg-red-50/80 border-red-100 text-red-700" : "bg-blue-50/80 border-blue-100 text-blue-700"
                     )}>
-                        <Bell className="w-3 h-3 mr-2 shrink-0 animate-pulse" />
+                        <div className="p-1.5 bg-white rounded-full mr-3 shadow-sm shrink-0">
+                            <Bell className="w-3 h-3 fill-current" />
+                        </div>
                         <div className="flex-1 overflow-hidden relative h-4">
                              <MotionDiv 
                                 initial={{ x: "100%" }} animate={{ x: "-100%" }} transition={{ repeat: Infinity, duration: 15, ease: "linear" }}
                                 className="whitespace-nowrap font-bold text-[10px] uppercase tracking-wide absolute top-0"
                             >
-                                {systemMessage.content} • {systemMessage.content}
+                                {systemMessage.content} • {systemMessage.content} • {systemMessage.content}
                             </MotionDiv>
                         </div>
                     </div>
                 ) : (
-                    <div className="h-8 bg-slate-100/50 rounded-xl animate-pulse"></div>
+                    <div className="h-12 bg-slate-100/50 rounded-2xl animate-pulse"></div>
                 )}
             </div>
 
-            {/* Smart Bento Grid - Calculates height to fill available space */}
-            <div className="flex-1 grid grid-cols-2 grid-rows-6 gap-3 min-h-0 mb-20">
+            {/* Revised Bento Grid */}
+            <div className="flex-1 grid grid-cols-2 grid-rows-6 gap-4 min-h-0 mb-24">
               
-              {/* Agent Hub - Large Card (2 rows) */}
-              <MotionDiv whileTap={{ scale: 0.98 }} onClick={() => onNavigate('agent')} className="col-span-2 row-span-2 bg-slate-900 rounded-[1.5rem] p-5 relative overflow-hidden flex flex-col justify-between shadow-2xl shadow-slate-200 group cursor-pointer">
-                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full blur-[60px] opacity-40 group-hover:opacity-60 transition-opacity"></div>
+              {/* 1. AGENT HUB (Large Card - Top) */}
+              <MotionDiv whileTap={{ scale: 0.98 }} onClick={() => onNavigate('agent')} className="col-span-2 row-span-2 bg-slate-900 rounded-[2rem] p-6 relative overflow-hidden shadow-2xl shadow-slate-200 group cursor-pointer border border-slate-800 flex flex-col justify-between">
+                 <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500 rounded-full blur-[80px] opacity-40 group-hover:opacity-60 transition-opacity"></div>
+                 
                  <div className="relative z-10 flex justify-between items-start">
-                    <div className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-white text-[9px] font-black uppercase tracking-widest">Partner Access</div>
-                    <Users className="text-white/50 w-5 h-5" />
+                    <div className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-white text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                        <Users className="w-3 h-3" /> Partner Access
+                    </div>
+                    <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
+                        <ArrowRight className="w-4 h-4 text-white -rotate-45" />
+                    </div>
                  </div>
-                 <div className="relative z-10">
-                    <h3 className="text-2xl font-black text-white tracking-tighter mb-1">AGENT TERMINAL</h3>
-                    <p className="text-slate-400 text-[10px] font-medium leading-tight max-w-[80%]">Manage liquidity, vending, and earnings via secure gateway.</p>
+
+                 <div className="relative z-10 mt-auto">
+                    <h3 className="text-3xl font-black text-white tracking-tighter mb-1">AGENT HUB</h3>
+                    <p className="text-slate-400 text-[11px] font-medium leading-tight max-w-[90%]">
+                        Manage liquidity, perform bulk actions, and view analytics securely.
+                    </p>
                  </div>
               </MotionDiv>
 
-              {/* Gadget Store (2 rows) */}
-              <MotionDiv whileTap={{ scale: 0.98 }} onClick={() => onNavigate('store')} className="col-span-1 row-span-2 bg-white rounded-[1.5rem] p-4 relative overflow-hidden border border-slate-100 shadow-lg flex flex-col justify-between group">
-                <div className="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center mb-2">
-                    <Smartphone className="w-4 h-4 text-slate-900" />
-                </div>
-                <div>
-                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight leading-none mb-1">Premium<br/>Store</h3>
-                   <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-blue-600 transition-colors flex items-center gap-1">Shop <ArrowRight className="w-2 h-2" /></span>
-                </div>
-                <Smartphone className="absolute -right-4 -bottom-4 w-20 h-20 text-slate-50 rotate-12 group-hover:scale-110 transition-transform duration-500" />
-              </MotionDiv>
-
-              {/* Data Bundle (2 rows) */}
-              <MotionDiv whileTap={{ scale: 0.98 }} onClick={() => onNavigate('data')} className="col-span-1 row-span-2 bg-blue-600 rounded-[1.5rem] p-4 relative overflow-hidden shadow-lg shadow-blue-200 flex flex-col justify-between group">
-                <div className="w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center mb-2">
-                    <Wifi className="w-4 h-4 text-white" />
+              {/* 2. GADGET STORE (Small Card - Bottom Left) */}
+              <MotionDiv whileTap={{ scale: 0.98 }} onClick={() => onNavigate('store')} className="col-span-1 row-span-3 bg-white rounded-[2rem] p-5 relative overflow-hidden border border-slate-100 shadow-xl shadow-slate-100 flex flex-col justify-between group">
+                <div className="w-10 h-10 bg-purple-50 rounded-2xl flex items-center justify-center mb-2">
+                    <Smartphone className="w-5 h-5 text-purple-600" />
                 </div>
                 <div className="relative z-10">
-                   <h3 className="text-sm font-black text-white uppercase tracking-tight leading-none mb-1">Instant<br/>Data</h3>
-                   <span className="text-[8px] font-bold text-blue-200 uppercase tracking-widest group-hover:text-white transition-colors flex items-center gap-1">Topup <ArrowRight className="w-2 h-2" /></span>
+                   <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight leading-none mb-2">Premium<br/>Store</h3>
+                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-purple-600 transition-colors flex items-center gap-1">Shop Now <ArrowRight className="w-2 h-2" /></span>
                 </div>
-                <Wifi className="absolute -right-4 -bottom-4 w-20 h-20 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-500" />
+                <Smartphone className="absolute -right-5 -bottom-5 w-24 h-24 text-slate-50 rotate-12 group-hover:scale-110 transition-transform duration-500" />
               </MotionDiv>
 
-              {/* Support & Legal (1 row) */}
-              <MotionDiv whileTap={{ scale: 0.98 }} onClick={() => setIsSupportOpen(true)} className="col-span-2 row-span-1 bg-white rounded-[1.25rem] px-5 flex items-center justify-between border border-slate-100 shadow-sm">
+              {/* 3. INSTANT DATA (Small Card - Bottom Right) */}
+              <MotionDiv whileTap={{ scale: 0.98 }} onClick={() => onNavigate('data')} className="col-span-1 row-span-3 bg-blue-600 rounded-[2rem] p-5 relative overflow-hidden shadow-xl shadow-blue-200 flex flex-col justify-between group">
+                <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mb-2">
+                    <Wifi className="w-5 h-5 text-white" />
+                </div>
+                <div className="relative z-10">
+                   <h3 className="text-lg font-black text-white uppercase tracking-tight leading-none mb-2">Instant<br/>Data</h3>
+                   <span className="text-[9px] font-bold text-blue-200 uppercase tracking-widest group-hover:text-white transition-colors flex items-center gap-1">Topup <ArrowRight className="w-2 h-2" /></span>
+                </div>
+                <Wifi className="absolute -right-5 -bottom-5 w-24 h-24 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-500" />
+              </MotionDiv>
+
+              {/* 4. Support & Legal (Footer Strip) */}
+              <MotionDiv whileTap={{ scale: 0.98 }} onClick={() => setIsSupportOpen(true)} className="col-span-2 row-span-1 bg-white rounded-[1.5rem] px-5 flex items-center justify-between border border-slate-100 shadow-sm mt-2">
                   <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-green-50 rounded-lg text-green-600"><ShieldCheck className="w-4 h-4" /></div>
+                      <div className="p-2 bg-green-50 rounded-xl text-green-600"><ShieldCheck className="w-4 h-4" /></div>
                       <div>
                           <h4 className="text-xs font-black text-slate-900 uppercase">Resources & Legal</h4>
                           <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wide">Support • Docs • Compliance</p>
                       </div>
                   </div>
-                  <div className="w-6 h-6 bg-slate-50 rounded-full flex items-center justify-center"><ArrowRight className="w-3 h-3 text-slate-400" /></div>
+                  <div className="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center"><ArrowRight className="w-3 h-3 text-slate-400" /></div>
               </MotionDiv>
-
-              {/* Trust Badge Footer (1 row) */}
-              <div className="col-span-2 row-span-1 flex flex-col items-center justify-end pb-2">
-                  <div className="flex items-center gap-4 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
-                      <img src="/smedan.png" className="h-6 w-auto object-contain" />
-                      <div className="h-4 w-[1px] bg-slate-300"></div>
-                      <img src="/coat.png" className="h-6 w-auto object-contain" />
-                  </div>
-              </div>
 
             </div>
       </div>

@@ -1,13 +1,14 @@
+
 {
   "name": "SAUKI MART Premium",
   "short_name": "SAUKI MART",
   "description": "Premium Mobile Commerce & Instant Data Top-up. Government Certified by SMEDAN SME.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#f8fafc",
   "theme_color": "#0f172a",
   "orientation": "portrait",
-  "categories": ["shopping", "finance", "productivity"],
+  "categories": ["shopping", "finance", "productivity", "utilities"],
   "icons": [
     {
       "src": "/logo.png",
@@ -20,29 +21,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/logo.png",
-      "sizes": "1170x2532",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Home Dashboard"
-    },
-    {
-      "src": "/logo.png",
-      "sizes": "1170x2532",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Premium Device Store"
-    },
-    {
-      "src": "/logo.png",
-      "sizes": "1170x2532",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Instant Data Topup"
     }
   ]
 }

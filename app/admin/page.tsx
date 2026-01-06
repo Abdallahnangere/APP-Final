@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { cn, formatCurrency } from '../../lib/utils';
-import { Loader2, Lock, Trash2, Edit2, Send, Search, Package, Wifi, LayoutDashboard, Users, Activity, Terminal, Megaphone, Server, Save, Plus, Ban, ArrowUpCircle, RefreshCw, FileText, CheckCircle2, AlertCircle, ShoppingBag, Truck, MessageSquare, Download, UploadCloud, Bell } from 'lucide-react';
+import { Loader2, Lock, Trash2, Edit2, Send, Search, Package, Wifi, LayoutDashboard, Users, Activity, Terminal, Megaphone, Server, Save, Plus, Ban, ArrowUpCircle, RefreshCw, FileText, CheckCircle2, AlertCircle, ShoppingBag, Truck, MessageSquare, Download, UploadCloud, Bell, X, ChevronRight, Smartphone } from 'lucide-react';
 import { DataPlan, Product, Transaction, Agent } from '../../types';
 import { toast } from '../../lib/toast';
 import { SharedReceipt } from '../../components/SharedReceipt';
@@ -12,17 +12,22 @@ import { toPng } from 'html-to-image';
 export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [view, setView] = useState<'dashboard' | 'products' | 'plans' | 'transactions' | 'orders' | 'agents' | 'support' | 'console' | 'broadcast' | 'webhooks'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'products' | 'plans' | 'transactions' | 'orders' | 'agents' | 'support' | 'console' | 'communication' | 'webhooks'>('dashboard');
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Data State
+  // Data State - Initialize as arrays to prevent blank page errors
   const [products, setProducts] = useState<Product[]>([]);
   const [plans, setPlans] = useState<DataPlan[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [agents, setAgents] = useState<(Agent & { _count: { transactions: number } })[]>([]);
   const [webhooks, setWebhooks] = useState<any[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
+
+  // Agent Drilldown State
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [agentHistory, setAgentHistory] = useState<Transaction[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Forms
   const [productForm, setProductForm] = useState<Partial<Product>>({ name: '', description: '', price: 0, image: '', category: 'device' });
@@ -49,39 +54,72 @@ export default function AdminPage() {
   const refreshAll = async () => {
     setLoading(true);
     try {
-        if (['dashboard', 'products'].includes(view)) await fetchProducts();
-        if (['dashboard', 'plans'].includes(view)) await fetchPlans();
-        if (['dashboard', 'agents'].includes(view)) await fetchAgents();
-        if (['dashboard', 'transactions', 'orders'].includes(view)) await fetchTransactions();
-        if (view === 'webhooks') await fetchWebhooks();
-        if (view === 'broadcast') await fetchBroadcast();
-        if (view === 'support') await fetchTickets();
-    } catch (e) {} 
+        // Parallel fetching for dashboard to avoid waterfall delay
+        if (view === 'dashboard') {
+            await Promise.all([fetchProducts(), fetchPlans(), fetchAgents(), fetchTransactions()]);
+        }
+        else if (view === 'products') await fetchProducts();
+        else if (view === 'plans') await fetchPlans();
+        else if (view === 'agents') await fetchAgents();
+        else if (view === 'transactions' || view === 'orders') await fetchTransactions();
+        else if (view === 'webhooks') await fetchWebhooks();
+        else if (view === 'communication') await fetchBroadcast();
+        else if (view === 'support') await fetchTickets();
+    } catch (e) {
+        console.error("Data fetch error", e);
+    } 
     finally { setLoading(false); }
   };
 
   // --- FETCHERS ---
-  const fetchProducts = async () => setProducts(await fetch('/api/products').then(r => r.json()));
-  const fetchPlans = async () => setPlans(await fetch('/api/data-plans').then(r => r.json()));
-  const fetchTransactions = async () => setTransactions(await fetch('/api/transactions/list').then(r => r.json()));
+  const fetchProducts = async () => setProducts(await fetch('/api/products').then(r => r.json()).catch(() => []));
+  const fetchPlans = async () => setPlans(await fetch('/api/data-plans').then(r => r.json()).catch(() => []));
+  const fetchTransactions = async () => setTransactions(await fetch('/api/transactions/list').then(r => r.json()).catch(() => []));
+  
   const fetchAgents = async () => {
-      const res = await fetch('/api/admin/agents', { method: 'POST', body: JSON.stringify({ password }) });
-      const data = await res.json();
-      if(data.agents) setAgents(data.agents);
+      try {
+        const res = await fetch('/api/admin/agents', { method: 'POST', body: JSON.stringify({ password }) });
+        const data = await res.json();
+        setAgents(data.agents || []);
+      } catch (e) { setAgents([]); }
   };
+  
   const fetchWebhooks = async () => {
-      const res = await fetch('/api/admin/webhooks', { method: 'POST', body: JSON.stringify({ password }) });
-      const data = await res.json();
-      if(data.logs) setWebhooks(data.logs);
+      try {
+        const res = await fetch('/api/admin/webhooks', { method: 'POST', body: JSON.stringify({ password }) });
+        const data = await res.json();
+        setWebhooks(data.logs || []);
+      } catch (e) { setWebhooks([]); }
   };
+  
   const fetchBroadcast = async () => {
-      const res = await fetch('/api/system/message').then(r => r.json());
-      if(res) setBroadcastForm(res);
+      try {
+        const res = await fetch('/api/system/message').then(r => r.json());
+        if(res) setBroadcastForm(res);
+      } catch(e) {}
   };
+  
   const fetchTickets = async () => {
-      const res = await fetch('/api/admin/support', { method: 'POST', body: JSON.stringify({ password }) });
-      const data = await res.json();
-      if(data.tickets) setTickets(data.tickets);
+      try {
+        const res = await fetch('/api/admin/support', { method: 'POST', body: JSON.stringify({ password }) });
+        const data = await res.json();
+        setTickets(data.tickets || []);
+      } catch (e) { setTickets([]); }
+  };
+
+  // --- AGENT DRILL DOWN ---
+  const openAgentDetails = async (agent: Agent) => {
+      setSelectedAgent(agent);
+      setLoadingHistory(true);
+      try {
+          const res = await fetch(`/api/agent/transactions?agentId=${agent.id}`);
+          const data = await res.json();
+          setAgentHistory(data.transactions || []);
+      } catch (e) {
+          toast.error("Could not load history");
+      } finally {
+          setLoadingHistory(false);
+      }
   };
 
   const checkAuth = async () => {
@@ -167,10 +205,18 @@ export default function AdminPage() {
       toast.success("Broadcast Updated");
   };
 
-  const sendPushNotification = () => {
-      // Simulation for UI completeness as real push needs Service Workers
-      toast.success(`Push Sent: ${pushForm.title}`);
-      setPushForm({ title: '', body: '' });
+  const sendPushNotification = async () => {
+      if(!pushForm.title || !pushForm.body) return toast.error("Enter Title & Body");
+      try {
+          await fetch('/api/admin/push', {
+              method: 'POST',
+              body: JSON.stringify({ ...pushForm, password })
+          });
+          toast.success(`Push Sent: ${pushForm.title}`);
+          setPushForm({ title: '', body: '' });
+      } catch(e) {
+          toast.error("Push failed");
+      }
   };
 
   const executeConsole = async () => {
@@ -226,12 +272,12 @@ export default function AdminPage() {
       }, 500);
   };
 
-  const filteredTransactions = transactions.filter(t => 
+  const filteredTransactions = transactions?.filter(t => 
       t.tx_ref.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.phone.includes(searchQuery)
-  );
+  ) || [];
 
-  const pendingOrders = transactions.filter(t => t.type === 'ecommerce' && t.status === 'paid');
+  const pendingOrders = transactions?.filter(t => t.type === 'ecommerce' && t.status === 'paid') || [];
 
   if (!isAuthenticated) return (
      <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6">
@@ -263,7 +309,7 @@ export default function AdminPage() {
                     { id: 'agents', label: 'Agents', icon: Users },
                     { id: 'support', label: 'Support Tickets', icon: MessageSquare },
                     { id: 'console', label: 'API Console', icon: Terminal },
-                    { id: 'broadcast', label: 'Broadcast / Push', icon: Megaphone },
+                    { id: 'communication', label: 'Comms & Push', icon: Megaphone },
                     { id: 'webhooks', label: 'Webhook Logs', icon: Activity },
                 ].map(item => (
                     <button key={item.id} onClick={() => setView(item.id as any)} className={cn("flex items-center justify-between w-full p-4 rounded-2xl text-xs font-black transition-all", view === item.id ? "bg-white text-slate-900" : "text-slate-500 hover:bg-slate-800")}>
@@ -274,7 +320,7 @@ export default function AdminPage() {
             </nav>
         </aside>
 
-        <main className="flex-1 lg:ml-64 p-8 overflow-y-auto h-screen bg-slate-50">
+        <main className="flex-1 lg:ml-64 p-8 overflow-y-auto h-screen bg-slate-50 relative">
              <header className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">{view.replace('_', ' ')}</h2>
                 <button onClick={refreshAll} className="p-3 bg-white rounded-xl shadow-sm border border-slate-100 hover:bg-slate-50"><RefreshCw className={cn("w-5 h-5", loading && "animate-spin")} /></button>
@@ -289,11 +335,11 @@ export default function AdminPage() {
                     </div>
                     <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Agents</p>
-                        <h3 className="text-4xl font-black text-slate-900">{agents.length}</h3>
+                        <h3 className="text-4xl font-black text-slate-900">{agents?.length || 0}</h3>
                     </div>
                     <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Inventory</p>
-                        <h3 className="text-4xl font-black text-slate-900">{products.length} Items</h3>
+                        <h3 className="text-4xl font-black text-slate-900">{products?.length || 0} Items</h3>
                     </div>
                 </div>
             )}
@@ -343,7 +389,7 @@ export default function AdminPage() {
                         <button onClick={saveProduct} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black uppercase text-xs">Save Product</button>
                     </div>
                     <div className="grid grid-cols-3 gap-6">
-                        {products.map(p => (
+                        {products?.map(p => (
                             <div key={p.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
                                 <img src={p.image} className="w-12 h-12 rounded-lg object-cover" />
                                 <div className="flex-1 min-w-0">
@@ -353,6 +399,40 @@ export default function AdminPage() {
                                 <button onClick={() => deleteProduct(p.id)} className="text-red-500"><Trash2 className="w-4 h-4" /></button>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* PLANS (FIXED BLANK PAGE) */}
+            {view === 'plans' && (
+                <div className="space-y-6">
+                     <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                        <h4 className="font-black text-xs text-slate-400 uppercase tracking-widest mb-4">{editMode ? 'Edit Plan' : 'Add New Plan'}</h4>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <select className="p-3 border rounded-xl" value={planForm.network} onChange={(e:any) => setPlanForm({...planForm, network: e.target.value})}>
+                                <option>MTN</option><option>AIRTEL</option><option>GLO</option>
+                            </select>
+                            <input className="p-3 border rounded-xl" placeholder="Data (1GB)" value={planForm.data} onChange={e => setPlanForm({...planForm, data: e.target.value})} />
+                            <input className="p-3 border rounded-xl" placeholder="Price" type="number" value={planForm.price || ''} onChange={e => setPlanForm({...planForm, price: Number(e.target.value)})} />
+                            <input className="p-3 border rounded-xl" placeholder="Amigo Plan ID" type="number" value={planForm.planId || ''} onChange={e => setPlanForm({...planForm, planId: Number(e.target.value)})} />
+                        </div>
+                        <button onClick={savePlan} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2"><Save className="w-4 h-4" /> Save</button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {plans?.length > 0 ? plans.map(p => (
+                            <div key={p.id} className="bg-white p-4 rounded-[1.5rem] border border-slate-100 flex justify-between items-center hover:shadow-md transition-all">
+                                <div>
+                                    <span className={cn("font-black text-[10px] px-2 py-0.5 rounded mb-1 inline-block", p.network === 'MTN' ? 'bg-yellow-100 text-yellow-700' : p.network === 'AIRTEL' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700')}>{p.network}</span>
+                                    <p className="font-bold text-sm">{p.data} - {p.validity}</p>
+                                    <p className="text-blue-600 font-bold text-xs">{formatCurrency(p.price)}</p>
+                                    <p className="text-[10px] text-slate-400">ID: {p.planId}</p>
+                                </div>
+                                <div className="flex gap-1">
+                                    <button onClick={() => { setPlanForm(p); setEditMode(true); }} className="p-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200"><Edit2 className="w-4 h-4" /></button>
+                                    <button onClick={() => deletePlan(p.id)} className="p-2 bg-red-50 rounded-lg text-red-600 hover:bg-red-100"><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                            </div>
+                        )) : <div className="col-span-2 text-center text-slate-400 py-10">No Plans Configured</div>}
                     </div>
                 </div>
             )}
@@ -388,7 +468,7 @@ export default function AdminPage() {
 
             {view === 'support' && (
                 <div className="space-y-4">
-                    {tickets.map(t => (
+                    {tickets?.map(t => (
                         <div key={t.id} className="bg-white p-5 rounded-2xl border border-slate-100">
                             <div className="flex justify-between mb-2">
                                 <span className="font-black text-slate-900">{t.phone}</span>
@@ -401,11 +481,14 @@ export default function AdminPage() {
                 </div>
             )}
 
-            {view === 'broadcast' && (
+            {view === 'communication' && (
                 <div className="grid grid-cols-2 gap-8">
+                    {/* BROADCAST SECTION */}
                     <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 text-center">
                         <Megaphone className="w-10 h-10 text-slate-900 mx-auto mb-4" />
-                        <h3 className="text-xl font-black uppercase mb-4">App Ticker</h3>
+                        <h3 className="text-xl font-black uppercase mb-2">App Ticker</h3>
+                        <p className="text-xs text-slate-400 mb-4">Scrolling message on Home Screen</p>
+                        
                         <textarea className="w-full p-4 bg-slate-50 rounded-2xl mb-4 text-sm" rows={3} value={broadcastForm.content} onChange={e => setBroadcastForm({...broadcastForm, content: e.target.value})} />
                         <div className="flex justify-center gap-2 mb-4">
                             {['info', 'warning', 'alert'].map(t => (
@@ -415,12 +498,16 @@ export default function AdminPage() {
                         <button onClick={updateBroadcast} className="w-full bg-slate-900 text-white p-3 rounded-xl font-black uppercase text-xs">Update Ticker</button>
                     </div>
                     
-                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 text-center">
+                    {/* PUSH NOTIFICATION SECTION */}
+                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 text-center relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-2 bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-bl-xl">Urgent Alerts</div>
                         <Bell className="w-10 h-10 text-blue-600 mx-auto mb-4" />
-                        <h3 className="text-xl font-black uppercase mb-4">Push Notification</h3>
-                        <input className="w-full p-3 bg-slate-50 rounded-xl mb-3 text-sm font-bold" placeholder="Title" value={pushForm.title} onChange={e => setPushForm({...pushForm, title: e.target.value})} />
-                        <textarea className="w-full p-4 bg-slate-50 rounded-2xl mb-4 text-sm" rows={2} placeholder="Body" value={pushForm.body} onChange={e => setPushForm({...pushForm, body: e.target.value})} />
-                        <button onClick={sendPushNotification} className="w-full bg-blue-600 text-white p-3 rounded-xl font-black uppercase text-xs">Send Push</button>
+                        <h3 className="text-xl font-black uppercase mb-2">Mobile Push</h3>
+                        <p className="text-xs text-slate-400 mb-4">Pop-up alert on user devices</p>
+
+                        <input className="w-full p-3 bg-slate-50 rounded-xl mb-3 text-sm font-bold" placeholder="Notification Title" value={pushForm.title} onChange={e => setPushForm({...pushForm, title: e.target.value})} />
+                        <textarea className="w-full p-4 bg-slate-50 rounded-2xl mb-4 text-sm" rows={2} placeholder="Message Body" value={pushForm.body} onChange={e => setPushForm({...pushForm, body: e.target.value})} />
+                        <button onClick={sendPushNotification} className="w-full bg-blue-600 text-white p-3 rounded-xl font-black uppercase text-xs">Send Blast</button>
                     </div>
                 </div>
             )}
@@ -446,6 +533,97 @@ export default function AdminPage() {
                     </div>
                 </div>
             )}
+
+            {/* WEBHOOKS LOGS (FIXED BLANK PAGE) */}
+            {view === 'webhooks' && (
+                <div className="space-y-4">
+                    <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-4 px-2">Recent Webhook Logs</h3>
+                    <div className="space-y-2">
+                        {webhooks?.length > 0 ? webhooks.map((log: any) => (
+                            <div key={log.id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm font-mono text-xs text-slate-600">
+                                <div className="flex justify-between items-center mb-2 pb-2 border-b border-slate-50">
+                                    <span className="font-bold text-blue-600 uppercase">{log.source}</span>
+                                    <span className="text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
+                                </div>
+                                <pre className="overflow-x-auto text-[10px] bg-slate-50 p-2 rounded-lg">{JSON.stringify(log.payload, null, 2)}</pre>
+                            </div>
+                        )) : <div className="text-center text-slate-400 py-10">No logs found yet</div>}
+                    </div>
+                </div>
+            )}
+
+            {/* AGENTS WITH DRILLDOWN SIDE PANEL */}
+            {view === 'agents' && (
+                <div className="flex h-full gap-4">
+                    <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto content-start flex-1 transition-all duration-300", selectedAgent ? "md:w-1/2 hidden md:grid" : "w-full")}>
+                        {agents?.map(agent => (
+                            <div key={agent.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+                                {!agent.isActive && <div className="absolute inset-0 bg-red-50/50 backdrop-blur-[1px] flex items-center justify-center z-10"><span className="bg-red-600 text-white px-4 py-2 rounded-xl font-black uppercase">Suspended</span></div>}
+                                
+                                <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                        <h4 className="font-black text-slate-900 uppercase text-lg">{agent.firstName} {agent.lastName}</h4>
+                                        <p className="text-xs text-slate-500 font-bold">{agent.phone}</p>
+                                    </div>
+                                    <span className="bg-slate-100 px-3 py-1 rounded-lg text-[10px] font-black uppercase">{agent._count?.transactions || 0} Txns</span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                    <div className="bg-slate-50 p-4 rounded-xl">
+                                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Main Wallet</p>
+                                        <p className="text-xl font-black text-slate-900">{formatCurrency(agent.balance)}</p>
+                                    </div>
+                                    <div className="bg-green-50 p-4 rounded-xl">
+                                        <p className="text-[9px] text-green-600 font-black uppercase tracking-widest mb-1">Cashback</p>
+                                        <p className="text-xl font-black text-green-700">{formatCurrency(agent.cashbackBalance)}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2 relative z-20">
+                                    <button onClick={() => fundAgent(agent.id)} className="flex-1 bg-slate-900 text-white p-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 hover:bg-slate-800"><ArrowUpCircle className="w-4 h-4" /> Credit</button>
+                                    <button onClick={() => toggleAgent(agent.id)} className={cn("flex-1 p-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2", agent.isActive ? "bg-red-100 text-red-600 hover:bg-red-200" : "bg-green-100 text-green-600 hover:bg-green-200")}>
+                                        <Ban className="w-4 h-4" /> {agent.isActive ? 'Suspend' : 'Activate'}
+                                    </button>
+                                    <button onClick={() => openAgentDetails(agent)} className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100"><ChevronRight className="w-4 h-4" /></button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* SLIDE-OVER DETAIL PANEL */}
+                    {selectedAgent && (
+                        <div className="w-full md:w-1/2 bg-white rounded-[2rem] border border-slate-200 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
+                            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                                <div>
+                                    <h3 className="font-black text-lg uppercase">{selectedAgent.firstName}'s History</h3>
+                                    <p className="text-xs text-slate-500 font-mono">ID: {selectedAgent.id.slice(0,8)}</p>
+                                </div>
+                                <button onClick={() => setSelectedAgent(null)} className="p-2 hover:bg-slate-200 rounded-full"><X className="w-5 h-5" /></button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4">
+                                {loadingHistory ? <div className="text-center py-10"><Loader2 className="animate-spin mx-auto text-slate-300" /></div> : (
+                                    <table className="w-full text-left text-xs">
+                                        <thead className="text-slate-400 uppercase font-black border-b border-slate-100">
+                                            <tr><th className="py-2">Type</th><th>Amount</th><th>Status</th><th>Date</th></tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {agentHistory.map(tx => (
+                                                <tr key={tx.id} className="hover:bg-slate-50">
+                                                    <td className="py-3 font-bold uppercase">{tx.type}</td>
+                                                    <td className="py-3">{formatCurrency(tx.amount)}</td>
+                                                    <td className="py-3"><span className={cn("px-2 py-0.5 rounded text-[9px] font-black uppercase", tx.status === 'delivered' ? "bg-green-100 text-green-700" : "bg-slate-100")}>{tx.status}</span></td>
+                                                    <td className="py-3 text-slate-400">{new Date(tx.createdAt).toLocaleDateString()}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
         </main>
     </div>
   );
