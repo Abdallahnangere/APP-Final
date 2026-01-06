@@ -53,6 +53,14 @@ export interface Transaction {
   dataPlan?: DataPlan;
 }
 
+export interface SupportTicket {
+    id: string;
+    phone: string;
+    message: string;
+    status: 'open' | 'closed';
+    createdAt: string;
+}
+
 export interface PaymentInitResponse {
   tx_ref: string;
   bank: string;
