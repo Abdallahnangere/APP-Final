@@ -22,14 +22,14 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
           />
           <MotionDiv
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 max-h-[90vh] overflow-y-auto shadow-[0_-8px_30px_rgba(0,0,0,0.12)]"
+            className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[70] max-h-[90vh] overflow-y-auto shadow-[0_-8px_30px_rgba(0,0,0,0.12)]"
           >
             <div className="sticky top-0 bg-white/90 backdrop-blur-md z-10 px-6 py-4 flex items-center justify-between border-b border-slate-100">
               <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
@@ -37,7 +37,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6 pb-12 safe-area-bottom">
+            <div className="p-6 pb-24 safe-area-bottom">
               {children}
             </div>
           </MotionDiv>
