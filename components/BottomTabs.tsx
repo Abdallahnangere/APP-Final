@@ -15,7 +15,7 @@ export const BottomTabs: React.FC<BottomTabsProps> = ({ activeTab, onChange }) =
     { id: 'store', icon: ShoppingBag, label: 'Store' },
     { id: 'data', icon: Wifi, label: 'Data' },
     { id: 'agent', icon: Users, label: 'Agent' },
-    { id: 'track', icon: MessageSquareWarning, label: 'Complaint' }, // Renamed from Help/Track to Complaint
+    { id: 'track', icon: MessageSquareWarning, label: 'Complaint' },
   ];
 
   const handlePress = (id: string) => {
@@ -24,7 +24,7 @@ export const BottomTabs: React.FC<BottomTabsProps> = ({ activeTab, onChange }) =
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50">
+    <div className="fixed bottom-0 fixed-mobile z-50">
       {/* Gradient Fade to seamless blend content */}
       <div className="h-12 bg-gradient-to-t from-[#f8fafc] to-transparent pointer-events-none" />
       
@@ -51,7 +51,7 @@ export const BottomTabs: React.FC<BottomTabsProps> = ({ activeTab, onChange }) =
                 </div>
                 <span
                   className={cn(
-                    "text-[9px] font-black uppercase tracking-wider transition-all duration-200 block", // Always visible (block)
+                    "text-[9px] font-black uppercase tracking-wider transition-all duration-200 block",
                     isActive ? "text-slate-900" : "text-slate-400"
                   )}
                 >

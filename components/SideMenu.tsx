@@ -60,6 +60,7 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal
             exit={{ x: "-100%" }}
             transition={{ type: "spring", stiffness: 350, damping: 35 }}
             className="fixed top-0 left-0 bottom-0 w-[85%] max-w-sm bg-slate-50 dark:bg-slate-900 z-[70] shadow-2xl flex flex-col rounded-r-[3rem] overflow-hidden"
+            style={{ position: 'absolute' }} // Use absolute to stay inside the #root container
           >
             <div className="p-8 bg-slate-900 text-white relative">
               <button onClick={onClose} className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors">

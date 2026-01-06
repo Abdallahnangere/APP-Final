@@ -4,8 +4,8 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { api } from '../../lib/api';
 import { Transaction } from '../../types';
-import { cn, formatCurrency } from '../../lib/utils';
-import { Search, Download, RefreshCw, AlertTriangle, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { cn, formatCurrency, generateReceiptData } from '../../lib/utils';
+import { Search, Download, RefreshCw, CheckCircle2, ArrowLeft, Loader2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { SharedReceipt } from '../SharedReceipt';
 import { toast } from '../../lib/toast';
@@ -95,30 +95,6 @@ export const Track: React.FC<TrackProps> = ({ onBack }) => {
     }
   };
 
-  const getTransactionDescription = (tx: Transaction) => {
-      // 1. Prioritize full manifest saved during ecommerce checkout
-      if (tx.deliveryData && (tx.deliveryData as any).manifest) {
-          return (tx.deliveryData as any).manifest;
-      }
-
-      // 2. Data Plan Fallback
-      if (tx.type === 'data') {
-          if (tx.dataPlan) {
-              return `${tx.dataPlan.network} ${tx.dataPlan.data} (${tx.dataPlan.validity})`;
-          }
-          return 'Data Bundle';
-      }
-
-      // 3. Single Product Fallback
-      if (tx.type === 'ecommerce') {
-          if (tx.product) {
-              return tx.product.name;
-          }
-          return 'Mobile Device';
-      }
-      return 'Unknown Item';
-  };
-
   return (
     <div className="p-6 pb-32 min-h-screen">
       <div className="flex items-center gap-3 mb-8">
@@ -153,17 +129,7 @@ export const Track: React.FC<TrackProps> = ({ onBack }) => {
       {receiptTx && (
         <SharedReceipt 
             ref={receiptRef}
-            transaction={{
-                tx_ref: receiptTx.tx_ref,
-                amount: receiptTx.amount,
-                date: new Date(receiptTx.createdAt).toLocaleString(),
-                type: receiptTx.type === 'ecommerce' ? 'Corporate Order' : 'Data Bundle',
-                description: getTransactionDescription(receiptTx),
-                status: receiptTx.status,
-                customerPhone: receiptTx.phone,
-                customerName: receiptTx.customerName,
-                deliveryAddress: receiptTx.deliveryState || (receiptTx.deliveryData as any)?.address
-            }}
+            transaction={generateReceiptData(receiptTx)} 
         />
       )}
 
@@ -172,7 +138,9 @@ export const Track: React.FC<TrackProps> = ({ onBack }) => {
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">Gateway Records</h3>
             {transactions.length > 0 ? (
                 <div className="space-y-4">
-                    {transactions.map((tx) => (
+                    {transactions.map((tx) => {
+                        const recData = generateReceiptData(tx);
+                        return (
                         <div key={tx.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-lg shadow-slate-50 relative overflow-hidden group">
                             {tx.status === 'delivered' && <CheckCircle2 className="absolute -right-4 -top-4 w-20 h-20 text-green-500/5 group-hover:rotate-12 transition-transform" />}
                             
@@ -180,7 +148,7 @@ export const Track: React.FC<TrackProps> = ({ onBack }) => {
                                 <div>
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{tx.tx_ref}</p>
                                     <div className="text-sm font-black text-slate-900 uppercase tracking-tight max-w-[200px] leading-snug">
-                                        {getTransactionDescription(tx)}
+                                        {recData.description}
                                     </div>
                                     <div className="text-[10px] text-slate-500 font-bold mt-1 uppercase">{new Date(tx.createdAt).toLocaleString()}</div>
                                 </div>
@@ -201,7 +169,7 @@ export const Track: React.FC<TrackProps> = ({ onBack }) => {
                                             className="h-10 px-4 text-[10px] font-black uppercase tracking-widest rounded-xl border-slate-200"
                                         >
                                             {retryingId === tx.id ? <Loader2 className="animate-spin w-4 h-4" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                                            Sync Now
+                                            Sync
                                         </Button>
                                     )}
 
@@ -217,7 +185,7 @@ export const Track: React.FC<TrackProps> = ({ onBack }) => {
                                 </div>
                             </div>
                         </div>
-                    ))}
+                    );})}
                 </div>
             ) : (
                 <div className="text-center py-20 bg-slate-50 rounded-[2.5rem] border border-slate-100 border-dashed">

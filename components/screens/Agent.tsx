@@ -6,7 +6,7 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { api } from '../../lib/api';
 import { Agent, Transaction } from '../../types';
-import { formatCurrency, cn } from '../../lib/utils';
+import { formatCurrency, cn, generateReceiptData } from '../../lib/utils';
 import { toast } from '../../lib/toast';
 import { BottomSheet } from '../ui/BottomSheet';
 import { Store } from './Store';
@@ -164,16 +164,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
       {receiptTx && (
         <SharedReceipt 
             ref={receiptRef}
-            transaction={{
-                tx_ref: receiptTx.tx_ref,
-                amount: receiptTx.amount,
-                date: new Date(receiptTx.createdAt).toLocaleString(),
-                type: receiptTx.type === 'wallet_funding' ? 'Wallet Credit' : receiptTx.type === 'data' ? 'Data Bundle' : 'Purchase',
-                description: receiptTx.type === 'wallet_funding' ? 'Wallet Deposit' : receiptTx.dataPlan ? `${receiptTx.dataPlan.network} ${receiptTx.dataPlan.data}` : receiptTx.product?.name || 'Item',
-                status: receiptTx.status,
-                customerPhone: receiptTx.phone,
-                customerName: receiptTx.customerName || agent?.firstName
-            }}
+            transaction={generateReceiptData(receiptTx)}
         />
       )}
 
@@ -344,14 +335,16 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                                         {history.length === 0 ? (
                                             <div className="p-8 text-center text-slate-400 text-xs font-bold uppercase">No records found</div>
                                         ) : (
-                                            history.map(tx => (
+                                            history.map(tx => {
+                                                const recData = generateReceiptData(tx);
+                                                return (
                                                 <div key={tx.id} onClick={() => generateReceipt(tx)} className="p-4 flex justify-between items-center active:bg-slate-50 transition-colors cursor-pointer">
                                                     <div className="flex items-center gap-3">
                                                         <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", tx.type === 'wallet_funding' ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-600")}>
                                                             {tx.type === 'wallet_funding' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <p className="text-[10px] font-black uppercase text-slate-900 truncate w-24">{tx.type.replace('_', ' ')}</p>
+                                                            <p className="text-[10px] font-black uppercase text-slate-900 truncate w-24">{tx.type === 'wallet_funding' ? 'Deposit' : recData.description}</p>
                                                             <p className="text-[8px] text-slate-400 font-bold">{tx.status}</p>
                                                         </div>
                                                     </div>
@@ -361,7 +354,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                                                         </p>
                                                     </div>
                                                 </div>
-                                            ))
+                                            );})
                                         )}
                                     </div>
                             </div>
