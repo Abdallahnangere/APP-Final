@@ -13,7 +13,7 @@ model Agent {
   lastName         String
   phone            String   @unique
   pin              String
-  balance          Decimal  @default(0)
+  balance          Float    @default(0)
   flwAccountNumber String?
   flwBankName      String?
   flwAccountName   String?
@@ -31,7 +31,7 @@ model Transaction {
   type           String
   status         String
   phone          String
-  amount         Decimal
+  amount         Float
   agentId        String?
   planId         String?
   productId      String?
@@ -41,18 +41,18 @@ model Transaction {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  agent   Agent?   @relation(fields: [agentId], references: [id])
+  agent    Agent?    @relation(fields: [agentId], references: [id])
   dataPlan DataPlan? @relation(fields: [planId], references: [id])
-  product Product?  @relation(fields: [productId], references: [id])
+  product  Product?  @relation(fields: [productId], references: [id])
 }
 
 model WalletLedger {
   id            String   @id @default(uuid())
   agentId       String
   direction     String   // CREDIT / DEBIT
-  amount        Decimal
-  balanceBefore Decimal
-  balanceAfter  Decimal
+  amount        Float
+  balanceBefore Float
+  balanceAfter  Float
   reference     String
   source        String
   createdAt     DateTime @default(now())
@@ -65,7 +65,7 @@ model DataPlan {
   network   String
   data      String
   validity  String
-  price     Decimal
+  price     Float
   planId    Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -76,7 +76,7 @@ model DataPlan {
 model Product {
   id        String   @id @default(uuid())
   name      String
-  price     Decimal
+  price     Float
   category  String   @default("device")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
