@@ -1,1 +1,87 @@
-���Ȭʋ�
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          String        @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  image       String
+  inStock     Boolean       @default(true)
+  category    String        @default("device")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  Transaction Transaction[]
+}
+
+model DataPlan {
+  id          String        @id @default(uuid())
+  network     String
+  data        String
+  validity    String
+  price       Float
+  planId      Int
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  Transaction Transaction[]
+}
+
+model Agent {
+  id               String        @id @default(uuid())
+  firstName        String
+  lastName         String
+  phone            String        @unique
+  pin              String
+  balance          Float         @default(0)
+  flwAccountNumber String?
+  flwBankName      String?
+  flwAccountName   String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  transactions     Transaction[]
+}
+
+model Transaction {
+  id             String    @id @default(uuid())
+  tx_ref         String    @unique
+  type           String
+  status         String
+  phone          String
+  amount         Float
+  productId      String?
+  planId         String?
+  agentId        String?
+  customerName   String?
+  deliveryState  String?
+  idempotencyKey String?   @unique
+  paymentData    Json?
+  deliveryData   Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  product  Product?  @relation(fields: [productId], references: [id])
+  dataPlan DataPlan? @relation(fields: [planId], references: [id])
+  agent    Agent?    @relation(fields: [agentId], references: [id])
+}
+
+model SystemMessage {
+  id        String   @id @default(uuid())
+  content   String
+  type      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WebhookLog {
+  id        String   @id @default(uuid())
+  source    String
+  payload   Json
+  createdAt DateTime @default(now())
+}
