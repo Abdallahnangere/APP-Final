@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import { callAmigoAPI, AMIGO_NETWORKS } from '../../../../lib/amigo';
@@ -14,88 +13,112 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const payload = body.data || body; 
-    const { status, account_number, amount } = payload; 
-    const reference = payload.txRef || payload.tx_ref || payload.reference; 
 
-    console.log(`[Webhook] 🔔 Received event. Status: ${status}, Acc: ${account_number}`);
+    // Destructure key fields
+    const status = payload.status;
+    const amount = Number(payload.amount);
+    
+    // Normalize Account Number: Ensure it is a String for comparison
+    const account_number = payload.account_number ? String(payload.account_number) : null;
+    
+    // Get the Reference (FLW sends 'txRef' or 'tx_ref')
+    const reference = payload.txRef || payload.tx_ref || payload.reference || payload.id?.toString();
+
+    console.log(`[Webhook] 🔔 Event: ${status} | Amt: ${amount} | Acc: ${account_number} | Ref: ${reference}`);
 
     if (status !== 'successful' && status !== 'completed') {
         return NextResponse.json({ received: true });
     }
 
-    // CASE 1: AGENT FUNDING (Virtual Account Deposit)
-    // Detected by the presence of 'account_number' which FLW sends for virtual account credits
+    // ==================================================================
+    // PATH 1: WALLET FUNDING (Virtual Account Deposit)
+    // Identified by the presence of 'account_number' in the payload
+    // ==================================================================
     if (account_number) {
+        // 1. Find the Agent who owns this Virtual Account
         const agent = await prisma.agent.findFirst({
             where: { flwAccountNumber: account_number }
         });
 
-        if (agent) {
-            // 1. Idempotency Check: Prevent Double Crediting
-            // If FLW sends the webhook twice, we must not credit the agent twice.
-            const existingTx = await prisma.transaction.findFirst({
-                where: { tx_ref: reference }
-            });
+        if (!agent) {
+            // Money received, but we don't know who owns this account number.
+            // We return 200 to stop FLW from retrying, but we log strictly.
+            console.error(`[Webhook] 🚨 UNCLAIMED DEPOSIT: No agent found for Account ${account_number}`);
+            return NextResponse.json({ received: true }); 
+        }
 
-            if (existingTx) {
-                console.log(`[Webhook] 🛑 Duplicate funding event ignored: ${reference}`);
-                return NextResponse.json({ received: true });
-            }
+        // 2. Idempotency Check: Did we already credit this specific transaction ID?
+        // We check if a transaction with this 'tx_ref' already exists.
+        const existingTx = await prisma.transaction.findUnique({
+            where: { tx_ref: reference }
+        });
 
-            console.log(`[Webhook] 🏦 Funding Agent ${agent.phone} with ${amount}`);
-
-            // 2. Atomic Transaction: Ensure Balance Update AND History Log happen together
-            // If one fails, both fail. This prevents "Ghost Money" (balance update without record).
-            await prisma.$transaction([
-                prisma.agent.update({
-                    where: { id: agent.id },
-                    data: { balance: { increment: Number(amount) } }
-                }),
-                prisma.transaction.create({
-                    data: {
-                        tx_ref: reference || `FUND-${Date.now()}`,
-                        type: 'wallet_funding', // Specific type for accounting
-                        status: 'delivered',
-                        phone: agent.phone,
-                        amount: Number(amount),
-                        agentId: agent.id,
-                        paymentData: payload,
-                        deliveryData: { method: 'Virtual Account Deposit' }
-                    }
-                })
-            ]);
-
+        if (existingTx) {
+            console.log(`[Webhook] ♻️ Duplicate webhook for ref ${reference}. Already processed.`);
             return NextResponse.json({ received: true });
         }
+
+        console.log(`[Webhook] 💰 Crediting Agent ${agent.phone} (+${amount})`);
+
+        // 3. Process the Credit (Atomic Update)
+        // We create the Transaction Record AND Update Balance simultaneously.
+        await prisma.$transaction([
+            // A. Update Agent Balance
+            prisma.agent.update({
+                where: { id: agent.id },
+                data: { balance: { increment: amount } }
+            }),
+            // B. Create the Transaction Record (So we have history)
+            prisma.transaction.create({
+                data: {
+                    tx_ref: reference,
+                    type: 'wallet_funding',
+                    status: 'delivered', // Delivered because money is in wallet
+                    phone: agent.phone,
+                    amount: amount,
+                    agentId: agent.id,
+                    paymentData: payload as any, // Save full webhook data for audit
+                    deliveryData: { method: 'Virtual Account Deposit' },
+                    idempotencyKey: reference // Ensure DB constraint prevents duplicates
+                }
+            })
+        ]);
+
+        return NextResponse.json({ received: true });
     }
 
-    // CASE 2: REGULAR PAYMENT (Ecommerce or Direct Data)
-    const transaction = await prisma.transaction.findFirst({ 
+    // ==================================================================
+    // PATH 2: CHECKOUT / DATA PURCHASE (Initiated by App)
+    // Identified by MISSING 'account_number' (Standard Checkout)
+    // ==================================================================
+    
+    // In this case, the transaction MUST already exist in our DB (status: pending)
+    const transaction = await prisma.transaction.findUnique({ 
         where: { tx_ref: reference } 
     });
     
     if (!transaction) {
-        // If not found, it might be a funding event for a non-agent or untracked.
-        // We return 200 to stop FLW from retrying indefinitely.
+        // This is rare. Could be a test webhook or a manual transfer we don't track.
+        console.log(`[Webhook] ❓ Ref ${reference} not found in DB. Skipping.`);
         return NextResponse.json({ error: 'Tx not found' }, { status: 200 });
     }
 
-    if (transaction.status === 'delivered') {
+    if (transaction.status === 'delivered' || transaction.status === 'paid') {
         return NextResponse.json({ received: true });
     }
 
-    // Mark as paid if not already
+    // Mark as paid
     if (transaction.status !== 'paid') {
         await prisma.transaction.update({
             where: { id: transaction.id },
             data: { 
                 status: 'paid',
-                paymentData: payload
+                paymentData: payload as any
             }
         });
     }
 
-    // Auto-Fulfillment for Data Plans
+    // Trigger Auto-Fulfillment (e.g. Data Dispense)
     if (transaction.type === 'data' && transaction.planId) {
          const plan = await prisma.dataPlan.findUnique({ where: { id: transaction.planId } });
          
@@ -108,10 +131,8 @@ export async function POST(req: Request) {
                  Ported_number: true
              };
 
-             // Call Amigo API
              const amigoRes = await callAmigoAPI('/data/', amigoPayload, reference);
              
-             // Check Amigo Response strictly
              const isSuccess = amigoRes.success && (
                 amigoRes.data.success === true || 
                 amigoRes.data.Status === 'successful' ||
@@ -134,7 +155,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true });
 
   } catch (error) {
-      console.error('[Webhook] 🔥 Error', error);
+      console.error('[Webhook] 🔥 Error:', error);
       return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
   }
 }
