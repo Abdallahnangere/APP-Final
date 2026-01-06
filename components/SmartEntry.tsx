@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 
@@ -7,7 +8,7 @@ interface SmartEntryProps {
 
 export const SmartEntry: React.FC<SmartEntryProps> = ({ onComplete }) => {
   useEffect(() => {
-    // Shorter, premium duration
+    // 2.5 seconds total entry time
     const timer = setTimeout(onComplete, 2500); 
     return () => clearTimeout(timer);
   }, [onComplete]);
@@ -17,26 +18,25 @@ export const SmartEntry: React.FC<SmartEntryProps> = ({ onComplete }) => {
       className="fixed inset-0 z-50 flex items-center justify-center bg-white"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.5, ease: "easeInOut" }}
+      transition={{ duration: 0.8, ease: "easeInOut" }}
     >
       <div className="flex flex-col items-center justify-center">
         <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="mb-8"
+            initial={{ opacity: 0, scale: 0.9, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+            className="text-center"
         >
-            <img src="/entry.png" className="w-24 h-24 object-contain" alt="Sauki Mart" />
+            <h1 className="text-2xl font-medium text-slate-500 tracking-widest uppercase mb-1">Welcome to</h1>
+            <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">Sauki Mart</h2>
         </motion.div>
         
         <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            className="flex flex-col items-center"
-        >
-             <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div>
-        </motion.div>
+            initial={{ width: 0 }}
+            animate={{ width: 60 }}
+            transition={{ duration: 1, delay: 0.8 }}
+            className="h-1 bg-blue-600 mt-6 rounded-full"
+        />
       </div>
     </motion.div>
   );

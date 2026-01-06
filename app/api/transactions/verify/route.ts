@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import axios from 'axios';
@@ -49,9 +50,11 @@ export async function POST(req: Request) {
     }
 
     // 2. AUTO-DELIVERY LOGIC FOR DATA
+    // IDEMPOTENCY FIX: We use updateMany to atomically "claim" the processing right.
+    // We only proceed if deliveryData is NULL (meaning untouched).
     if (currentStatus === 'paid' && transaction.type === 'data') {
         
-        // Use updateMany for atomicity
+        // Try to lock the row. This returns { count: 1 } only if we won the race.
         const lockResult = await prisma.transaction.updateMany({
             where: { 
                 id: transaction.id,
@@ -66,6 +69,7 @@ export async function POST(req: Request) {
         });
 
         if (lockResult.count > 0) {
+            // WE WON THE LOCK. We are responsible for calling Amigo.
             const plan = transaction.dataPlan;
             if (plan) {
                 const networkId = AMIGO_NETWORKS[plan.network as any];
@@ -78,6 +82,8 @@ export async function POST(req: Request) {
 
                 try {
                     const amigoRes = await callAmigoAPI('/data/', amigoPayload, tx_ref);
+                    
+                    // Check strict success
                     const isSuccess = amigoRes.success && (
                         amigoRes.data.success === true || 
                         amigoRes.data.Status === 'successful' || 
@@ -95,6 +101,8 @@ export async function POST(req: Request) {
                         });
                         currentStatus = 'delivered';
                     } else {
+                        // Log failure but keep deliveryData populated so we don't auto-retry blindly
+                        // Admin can reset this if needed
                         await prisma.transaction.update({
                             where: { id: transaction.id },
                             data: {
@@ -110,7 +118,8 @@ export async function POST(req: Request) {
                 }
             }
         } else {
-            // Already processing or done
+            // LOCK FAILED. This means Webhook or another request is already handling it.
+            // Just return the latest status from DB.
             const fresh = await prisma.transaction.findUnique({ where: { id: transaction.id } });
             currentStatus = fresh?.status || currentStatus;
         }

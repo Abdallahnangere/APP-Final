@@ -1,46 +1,49 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Bell, Moon, Sun, Info, ShieldCheck, CheckCircle } from 'lucide-react';
+import { X, Bell, Moon, Sun, Info, ShieldCheck, CheckCircle, Volume2, Smartphone, LogIn } from 'lucide-react';
 import { toast } from '../lib/toast';
 import { cn } from '../lib/utils';
+import { playSound, triggerHaptic } from '../lib/sounds';
 
 interface SideMenuProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenLegal?: () => void;
+  onAgentLogin?: () => void;
 }
 
-export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal }) => {
-  const [notifications, setNotifications] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal, onAgentLogin }) => {
+  const [settings, setSettings] = useState({
+      notifications: true,
+      darkMode: false,
+      sounds: true,
+      haptics: true
+  });
 
   useEffect(() => {
-    // Sync dark mode with document
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      document.body.style.backgroundColor = '#0f172a';
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.body.style.backgroundColor = '#f8fafc';
-    }
-  }, [isDarkMode]);
+    const saved = localStorage.getItem('appSettings');
+    if (saved) setSettings(JSON.parse(saved));
+  }, []);
 
-  const toggleNotifications = () => {
-    setNotifications(!notifications);
-    toast.info(notifications ? "Notifications silenced" : "Notifications enabled");
-  };
-
-  const handleLegalClick = () => {
-    if (onOpenLegal) {
-        onOpenLegal();
-    }
+  const updateSetting = (key: keyof typeof settings, value: boolean) => {
+      const newSettings = { ...settings, [key]: value };
+      setSettings(newSettings);
+      localStorage.setItem('appSettings', JSON.stringify(newSettings));
+      
+      if (key === 'sounds' && value) playSound('success');
+      if (key === 'haptics' && value) triggerHaptic();
+      
+      if (key === 'darkMode') {
+          if (value) document.documentElement.classList.add('dark');
+          else document.documentElement.classList.remove('dark');
+      }
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -49,15 +52,13 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal
             className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-md"
           />
           
-          {/* Drawer */}
           <motion.div
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", stiffness: 350, damping: 35 }}
-            className="fixed top-0 left-0 bottom-0 w-[85%] max-w-sm bg-white dark:bg-slate-900 z-[70] shadow-2xl flex flex-col rounded-r-[3rem] overflow-hidden"
+            className="fixed top-0 left-0 bottom-0 w-[85%] max-w-sm bg-slate-50 dark:bg-slate-900 z-[70] shadow-2xl flex flex-col rounded-r-[3rem] overflow-hidden"
           >
-            {/* Header */}
             <div className="p-8 bg-slate-900 text-white relative">
               <button onClick={onClose} className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors">
                 <X className="w-6 h-6" />
@@ -75,77 +76,52 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal
               </div>
             </div>
 
-            {/* Menu Items */}
             <div className="flex-1 p-8 space-y-8 overflow-y-auto no-scrollbar">
                 <div>
-                    <h3 className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] mb-5">Personalization</h3>
+                    <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] mb-5">App Experience</h3>
                     
                     <div className="space-y-3">
-                        <button 
-                            onClick={toggleNotifications}
-                            className="w-full flex items-center justify-between p-4 rounded-[1.75rem] bg-slate-50 dark:bg-slate-800 transition-all active:scale-95 border border-slate-100 dark:border-slate-700 shadow-sm"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-inner", notifications ? "bg-blue-600 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-400")}>
-                                    <Bell className="w-5 h-5" />
-                                </div>
-                                <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">Broadcasts</span>
-                            </div>
-                            <div className={cn("w-12 h-6 rounded-full relative transition-colors", notifications ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-600")}>
-                                <motion.div 
-                                    animate={{ x: notifications ? 24 : 4 }}
-                                    className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-md"
-                                />
-                            </div>
-                        </button>
-
-                        <button 
-                            onClick={() => setIsDarkMode(!isDarkMode)}
-                            className="w-full flex items-center justify-between p-4 rounded-[1.75rem] bg-slate-50 dark:bg-slate-800 transition-all active:scale-95 border border-slate-100 dark:border-slate-700 shadow-sm"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-inner", isDarkMode ? "bg-indigo-600 text-white" : "bg-orange-400 text-white")}>
-                                    {isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-                                </div>
-                                <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{isDarkMode ? 'Night Mode' : 'Day Mode'}</span>
-                            </div>
-                            <div className={cn("w-12 h-6 rounded-full relative transition-colors", isDarkMode ? "bg-indigo-600" : "bg-slate-300 dark:bg-slate-600")}>
-                                <motion.div 
-                                    animate={{ x: isDarkMode ? 24 : 4 }}
-                                    className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-md"
-                                />
-                            </div>
-                        </button>
+                        <ToggleItem 
+                            icon={Bell} 
+                            label="Notifications" 
+                            isActive={settings.notifications} 
+                            onToggle={() => updateSetting('notifications', !settings.notifications)} 
+                        />
+                         <ToggleItem 
+                            icon={settings.darkMode ? Moon : Sun} 
+                            label="Dark Mode" 
+                            isActive={settings.darkMode} 
+                            onToggle={() => updateSetting('darkMode', !settings.darkMode)} 
+                            activeColor="bg-indigo-600"
+                        />
+                        <ToggleItem 
+                            icon={Volume2} 
+                            label="Sound FX" 
+                            isActive={settings.sounds} 
+                            onToggle={() => updateSetting('sounds', !settings.sounds)} 
+                            activeColor="bg-purple-600"
+                        />
+                         <ToggleItem 
+                            icon={Smartphone} 
+                            label="Haptic Feedback" 
+                            isActive={settings.haptics} 
+                            onToggle={() => updateSetting('haptics', !settings.haptics)} 
+                            activeColor="bg-blue-600"
+                        />
                     </div>
                 </div>
 
                 <div>
-                    <h3 className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] mb-5">Enterprise</h3>
+                    <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] mb-5">Enterprise</h3>
                     <div className="space-y-2">
-                        <button onClick={handleLegalClick} className="w-full flex items-center gap-4 p-4 rounded-[1.75rem] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left group">
-                            <div className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 transition-colors shadow-sm">
-                                <Info className="w-5 h-5 text-slate-600 dark:text-slate-300" />
-                            </div>
-                            <div>
-                                <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight block">Corporate Profile</span>
-                                <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Our Vision & Mission</span>
-                            </div>
-                        </button>
-                        <button onClick={handleLegalClick} className="w-full flex items-center gap-4 p-4 rounded-[1.75rem] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left group">
-                            <div className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 transition-colors shadow-sm">
-                                <ShieldCheck className="w-5 h-5 text-slate-600 dark:text-slate-300" />
-                            </div>
-                            <div>
-                                <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight block">Privacy & Security</span>
-                                <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">NDPA Compliance</span>
-                            </div>
-                        </button>
+                         <MenuItem icon={LogIn} label="Agent / Admin Login" subLabel="Partner Access" onClick={() => { onClose(); onAgentLogin?.(); }} />
+                        <MenuItem icon={Info} label="About Sauki Mart" subLabel="Our Vision" onClick={() => { onClose(); onOpenLegal?.(); }} />
+                        <MenuItem icon={ShieldCheck} label="Legal & Privacy" subLabel="Compliance" onClick={() => { onClose(); onOpenLegal?.(); }} />
                     </div>
                 </div>
             </div>
 
-            {/* Footer */}
-            <div className="p-10 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+            <div className="p-10 border-t border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/50">
                 <div className="flex flex-col items-center gap-4">
                     <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.3em]">Sauki Data Links</p>
                     <div className="flex gap-8 opacity-40 hover:opacity-100 transition-opacity duration-500">
@@ -160,3 +136,29 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal
     </AnimatePresence>
   );
 };
+
+const ToggleItem = ({ icon: Icon, label, isActive, onToggle, activeColor = "bg-blue-600" }: any) => (
+    <button onClick={onToggle} className="w-full flex items-center justify-between p-4 rounded-[1.75rem] bg-white border border-slate-100 shadow-sm active:scale-95 transition-all">
+        <div className="flex items-center gap-4">
+            <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-inner", isActive ? `${activeColor} text-white` : "bg-slate-100 text-slate-400")}>
+                <Icon className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-black text-slate-900 uppercase tracking-tight">{label}</span>
+        </div>
+        <div className={cn("w-12 h-7 rounded-full relative transition-colors p-1", isActive ? activeColor : "bg-slate-200")}>
+            <motion.div animate={{ x: isActive ? 20 : 0 }} className="w-5 h-5 bg-white rounded-full shadow-md" />
+        </div>
+    </button>
+);
+
+const MenuItem = ({ icon: Icon, label, subLabel, onClick }: any) => (
+    <button onClick={onClick} className="w-full flex items-center gap-4 p-4 rounded-[1.75rem] bg-white border border-slate-100 shadow-sm hover:bg-slate-50 transition-all text-left group active:scale-95">
+        <div className="w-11 h-11 rounded-2xl bg-slate-50 flex items-center justify-center group-hover:bg-blue-50 transition-colors shadow-inner">
+            <Icon className="w-5 h-5 text-slate-600" />
+        </div>
+        <div>
+            <span className="text-xs font-black text-slate-900 uppercase tracking-tight block">{label}</span>
+            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{subLabel}</span>
+        </div>
+    </button>
+);

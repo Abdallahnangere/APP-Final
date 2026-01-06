@@ -7,25 +7,30 @@ import { callAmigoAPI, AMIGO_NETWORKS } from '../../../../lib/amigo';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { agentId, pin, type, payload } = body;
+    const { agentId, pin, type, payload, useCashback } = body;
 
     // 1. Verify Agent & PIN
     const agent = await prisma.agent.findUnique({ where: { id: agentId } });
     if (!agent || agent.pin !== pin) {
         return NextResponse.json({ error: 'Invalid PIN Authorization' }, { status: 401 });
     }
+    if (!agent.isActive) return NextResponse.json({ error: 'Agent Account Suspended' }, { status: 403 });
 
     let amount = 0;
+    let cashbackEarned = 0;
     let description = '';
     let productDetails: any = {};
 
-    // 2. Calculate Amount & Details
+    // 2. Calculate Amount & Cashback Logic
     if (type === 'data') {
         const plan = await prisma.dataPlan.findUnique({ where: { id: payload.planId } });
         if (!plan) return NextResponse.json({ error: 'Invalid Plan' }, { status: 400 });
         amount = plan.price;
         description = `Data: ${plan.network} ${plan.data}`;
         productDetails = { planId: plan.id };
+        
+        // Earn 10% Cashback on Data Sales
+        cashbackEarned = amount * 0.10;
     } else if (type === 'ecommerce') {
         const product = await prisma.product.findUnique({ where: { id: payload.productId } });
         if (!product) return NextResponse.json({ error: 'Invalid Product' }, { status: 400 });
@@ -42,20 +47,31 @@ export async function POST(req: Request) {
         }
     }
 
-    // 3. Check Balance
-    if (agent.balance < amount) {
-        return NextResponse.json({ error: 'Insufficient Wallet Balance' }, { status: 402 });
+    // 3. Determine Payment Splits
+    let cashbackToDeduct = 0;
+    let mainBalanceToDeduct = amount;
+
+    if (useCashback && agent.cashbackBalance > 0) {
+        cashbackToDeduct = Math.min(agent.cashbackBalance, amount);
+        mainBalanceToDeduct = amount - cashbackToDeduct;
+    }
+
+    // 4. Check Main Balance
+    if (agent.balance < mainBalanceToDeduct) {
+        return NextResponse.json({ error: 'Insufficient Main Wallet Balance' }, { status: 402 });
     }
 
     const tx_ref = `AGENT-${type.toUpperCase()}-${Date.now()}`;
 
-    // 4. Debit Wallet & Create Transaction Record
-    // We use a transaction to ensure atomicity
+    // 5. Debit Wallet, Credit Cashback, Create Record
     const result = await prisma.$transaction(async (prisma) => {
         // Debit
         await prisma.agent.update({
             where: { id: agent.id },
-            data: { balance: { decrement: amount } }
+            data: { 
+                balance: { decrement: mainBalanceToDeduct },
+                cashbackBalance: { decrement: cashbackToDeduct, increment: cashbackEarned }
+            }
         });
 
         // Create Record
@@ -63,18 +79,20 @@ export async function POST(req: Request) {
             data: {
                 tx_ref,
                 type: type,
-                status: 'paid', // Initially paid, delivery check next
+                status: 'paid',
                 phone: payload.phone,
                 amount,
+                cashbackUsed: cashbackToDeduct,
+                cashbackEarned: cashbackEarned,
                 agentId: agent.id,
-                customerName: payload.name || agent.firstName, // Use customer name if provided (store), else agent
+                customerName: payload.name || agent.firstName,
                 deliveryState: payload.state || 'Agent Direct',
                 idempotencyKey: uuidv4(),
                 ...productDetails,
                 deliveryData: {
                     method: 'Agent Wallet',
                     manifest: description,
-                    agent_debit: amount
+                    payment_split: { wallet: mainBalanceToDeduct, cashback: cashbackToDeduct }
                 }
             }
         });
@@ -82,7 +100,7 @@ export async function POST(req: Request) {
         return transaction;
     });
 
-    // 5. Fulfillment (If Data)
+    // 6. Fulfillment (If Data)
     if (type === 'data') {
         const plan = await prisma.dataPlan.findUnique({ where: { id: payload.planId } });
         if (plan) {
@@ -95,7 +113,6 @@ export async function POST(req: Request) {
             };
 
             const amigoRes = await callAmigoAPI('/data/', amigoPayload, tx_ref);
-            
             const isSuccess = amigoRes.success && (
                 amigoRes.data.success === true || 
                 amigoRes.data.Status === 'successful' || 
@@ -103,11 +120,10 @@ export async function POST(req: Request) {
                 amigoRes.data.status === 'successful'
             );
 
-            // Update transaction status based on API result
             await prisma.transaction.update({
                 where: { id: result.id },
                 data: {
-                    status: isSuccess ? 'delivered' : 'failed', // Failed delivery but wallet debited? Typically requires refund logic or manual retry. Keeping simple as requested.
+                    status: isSuccess ? 'delivered' : 'failed', 
                     deliveryData: {
                         ...(result.deliveryData as object),
                         amigo_response: amigoRes.data,
@@ -115,16 +131,11 @@ export async function POST(req: Request) {
                     }
                 }
             });
-
-            // Auto-refund on failure could be added here, but staying simple:
-            // "if there is the amount, then debit it and call amigo to deliver data"
         }
     }
 
-    // Refresh final transaction state
     const finalTx = await prisma.transaction.findUnique({ where: { id: result.id }, include: { product: true, dataPlan: true } });
-
-    return NextResponse.json({ success: true, transaction: finalTx });
+    return NextResponse.json({ success: true, transaction: finalTx, earned: cashbackEarned });
 
   } catch (error: any) {
     console.error('Agent Purchase Error:', error);

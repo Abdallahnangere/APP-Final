@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import { callAmigoAPI, AMIGO_NETWORKS } from '../../../../lib/amigo';
+import { Prisma } from '@prisma/client';
 
 export async function POST(req: Request) {
   const secret = process.env.FLUTTERWAVE_WEBHOOK_SECRET;
@@ -16,8 +17,7 @@ export async function POST(req: Request) {
     
     // 1. DATA EXTRACTION
     const payload = body.data || body;
-    const eventType = body['event.type'] || body.event; // e.g., BANK_TRANSFER_TRANSACTION
-
+    
     // Log for debugging
     try {
         await prisma.webhookLog.create({
@@ -25,17 +25,10 @@ export async function POST(req: Request) {
         });
     } catch (e) { console.error("Logging failed", e); }
 
-    // 2. PARSING CRITICAL VARIABLES
     const status = (payload.status || '').toLowerCase();
     const amount = Number(payload.amount);
-    
-    // Webhook Phone (Crucial for identifying agent)
     const customerPhone = payload.customer?.phone_number || payload.phone_number;
-
-    // Webhook ID (Crucial for Uniqueness)
     const flwId = String(payload.id); 
-
-    // Incoming Reference
     const incomingRef = payload.txRef || payload.tx_ref || payload.reference;
 
     console.log(`[Webhook] ID: ${flwId} | Ref: ${incomingRef} | Phone: ${customerPhone} | Status: ${status}`);
@@ -48,34 +41,17 @@ export async function POST(req: Request) {
     }
 
     // ==========================================================
-    // CASE 1: AGENT WALLET FUNDING (Detected via Phone Number)
+    // CASE 1: AGENT WALLET FUNDING
     // ==========================================================
     if (customerPhone) {
-        // Find Agent by Phone
-        const agent = await prisma.agent.findUnique({
-            where: { phone: customerPhone }
-        });
+        const agent = await prisma.agent.findUnique({ where: { phone: customerPhone } });
 
         if (agent) {
-            console.log(`[Webhook] Found Agent: ${agent.firstName} (${agent.phone})`);
-
-            // IDEMPOTENCY CHECK
-            // We create a custom unique ref using the FLW ID to ensure we never credit the same transfer twice.
-            // Even if FLW sends "AGENT-REG-..." multiple times, the 'id' (1954048149) will differ for each actual transfer.
             const uniqueFundingRef = `FUND-${flwId}`;
+            const existingTx = await prisma.transaction.findUnique({ where: { tx_ref: uniqueFundingRef } });
 
-            const existingTx = await prisma.transaction.findUnique({
-                where: { tx_ref: uniqueFundingRef }
-            });
+            if (existingTx) return NextResponse.json({ received: true });
 
-            if (existingTx) {
-                console.log(`[Webhook] Duplicate funding prevented. Ref: ${uniqueFundingRef} already processed.`);
-                return NextResponse.json({ received: true });
-            }
-
-            console.log(`[Webhook] 🏦 Crediting Agent ${agent.phone} +${amount}`);
-
-            // ATOMIC UPDATE: Credit Balance + Record Transaction
             await prisma.$transaction([
                 prisma.agent.update({
                     where: { id: agent.id },
@@ -83,97 +59,108 @@ export async function POST(req: Request) {
                 }),
                 prisma.transaction.create({
                     data: {
-                        tx_ref: uniqueFundingRef,  // Use our safe unique ID
+                        tx_ref: uniqueFundingRef,
                         type: 'wallet_funding',
-                        status: 'delivered', // Delivered means money is in wallet
+                        status: 'delivered',
                         phone: agent.phone,
                         amount: amount,
                         agentId: agent.id,
                         paymentData: payload as any,
                         deliveryData: { 
                             method: 'Virtual Account Deposit', 
-                            original_flw_ref: incomingRef, // Keep the original AGENT-REG ref for records
-                            flw_id: flwId,
-                            sender: payload.customer?.name
+                            original_flw_ref: incomingRef,
+                            flw_id: flwId
                         }
                     }
                 })
             ]);
-
             return NextResponse.json({ received: true });
         }
     }
 
     // ==========================================================
-    // CASE 2: REGULAR E-COMMERCE / DATA (Identified by unique tx_ref)
+    // CASE 2: REGULAR E-COMMERCE / DATA
     // ==========================================================
-    // Only proceed if we have a valid unique reference that isn't the AGENT-REG one
     if (incomingRef && !incomingRef.startsWith('FUND-')) {
-        const transaction = await prisma.transaction.findUnique({ 
-            where: { tx_ref: incomingRef } 
-        });
+        const transaction = await prisma.transaction.findUnique({ where: { tx_ref: incomingRef } });
         
         if (transaction) {
-            if (transaction.status === 'delivered' || transaction.status === 'paid') {
-                return NextResponse.json({ received: true });
+            // Mark as Paid if not already
+            if (transaction.status !== 'delivered' && transaction.status !== 'paid') {
+                await prisma.transaction.update({
+                    where: { id: transaction.id },
+                    data: { status: 'paid', paymentData: payload as any }
+                });
             }
 
-            await prisma.transaction.update({
-                where: { id: transaction.id },
-                data: { 
-                    status: 'paid',
-                    paymentData: payload as any
-                }
-            });
-
-            // Auto-Fulfillment for Data Plans
+            // IDEMPOTENCY / LOCKING LOGIC FOR DATA
             if (transaction.type === 'data' && transaction.planId) {
-                const plan = await prisma.dataPlan.findUnique({ where: { id: transaction.planId } });
                 
-                if (plan) {
-                    const networkId = AMIGO_NETWORKS[plan.network];
-                    const amigoPayload = {
-                        network: networkId,
-                        mobile_number: transaction.phone,
-                        plan: Number(plan.planId),
-                        Ported_number: true
-                    };
-
-                    const amigoRes = await callAmigoAPI('/data/', amigoPayload, incomingRef);
-                    
-                    const isAmigoSuccess = amigoRes.success && (
-                        amigoRes.data.success === true || 
-                        amigoRes.data.Status === 'successful' ||
-                        amigoRes.data.status === 'delivered' ||
-                        amigoRes.data.status === 'successful'
-                    );
-
-                    if (isAmigoSuccess) {
-                        await prisma.transaction.update({
-                            where: { id: transaction.id },
-                            data: { 
-                                status: 'delivered', 
-                                deliveryData: amigoRes.data 
-                            }
-                        });
-                    } else {
-                        await prisma.transaction.update({
-                            where: { id: transaction.id },
-                            data: {
-                                deliveryData: { error: 'Auto-delivery failed', response: amigoRes.data }
-                            }
-                        });
+                // Attempt to acquire lock. 
+                // This ensures if User clicked "Verify" at the same time, only one wins.
+                const lockResult = await prisma.transaction.updateMany({
+                    where: { 
+                        id: transaction.id,
+                        OR: [
+                            { deliveryData: { equals: Prisma.DbNull } },
+                            { deliveryData: { equals: Prisma.JsonNull } }
+                        ]
+                    },
+                    data: { 
+                        deliveryData: { status: 'processing', source: 'webhook' } 
                     }
+                });
+
+                if (lockResult.count > 0) {
+                    // WE WON THE LOCK. CALL AMIGO.
+                    const plan = await prisma.dataPlan.findUnique({ where: { id: transaction.planId } });
+                    
+                    if (plan) {
+                        const networkId = AMIGO_NETWORKS[plan.network];
+                        const amigoPayload = {
+                            network: networkId,
+                            mobile_number: transaction.phone,
+                            plan: Number(plan.planId),
+                            Ported_number: true
+                        };
+
+                        const amigoRes = await callAmigoAPI('/data/', amigoPayload, incomingRef);
+                        
+                        const isAmigoSuccess = amigoRes.success && (
+                            amigoRes.data.success === true || 
+                            amigoRes.data.Status === 'successful' ||
+                            amigoRes.data.status === 'delivered' ||
+                            amigoRes.data.status === 'successful'
+                        );
+
+                        if (isAmigoSuccess) {
+                            await prisma.transaction.update({
+                                where: { id: transaction.id },
+                                data: { 
+                                    status: 'delivered', 
+                                    deliveryData: amigoRes.data 
+                                }
+                            });
+                        } else {
+                            await prisma.transaction.update({
+                                where: { id: transaction.id },
+                                data: {
+                                    deliveryData: { error: 'Auto-delivery failed', response: amigoRes.data }
+                                }
+                            });
+                        }
+                    }
+                } else {
+                    console.log(`[Webhook] Skipped delivery for ${incomingRef} - already processing/delivered.`);
                 }
             }
-            return NextResponse.json({ received: true });
         }
     }
 
     return NextResponse.json({ received: true });
 
   } catch (error) {
-      console.error('[Webhook] 🔥 Critical Error', error);
+      console.error('[Webhook] Error', error);
       return NextResponse.json({ error: 'Internal Error' }, { status: 200 });
   }
 }

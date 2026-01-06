@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 
@@ -14,7 +13,7 @@ export async function GET(req: Request) {
     const agent = await prisma.agent.findUnique({ where: { id: agentId } });
     if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
 
-    return NextResponse.json({ balance: agent.balance });
+    return NextResponse.json({ balance: agent.balance, cashbackBalance: agent.cashbackBalance });
   } catch (error) {
     return NextResponse.json({ error: 'Error fetching balance' }, { status: 500 });
   }

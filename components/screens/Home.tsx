@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Smartphone, Wifi, Phone, Mail, Headphones, MessageCircle, Shield, Bell, Menu, CheckCircle, Users } from 'lucide-react';
+import { Smartphone, Wifi, Phone, FileText, MessageCircle, Bell, Menu, CheckCircle, Users, ArrowRight } from 'lucide-react';
 import { BottomSheet } from '../ui/BottomSheet';
 import { LegalDocs } from './LegalDocs';
 import { SideMenu } from '../SideMenu';
@@ -13,7 +13,7 @@ interface HomeProps {
 export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'contact' | 'legal'>('contact');
+  const [activeTab, setActiveTab] = useState<'contact' | 'docs'>('contact');
   const [systemMessage, setSystemMessage] = useState<{ content: string; type: string } | null>(null);
 
   useEffect(() => {
@@ -26,197 +26,173 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen bg-white relative overflow-hidden">
-      <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onOpenLegal={() => { setIsMenuOpen(false); setIsSupportOpen(true); setActiveTab('legal'); }} />
+    <div className="flex flex-col h-screen max-h-screen bg-slate-50 relative overflow-hidden font-sans">
+      <SideMenu 
+        isOpen={isMenuOpen} 
+        onClose={() => setIsMenuOpen(false)} 
+        onOpenLegal={() => { setIsMenuOpen(false); setIsSupportOpen(true); setActiveTab('docs'); }} 
+        onAgentLogin={() => { setIsMenuOpen(false); onNavigate('agent'); }}
+      />
       
-      {/* Header Section */}
-      <header className="flex justify-between items-center px-6 pt-6 pb-2">
-        <div className="flex items-center gap-4">
-             <button onClick={() => setIsMenuOpen(true)} className="p-3 -ml-2 text-slate-800 hover:bg-slate-50 rounded-full transition-colors">
-                 <Menu className="w-8 h-8" />
-             </button>
-             <div>
-                <h1 className="text-2xl font-black tracking-tighter text-slate-900 leading-none uppercase">SAUKI MART</h1>
-                <div className="flex flex-col mt-1.5">
-                   <p className="text-slate-400 text-[10px] font-black tracking-[0.2em] uppercase">Premium Services Hub</p>
-                   <p className="text-green-600 text-[11px] font-black flex items-center gap-1.5 mt-0.5">
-                     Government Certified by SMEDAN <CheckCircle className="w-3.5 h-3.5 fill-green-600 text-white" />
-                   </p>
-                </div>
-             </div>
-        </div>
-        <div className="w-16 h-16 bg-white rounded-3xl shadow-2xl shadow-slate-200 border border-slate-50 flex items-center justify-center p-2.5 transition-all hover:scale-105 active:scale-95">
-            <img src="/logo.png" alt="Sauki" className="w-full h-full object-contain" />
-        </div>
+      {/* Header - Compact */}
+      <header className="px-6 pt-safe top-0 z-20 flex justify-between items-end bg-transparent mt-6 mb-2 shrink-0">
+         <div>
+            <h1 className="text-2xl font-black tracking-tighter text-slate-900 leading-none">SAUKI MART</h1>
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Premium Hub</p>
+         </div>
+         <button onClick={() => setIsMenuOpen(true)} className="p-2 bg-white rounded-full shadow-sm active:scale-95 transition-transform border border-slate-100">
+             <Menu className="w-5 h-5 text-slate-900" />
+         </button>
       </header>
 
-      <div className="flex-1 flex flex-col px-6 justify-between pt-2 pb-6">
-          <div className="space-y-4">
-            {/* System Broadcast - Marquee Animation */}
+      {/* Main Content - Flex Column to fill space without scroll */}
+      <div className="flex-1 flex flex-col px-5 pb-28 space-y-3 min-h-0">
+            
+            {/* System Broadcast */}
             {systemMessage && (
-                <div className={`overflow-hidden rounded-2xl border h-10 flex items-center shadow-sm ${
-                    systemMessage.type === 'alert' ? 'bg-red-50 border-red-100 text-red-800' :
-                    systemMessage.type === 'warning' ? 'bg-orange-50 border-orange-100 text-orange-800' :
-                    'bg-blue-50 border-blue-100 text-blue-800'
+                <div className={`overflow-hidden rounded-xl p-2.5 flex items-center shadow-sm relative shrink-0 ${
+                    systemMessage.type === 'alert' ? 'bg-red-50 text-red-900' :
+                    systemMessage.type === 'warning' ? 'bg-amber-50 text-amber-900' :
+                    'bg-blue-50 text-blue-900'
                 }`}>
-                    <div className="px-3 bg-inherit z-10 shrink-0 border-r border-current/10 h-full flex items-center">
-                        <Bell className="w-4 h-4" />
-                    </div>
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-current opacity-20"></div>
+                    <Bell className="w-4 h-4 mr-3 opacity-70 shrink-0" />
                     <motion.div 
                         initial={{ x: "100%" }}
                         animate={{ x: "-100%" }}
-                        transition={{ repeat: Infinity, duration: 22, ease: "linear" }}
-                        className="whitespace-nowrap font-black uppercase text-[10px] tracking-tight pl-4"
+                        transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
+                        className="whitespace-nowrap font-bold text-[10px] uppercase tracking-wide"
                     >
-                        {systemMessage.content} • {systemMessage.content} • {systemMessage.content}
+                        {systemMessage.content} &nbsp; • &nbsp; {systemMessage.content}
                     </motion.div>
                 </div>
             )}
 
-            {/* Action Grid - 2x2 Layout */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Certification Badge */}
+            <div className="flex justify-center shrink-0">
+                <div className="flex items-center gap-1.5 bg-white px-3 py-1 rounded-full w-fit shadow-sm border border-slate-100">
+                    <CheckCircle className="w-3 h-3 text-green-500 fill-green-100" />
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">SMEDAN Certified</span>
+                </div>
+            </div>
+
+            {/* Action Grid - Flex Grow to fill remaining space */}
+            <div className="flex-1 grid grid-cols-2 grid-rows-3 gap-3 min-h-0">
+              
+              {/* Row 1: Store & Data */}
               <motion.div
-                whileTap={{ scale: 0.97 }}
+                whileTap={{ scale: 0.96 }}
                 onClick={() => onNavigate('store')}
-                className="col-span-1 bg-gradient-to-br from-slate-900 via-slate-800 to-black text-white rounded-[2.5rem] p-6 shadow-2xl shadow-slate-300 cursor-pointer relative overflow-hidden group border border-white/10 min-h-[145px] flex flex-col justify-end"
+                className="col-span-1 row-span-1 bg-white rounded-[1.5rem] p-4 shadow-sm border border-slate-100 relative overflow-hidden flex flex-col justify-between group"
               >
-                <div className="absolute -top-4 -right-4 p-4 opacity-15 group-hover:opacity-25 transition-all transform group-hover:scale-110">
-                  <Smartphone size={80} />
+                <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-md">
+                    <Smartphone className="w-4 h-4" />
                 </div>
                 <div className="relative z-10">
-                  <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center mb-3 backdrop-blur-2xl border border-white/10 shadow-inner">
-                      <Smartphone className="w-5 h-5 text-white" />
-                  </div>
-                  <h3 className="text-xl font-black leading-none tracking-tighter uppercase">Gadget<br/>Store</h3>
+                   <h3 className="text-lg font-black leading-none tracking-tighter text-slate-900 mb-1">GADGET<br/>STORE</h3>
+                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">Shop <ArrowRight className="w-2 h-2" /></p>
                 </div>
+                <Smartphone className="absolute -right-3 -bottom-3 w-20 h-20 text-slate-50 opacity-80 rotate-12 group-hover:scale-110 transition-transform" />
               </motion.div>
 
+              <motion.div
+                whileTap={{ scale: 0.96 }}
+                onClick={() => onNavigate('data')}
+                className="col-span-1 row-span-1 bg-slate-900 rounded-[1.5rem] p-4 shadow-sm relative overflow-hidden flex flex-col justify-between group"
+              >
+                <div className="w-9 h-9 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center text-white border border-white/10">
+                    <Wifi className="w-4 h-4" />
+                </div>
+                <div className="relative z-10">
+                   <h3 className="text-lg font-black leading-none tracking-tighter text-white mb-1">INSTANT<br/>DATA</h3>
+                   <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1">Topup <ArrowRight className="w-2 h-2" /></p>
+                </div>
+                <Wifi className="absolute -right-3 -bottom-3 w-20 h-20 text-white opacity-5 rotate-12 group-hover:scale-110 transition-transform" />
+              </motion.div>
+
+              {/* Row 2: Agent Hub */}
               <motion.div
                 whileTap={{ scale: 0.97 }}
                 onClick={() => onNavigate('agent')}
-                className="col-span-1 bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-[2.5rem] p-6 shadow-2xl shadow-purple-100 cursor-pointer relative overflow-hidden group min-h-[145px] flex flex-col justify-end"
+                className="col-span-2 row-span-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-[1.5rem] p-5 shadow-md relative overflow-hidden flex items-center justify-between group"
               >
-                 <div className="absolute -top-4 -right-4 p-4 opacity-15 group-hover:opacity-25 transition-all transform group-hover:scale-110">
-                  <Users size={80} />
-                </div>
-                <div className="relative z-10">
-                   <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center mb-3 backdrop-blur-md border border-white/10">
-                      <Users className="w-5 h-5 text-white" />
-                   </div>
-                  <h3 className="text-xl font-black leading-none tracking-tighter uppercase">Agent<br/>Hub</h3>
-                </div>
+                 <div className="relative z-10 flex flex-col justify-center h-full">
+                    <div className="px-2 py-0.5 bg-white/20 backdrop-blur rounded text-[8px] font-black uppercase text-white tracking-widest w-fit mb-1">Partner</div>
+                    <h3 className="text-2xl font-black tracking-tighter text-white">AGENT HUB</h3>
+                    <p className="text-indigo-100 text-[10px] font-medium leading-none mt-1">Manage wallet & earnings.</p>
+                 </div>
+                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                     <Users className="w-6 h-6 text-purple-600" />
+                 </div>
               </motion.div>
 
-              <motion.div
-                whileTap={{ scale: 0.97 }}
-                onClick={() => onNavigate('data')}
-                className="col-span-1 bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-[2.5rem] p-6 shadow-2xl shadow-blue-100 cursor-pointer relative overflow-hidden group min-h-[145px] flex flex-col justify-end"
-              >
-                 <div className="absolute -top-4 -right-4 p-4 opacity-15 group-hover:opacity-25 transition-all transform group-hover:scale-110">
-                  <Wifi size={80} />
-                </div>
-                <div className="relative z-10">
-                   <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center mb-3 backdrop-blur-md border border-white/10">
-                      <Wifi className="w-5 h-5 text-white" />
-                   </div>
-                  <h3 className="text-xl font-black leading-none tracking-tighter uppercase">Instant<br/>Data</h3>
-                </div>
-              </motion.div>
-
+              {/* Row 3: Contact & Docs */}
               <motion.div
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setIsSupportOpen(true)}
-                className="col-span-1 bg-slate-50 text-slate-900 rounded-[2.5rem] p-6 shadow-xl shadow-slate-100 border border-slate-100 cursor-pointer relative overflow-hidden group min-h-[145px] flex flex-col justify-end"
+                className="col-span-2 row-span-1 bg-white rounded-[1.5rem] p-5 shadow-sm border border-slate-100 flex items-center gap-4 relative overflow-hidden"
               >
-                 <div className="absolute -top-4 -right-4 p-4 opacity-10 group-hover:opacity-20 transition-all transform group-hover:scale-110">
-                  <Headphones size={80} />
-                </div>
-                <div className="relative z-10">
-                   <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center mb-3 border border-slate-100 shadow-sm">
-                      <Headphones className="w-5 h-5 text-slate-800" />
-                   </div>
-                  <h3 className="text-xl font-black leading-none tracking-tighter uppercase text-slate-900">Support<br/>& Legal</h3>
-                </div>
+                  <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                      <FileText className="w-6 h-6" />
+                  </div>
+                  <div>
+                      <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Contact & Docs</h3>
+                      <p className="text-slate-400 text-[9px] font-bold uppercase tracking-widest">Support • Legal • FAQ</p>
+                  </div>
+                  <ArrowRight className="ml-auto w-5 h-5 text-slate-300" />
               </motion.div>
             </div>
-          </div>
 
-          <div className="flex-1 flex flex-col justify-center items-center py-2">
-            <div className="flex flex-col items-center gap-4">
-                <div className="flex items-center justify-center gap-12">
-                    <img src="/smedan.png" alt="SMEDAN" className="h-10 w-auto object-contain grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-500" />
-                    <img src="/coat.png" alt="Nigeria" className="h-10 w-auto object-contain grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-500" />
-                </div>
-                 <div className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-black text-center opacity-80 leading-relaxed">
-                    Subsidiary of Sauki Data Links<br/>SMEDAN Certified SME
-                 </div>
+            {/* Footer Logos - Compact */}
+            <div className="flex justify-center gap-6 opacity-30 grayscale pt-2 shrink-0">
+                <img src="/smedan.png" className="h-6 w-auto object-contain" />
+                <img src="/coat.png" className="h-6 w-auto object-contain" />
             </div>
-          </div>
       </div>
 
-      <BottomSheet isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} title="Corporate Concierge">
-          <div className="flex bg-slate-100 rounded-2xl p-1 mb-6">
+      <BottomSheet isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} title="Resources">
+          <div className="bg-slate-100 p-1.5 rounded-2xl flex mb-8">
               <button 
                 onClick={() => setActiveTab('contact')}
-                className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'contact' ? 'bg-white shadow-xl text-slate-900' : 'text-slate-50'}`}
+                className={`flex-1 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wide transition-all ${activeTab === 'contact' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
               >
                   Contact Hub
               </button>
               <button 
-                onClick={() => setActiveTab('legal')}
-                className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'legal' ? 'bg-white shadow-xl text-slate-900' : 'text-slate-500'}`}
+                onClick={() => setActiveTab('docs')}
+                className={`flex-1 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wide transition-all ${activeTab === 'docs' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
               >
-                  Legal Portal
+                  Documents
               </button>
           </div>
 
           {activeTab === 'contact' ? (
               <div className="space-y-4">
-                  <div className="grid gap-3">
-                      <div className="flex items-center p-5 rounded-[2rem] bg-slate-50 border border-slate-100 justify-between shadow-sm group">
-                          <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 shadow-inner group-hover:scale-110 transition-transform">
-                                  <MessageCircle className="w-6 h-6" />
-                              </div>
-                              <div>
-                                  <p className="text-[9px] text-slate-500 font-black uppercase tracking-wider">Help Desk I</p>
-                                  <p className="font-black text-slate-900 text-xl tracking-tighter">08061934056</p>
-                              </div>
-                          </div>
-                          <div className="flex gap-2">
-                             <a href="tel:+2348061934056" className="w-12 h-12 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-700 hover:bg-slate-100 transition-all"><Phone className="w-5 h-5" /></a>
-                             <a href="https://wa.me/2348061934056" className="w-12 h-12 flex items-center justify-center bg-green-500 border-green-600 border rounded-full text-white hover:bg-green-600 shadow-2xl shadow-green-100 transition-all"><MessageCircle className="w-5 h-5" /></a>
-                          </div>
-                      </div>
-
-                      <div className="flex items-center p-5 rounded-[2rem] bg-slate-50 border border-slate-100 justify-between shadow-sm group">
-                          <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 shadow-inner group-hover:scale-110 transition-transform">
-                                  <MessageCircle className="w-6 h-6" />
-                              </div>
-                              <div>
-                                  <p className="text-[9px] text-slate-500 font-black uppercase tracking-wider">Help Desk II</p>
-                                  <p className="font-black text-slate-900 text-xl tracking-tighter">07044647081</p>
-                              </div>
-                          </div>
-                          <div className="flex gap-2">
-                             <a href="tel:+2347044647081" className="w-12 h-12 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-700 hover:bg-slate-100 transition-all"><Phone className="w-5 h-5" /></a>
-                             <a href="https://wa.me/2347044647081" className="w-12 h-12 flex items-center justify-center bg-green-500 border-green-600 border rounded-full text-white hover:bg-green-600 shadow-2xl shadow-green-100 transition-all"><MessageCircle className="w-5 h-5" /></a>
-                          </div>
-                      </div>
-
-                      <a href="mailto:saukidatalinks@gmail.com" className="flex items-center p-6 rounded-[2rem] bg-slate-50 hover:bg-slate-100 transition-all border border-slate-100 justify-between shadow-sm group">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-600 shadow-inner group-hover:rotate-6 transition-transform">
-                                <Mail className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <p className="text-[9px] text-slate-500 font-black uppercase tracking-wider">Corporate Email</p>
-                                <p className="font-black text-slate-900 text-sm tracking-tight uppercase">saukidatalinks@gmail.com</p>
-                            </div>
-                          </div>
-                      </a>
-                  </div>
+                  <ContactItem 
+                    icon={Phone} 
+                    label="Customer Line 1" 
+                    value="08061934056" 
+                    action={() => window.open('tel:08061934056')} 
+                  />
+                  <ContactItem 
+                    icon={Phone} 
+                    label="Customer Line 2" 
+                    value="07044647081" 
+                    action={() => window.open('tel:07044647081')} 
+                  />
+                  <ContactItem 
+                    icon={MessageCircle} 
+                    label="WhatsApp Support" 
+                    value="Chat Now" 
+                    action={() => window.open('https://wa.me/2348061934056')} 
+                    highlight
+                  />
+                  <ContactItem 
+                    icon={FileText} 
+                    label="Corporate Email" 
+                    value="saukidatalinks@gmail.com" 
+                    action={() => window.open('mailto:saukidatalinks@gmail.com')} 
+                  />
               </div>
           ) : (
               <LegalDocs />
@@ -225,3 +201,23 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
     </div>
   );
 };
+
+const ContactItem = ({ icon: Icon, label, value, action, highlight }: any) => (
+    <button 
+        onClick={action}
+        className={`w-full flex items-center justify-between p-5 rounded-2xl border transition-all active:scale-95 ${highlight ? 'bg-green-50 border-green-100' : 'bg-white border-slate-100'}`}
+    >
+        <div className="flex items-center gap-4">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${highlight ? 'bg-green-500 text-white shadow-lg shadow-green-200' : 'bg-slate-50 text-slate-600'}`}>
+                <Icon className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+                <p className={`text-[10px] font-bold uppercase tracking-widest ${highlight ? 'text-green-600' : 'text-slate-400'}`}>{label}</p>
+                <p className={`text-lg font-bold ${highlight ? 'text-green-900' : 'text-slate-900'} tracking-tight`}>{value}</p>
+            </div>
+        </div>
+        <div className={`p-2 rounded-full ${highlight ? 'bg-white text-green-600' : 'bg-slate-50 text-slate-400'}`}>
+            <ArrowRight className="w-4 h-4" />
+        </div>
+    </button>
+);
