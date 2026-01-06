@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { cn, formatCurrency } from '../../lib/utils';
-import { Loader2, Upload, Lock, Trash2, Edit2, Send, Download, Search, Package, Wifi, LayoutDashboard, LogOut, Terminal, Play, RotateCcw, Megaphone, CreditCard, Activity, TrendingUp, CheckCircle, Smartphone, MapPin, List, Calculator, Users, Wallet } from 'lucide-react';
+import { Loader2, Upload, Lock, Trash2, Edit2, Send, Download, Search, Package, Wifi, LayoutDashboard, LogOut, Terminal, Play, RotateCcw, Megaphone, CreditCard, Activity, TrendingUp, CheckCircle, Smartphone, MapPin, List, Calculator, Users, Wallet, FileJson } from 'lucide-react';
 import { DataPlan, Product, Transaction, Agent } from '../../types';
 import { SharedReceipt } from '../../components/SharedReceipt';
 import { toPng } from 'html-to-image';
@@ -11,7 +11,7 @@ import { toPng } from 'html-to-image';
 export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [view, setView] = useState<'dashboard' | 'products' | 'plans' | 'orders' | 'transactions' | 'calculator' | 'agents' | 'manual' | 'console' | 'broadcast' | 'flw_console'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'products' | 'plans' | 'orders' | 'transactions' | 'calculator' | 'agents' | 'manual' | 'console' | 'broadcast' | 'flw_console' | 'webhooks'>('dashboard');
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -19,9 +19,10 @@ export default function AdminPage() {
   const [plans, setPlans] = useState<DataPlan[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
-  // New States for Calculator and Agents
+  // New States
   const [salesReport, setSalesReport] = useState<any[]>([]);
   const [agents, setAgents] = useState<(Agent & { _count: { transactions: number } })[]>([]);
+  const [webhookLogs, setWebhookLogs] = useState<any[]>([]);
 
   const [productForm, setProductForm] = useState<Partial<Product>>({ name: '', description: '', price: 0, image: '', category: 'device' });
   const [planForm, setPlanForm] = useState<Partial<DataPlan>>({ network: 'MTN', data: '', validity: '30 Days', price: 0, planId: 0 });
@@ -92,9 +93,24 @@ export default function AdminPage() {
       finally { setLoading(false); }
   };
 
+  const fetchWebhooks = async () => {
+      setLoading(true);
+      try {
+          const res = await fetch('/api/admin/webhooks', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ password })
+          });
+          const data = await res.json();
+          if (data.logs) setWebhookLogs(data.logs);
+      } catch (e) { alert("Webhook Error"); }
+      finally { setLoading(false); }
+  };
+
   useEffect(() => {
       if (view === 'calculator') fetchCalculator();
       if (view === 'agents') fetchAgents();
+      if (view === 'webhooks') fetchWebhooks();
   }, [view]);
 
   const checkAuth = async () => {
@@ -336,6 +352,7 @@ export default function AdminPage() {
             <nav className="flex-1 p-6 space-y-1.5 overflow-y-auto no-scrollbar">
                 {[
                     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+                    { id: 'webhooks', label: 'Webhook Logs', icon: FileJson },
                     { id: 'calculator', label: 'Financial Calc', icon: Calculator },
                     { id: 'agents', label: 'Agent Wallet', icon: Users },
                     { id: 'orders', label: 'Store Orders', icon: Package },
@@ -391,6 +408,45 @@ export default function AdminPage() {
                                 <p className="text-2xl font-black text-slate-900 tracking-tighter">{stat.value}</p>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Webhook Logs */}
+            {view === 'webhooks' && (
+                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <div>
+                            <h3 className="font-black text-lg uppercase tracking-tight">Flutterwave Webhook Logs</h3>
+                            <p className="text-[10px] text-slate-400 uppercase tracking-widest">Latest 20 Inbound Events • Auto-Rotating Buffer</p>
+                        </div>
+                        <button onClick={fetchWebhooks} className="bg-slate-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800"><RotateCcw className="w-4 h-4" /></button>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                        {webhookLogs.length === 0 ? (
+                            <div className="p-10 text-center text-slate-400 text-xs font-black uppercase tracking-widest">No logs captured yet</div>
+                        ) : (
+                            webhookLogs.map((log) => (
+                                <div key={log.id} className="p-6 hover:bg-slate-50 transition-colors">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center border border-green-100">
+                                                <Activity className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date(log.createdAt).toLocaleString()}</p>
+                                                <p className="font-black text-slate-900 text-xs uppercase">{log.source}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-900 rounded-xl p-4 overflow-x-auto">
+                                        <pre className="text-[10px] font-mono text-green-400 leading-relaxed">
+                                            {JSON.stringify(log.payload, null, 2)}
+                                        </pre>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             )}
@@ -733,7 +789,7 @@ export default function AdminPage() {
                     </div>
                     <div className="bg-slate-900 rounded-[3rem] p-10 flex flex-col relative overflow-hidden shadow-2xl">
                         <h3 className="text-white font-black text-xl mb-10 uppercase tracking-tighter relative z-10 flex items-center gap-4">
-                            <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.6)]"></div> Server Response
+                            <div className="w-3 h-3 rounded-full bg-green-50 animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.6)]"></div> Server Response
                         </h3>
                         <div className="flex-1 overflow-y-auto space-y-6 no-scrollbar relative z-10 font-mono text-xs">
                             {(view === 'console' ? consoleHistory : flwHistory).map((h, i) => (
