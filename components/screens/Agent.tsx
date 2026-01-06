@@ -1,16 +1,18 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Lock, Phone, Wallet, RefreshCw, CheckCircle, ArrowRight, UserPlus, ShieldCheck, ShoppingBag, Wifi, Loader2, Copy } from 'lucide-react';
+import { Users, Lock, Phone, Wallet, RefreshCw, CheckCircle, ArrowRight, UserPlus, ShieldCheck, ShoppingBag, Wifi, Loader2, Copy, History, Download, ChevronRight } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { api } from '../../lib/api';
-import { Agent, DataPlan, Product } from '../../types';
+import { Agent, DataPlan, Product, Transaction } from '../../types';
 import { formatCurrency, cn } from '../../lib/utils';
 import { toast } from '../../lib/toast';
 import { BottomSheet } from '../ui/BottomSheet';
 import { Store } from './Store';
 import { Data } from './Data';
+import { toPng } from 'html-to-image';
+import { SharedReceipt } from '../SharedReceipt';
 
 interface AgentHubProps {
     onBack?: () => void;
@@ -21,6 +23,12 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
   const [agent, setAgent] = useState<Agent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // History State
+  const [history, setHistory] = useState<Transaction[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [receiptTx, setReceiptTx] = useState<Transaction | null>(null);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   // Form states
   const [loginForm, setLoginForm] = useState({ phone: '', pin: '' });
@@ -31,6 +39,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
     // Polling set to 15 seconds
     let interval: any;
     if (view === 'dashboard' && agent) {
+      fetchHistory();
       interval = setInterval(() => {
         refreshBalance(true);
       }, 15000);
@@ -45,11 +54,21 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
       const res = await api.agentGetBalance(agent.id);
       setAgent(prev => prev ? { ...prev, balance: res.balance } : null);
       if (!silent) toast.success("Balance updated");
+      // Also background refresh history
+      fetchHistory();
     } catch (e) {
       if (!silent) toast.error("Refresh failed");
     } finally {
       if (!silent) setIsRefreshing(false);
     }
+  };
+
+  const fetchHistory = async () => {
+      if(!agent) return;
+      try {
+          const res = await fetch(`/api/agent/transactions?agentId=${agent.id}`).then(r => r.json());
+          if(res.transactions) setHistory(res.transactions);
+      } catch(e) {}
   };
 
   const handleLogin = async () => {
@@ -89,8 +108,46 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
       setView('login');
   };
 
+  const generateReceipt = async (tx: Transaction) => {
+      setReceiptTx(tx);
+      setTimeout(async () => {
+          if (receiptRef.current) {
+              try {
+                  const dataUrl = await toPng(receiptRef.current, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff' });
+                  const link = document.createElement('a');
+                  link.download = `SAUKI-RECEIPT-${tx.tx_ref}.png`;
+                  link.href = dataUrl;
+                  link.click();
+                  toast.success("Receipt downloaded");
+              } catch (err) {
+                  toast.error("Failed to generate receipt");
+              }
+              setReceiptTx(null);
+          }
+      }, 800);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
+      
+      {/* Hidden Receipt Component */}
+      {receiptTx && (
+        <SharedReceipt 
+            ref={receiptRef}
+            transaction={{
+                tx_ref: receiptTx.tx_ref,
+                amount: receiptTx.amount,
+                date: new Date(receiptTx.createdAt).toLocaleString(),
+                type: receiptTx.type === 'wallet_funding' ? 'Wallet Credit' : receiptTx.type === 'data' ? 'Data Bundle' : 'Purchase',
+                description: receiptTx.type === 'wallet_funding' ? 'Wallet Deposit via Bank Transfer' : receiptTx.dataPlan ? `${receiptTx.dataPlan.network} ${receiptTx.dataPlan.data}` : receiptTx.product?.name || 'Item',
+                status: receiptTx.status,
+                customerPhone: receiptTx.phone,
+                customerName: receiptTx.customerName || agent?.firstName,
+                deliveryAddress: receiptTx.deliveryState || (receiptTx.deliveryData as any)?.address
+            }}
+        />
+      )}
+
       <AnimatePresence mode="wait">
         {view === 'login' && (
           <motion.div 
@@ -315,14 +372,69 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                     <span className="text-[11px] font-black uppercase tracking-widest">Resell Gadgets</span>
                   </motion.button>
                </div>
-
+               
+               {/* History Section */}
                <div className="bg-slate-100 p-6 rounded-[2rem] border border-slate-200/50">
-                  <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Service Notice</h5>
-                  <p className="text-[11px] text-slate-600 font-medium leading-relaxed italic">
-                    Agent transactions are instantaneous. Ensure you collect end-user payment before clicking purchase. Sauki Mart is not liable for wrong phone number entries.
-                  </p>
+                   <div className="flex items-center justify-between mb-4">
+                       <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Recent Activity</h5>
+                       <button onClick={() => setShowHistory(true)} className="text-[10px] font-black uppercase text-purple-600 flex items-center gap-1">View All <ChevronRight className="w-3 h-3" /></button>
+                   </div>
+                   
+                   <div className="space-y-3">
+                       {history.slice(0, 3).map(tx => (
+                           <div key={tx.id} className="bg-white p-4 rounded-xl flex items-center justify-between shadow-sm">
+                               <div className="flex items-center gap-3">
+                                   <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", tx.type === 'wallet_funding' ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600")}>
+                                       {tx.type === 'wallet_funding' ? <Wallet className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                                   </div>
+                                   <div>
+                                       <p className="text-[10px] font-black uppercase text-slate-900">{tx.type === 'wallet_funding' ? 'Wallet Credit' : 'Sales Order'}</p>
+                                       <p className="text-[9px] font-bold text-slate-400">{new Date(tx.createdAt).toLocaleDateString()}</p>
+                                   </div>
+                               </div>
+                               <div className="text-right">
+                                    <p className={cn("text-xs font-black", tx.type === 'wallet_funding' ? "text-green-600" : "text-slate-900")}>
+                                        {tx.type === 'wallet_funding' ? '+' : '-'}{formatCurrency(tx.amount)}
+                                    </p>
+                                    <button onClick={() => generateReceipt(tx)} className="text-[8px] font-bold uppercase text-purple-600 flex items-center justify-end gap-1 mt-1">Receipt <Download className="w-3 h-3" /></button>
+                               </div>
+                           </div>
+                       ))}
+                       {history.length === 0 && (
+                           <p className="text-center text-[10px] font-bold text-slate-400 py-4">No recent transactions</p>
+                       )}
+                   </div>
                </div>
             </div>
+
+            {/* History Sheet */}
+            <BottomSheet isOpen={showHistory} onClose={() => setShowHistory(false)} title="Transaction Ledger">
+                <div className="space-y-4">
+                    {history.map(tx => (
+                        <div key={tx.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+                             <div className="flex items-center gap-3">
+                                   <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", tx.type === 'wallet_funding' ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600")}>
+                                       {tx.type === 'wallet_funding' ? <Wallet className="w-5 h-5" /> : <ShoppingBag className="w-5 h-5" />}
+                                   </div>
+                                   <div>
+                                       <p className="text-xs font-black uppercase text-slate-900">{tx.type === 'wallet_funding' ? 'Wallet Credit' : tx.dataPlan ? `${tx.dataPlan.network} Data` : 'Product Sale'}</p>
+                                       <p className="text-[10px] font-bold text-slate-400">{tx.tx_ref}</p>
+                                       <p className="text-[9px] font-bold text-slate-400">{new Date(tx.createdAt).toLocaleString()}</p>
+                                   </div>
+                               </div>
+                               <div className="flex flex-col items-end gap-2">
+                                    <p className={cn("text-sm font-black", tx.type === 'wallet_funding' ? "text-green-600" : "text-slate-900")}>
+                                        {tx.type === 'wallet_funding' ? '+' : '-'}{formatCurrency(tx.amount)}
+                                    </p>
+                                    <button onClick={() => generateReceipt(tx)} className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase flex items-center gap-1">
+                                        Receipt <Download className="w-3 h-3" />
+                                    </button>
+                               </div>
+                        </div>
+                    ))}
+                    {history.length === 0 && <div className="text-center p-10 text-slate-400 text-xs font-bold uppercase">No records found</div>}
+                </div>
+            </BottomSheet>
 
             <BottomSheet isOpen={!!showPurchase} onClose={() => setShowPurchase(null)} title={showPurchase === 'data' ? 'Bulk Data Injection' : 'Corporate reselling'}>
                <div className="bg-slate-50 -mx-6 -mt-6 p-4 mb-6 border-b border-slate-100 flex items-center justify-between">
