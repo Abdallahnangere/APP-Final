@@ -68,14 +68,14 @@
     },
       {
       "src": "/screenshots/mobile-agent.png",
-      "sizes": "1080x2189",
+      "sizes": "1080x2033",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Agent Interface"
     },
     {
       "src": "/screenshots/mobile-support.png",
-      "sizes": "1080x2189",
+      "sizes": "1080x2030",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "24/7 Support Center"
