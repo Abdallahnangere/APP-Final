@@ -47,7 +47,7 @@
   "screenshots": [
     {
       "src": "/screenshots/mobile-home.png",
-      "sizes": "1080x2189",
+      "sizes": "1920x1920",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Instant Data Dashboard"
@@ -61,7 +61,7 @@
     },
     {
       "src": "/screenshots/mobile-data.png",
-      "sizes": "1080x2189",
+      "sizes": "1920x1920",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Fast Recharges"
