@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Smartphone, Wifi, Phone, FileText, MessageCircle, Bell, Menu, ArrowRight, ShieldCheck, Users, Globe } from 'lucide-react';
+import { Smartphone, Wifi, Phone, MessageCircle, Bell, Menu, ArrowRight, ShieldCheck, Users, Mail } from 'lucide-react';
 import { BottomSheet } from '../ui/BottomSheet';
 import { LegalDocs } from './LegalDocs';
 import { SideMenu } from '../SideMenu';
@@ -32,7 +32,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         onAgentLogin={() => { setIsMenuOpen(false); onNavigate('agent'); }}
       />
       
-      {/* 1. Updated Header */}
+      {/* Header */}
       <header className="px-6 pt-safe mt-6 mb-4 flex justify-between items-start shrink-0 z-20">
          <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200 border border-slate-50 p-1">
@@ -51,10 +51,10 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
          </button>
       </header>
 
-      {/* 2. Main Content */}
+      {/* Main Content */}
       <div className="flex-1 flex flex-col px-5 pb-safe min-h-0">
             
-            {/* Intelligent Ticker */}
+            {/* Ticker */}
             <div className="shrink-0 mb-4">
                 {systemMessage ? (
                     <div className={cn("overflow-hidden rounded-2xl py-3 px-4 flex items-center shadow-sm border relative backdrop-blur-sm",
@@ -77,10 +77,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 )}
             </div>
 
-            {/* Revised Bento Grid */}
+            {/* Bento Grid */}
             <div className="flex-1 grid grid-cols-2 grid-rows-6 gap-4 min-h-0 mb-24">
               
-              {/* 1. AGENT HUB (Large Card - Top) */}
               <MotionDiv whileTap={{ scale: 0.98 }} onClick={() => onNavigate('agent')} className="col-span-2 row-span-2 bg-slate-900 rounded-[2rem] p-6 relative overflow-hidden shadow-2xl shadow-slate-200 group cursor-pointer border border-slate-800 flex flex-col justify-between">
                  <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500 rounded-full blur-[80px] opacity-40 group-hover:opacity-60 transition-opacity"></div>
                  
@@ -101,7 +100,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                  </div>
               </MotionDiv>
 
-              {/* 2. GADGET STORE (Small Card - Bottom Left) */}
               <MotionDiv whileTap={{ scale: 0.98 }} onClick={() => onNavigate('store')} className="col-span-1 row-span-3 bg-white rounded-[2rem] p-5 relative overflow-hidden border border-slate-100 shadow-xl shadow-slate-100 flex flex-col justify-between group">
                 <div className="w-10 h-10 bg-purple-50 rounded-2xl flex items-center justify-center mb-2">
                     <Smartphone className="w-5 h-5 text-purple-600" />
@@ -113,7 +111,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 <Smartphone className="absolute -right-5 -bottom-5 w-24 h-24 text-slate-50 rotate-12 group-hover:scale-110 transition-transform duration-500" />
               </MotionDiv>
 
-              {/* 3. INSTANT DATA (Small Card - Bottom Right) */}
               <MotionDiv whileTap={{ scale: 0.98 }} onClick={() => onNavigate('data')} className="col-span-1 row-span-3 bg-blue-600 rounded-[2rem] p-5 relative overflow-hidden shadow-xl shadow-blue-200 flex flex-col justify-between group">
                 <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mb-2">
                     <Wifi className="w-5 h-5 text-white" />
@@ -125,13 +122,12 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                 <Wifi className="absolute -right-5 -bottom-5 w-24 h-24 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-500" />
               </MotionDiv>
 
-              {/* 4. Support & Legal (Footer Strip) */}
               <MotionDiv whileTap={{ scale: 0.98 }} onClick={() => setIsSupportOpen(true)} className="col-span-2 row-span-1 bg-white rounded-[1.5rem] px-5 flex items-center justify-between border border-slate-100 shadow-sm mt-2">
                   <div className="flex items-center gap-3">
                       <div className="p-2 bg-green-50 rounded-xl text-green-600"><ShieldCheck className="w-4 h-4" /></div>
                       <div>
                           <h4 className="text-xs font-black text-slate-900 uppercase">Resources & Legal</h4>
-                          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wide">Support • Docs • Compliance</p>
+                          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wide">Contact • Support • Docs</p>
                       </div>
                   </div>
                   <div className="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center"><ArrowRight className="w-3 h-3 text-slate-400" /></div>
@@ -146,11 +142,22 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
               <button onClick={() => setActiveTab('docs')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-wide transition-all", activeTab === 'docs' ? "bg-white text-slate-900 shadow-md" : "text-slate-500")}>Documents</button>
           </div>
           {activeTab === 'contact' ? (
-              <div className="space-y-3">
-                  <ContactItem icon={Phone} label="Support Line 1" value="08061934056" action={() => window.open('tel:08061934056')} />
-                  <ContactItem icon={Phone} label="Support Line 2" value="07044647081" action={() => window.open('tel:07044647081')} />
-                  <ContactItem icon={MessageCircle} label="WhatsApp Priority" value="Start Chat" action={() => window.open('https://wa.me/2348061934056')} highlight />
-                  <ContactItem icon={FileText} label="Email" value="saukidatalinks@gmail.com" action={() => window.open('mailto:saukidatalinks@gmail.com')} />
+              <div className="space-y-4">
+                  <SupportLineCard label="Primary Support" number="08061934056" />
+                  <SupportLineCard label="Secondary Support" number="07044647081" />
+                  
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                              <Mail className="w-5 h-5 text-slate-400" />
+                          </div>
+                          <div>
+                              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Official Email</p>
+                              <p className="text-sm font-bold text-slate-900 lowercase">saukidatalinks@gmail.com</p>
+                          </div>
+                      </div>
+                      <button onClick={() => window.open('mailto:saukidatalinks@gmail.com')} className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase">Email Us</button>
+                  </div>
               </div>
           ) : ( <LegalDocs /> )}
       </BottomSheet>
@@ -158,17 +165,21 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   );
 };
 
-const ContactItem = ({ icon: Icon, label, value, action, highlight }: any) => (
-    <button onClick={action} className={cn("w-full flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-95", highlight ? "bg-green-50 border-green-100" : "bg-white border-slate-100")}>
-        <div className="flex items-center gap-3">
-            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", highlight ? "bg-green-500 text-white shadow-lg shadow-green-200" : "bg-slate-50 text-slate-600")}>
-                <Icon className="w-4 h-4" />
+const SupportLineCard = ({ label, number }: { label: string, number: string }) => {
+    return (
+        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="flex justify-between items-center mb-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</span>
+                <span className="text-sm font-black text-slate-900">{number}</span>
             </div>
-            <div className="text-left">
-                <p className={cn("text-[8px] font-bold uppercase tracking-widest", highlight ? "text-green-600" : "text-slate-400")}>{label}</p>
-                <p className={cn("text-sm font-black tracking-tight", highlight ? "text-green-900" : "text-slate-900")}>{value}</p>
+            <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => window.open(`tel:${number}`)} className="h-10 bg-slate-100 rounded-xl flex items-center justify-center gap-2 text-slate-700 font-bold text-xs uppercase hover:bg-slate-200 active:scale-95 transition-all">
+                    <Phone className="w-4 h-4" /> Call Now
+                </button>
+                <button onClick={() => window.open(`https://wa.me/234${number.substring(1)}`)} className="h-10 bg-green-50 rounded-xl flex items-center justify-center gap-2 text-green-700 font-bold text-xs uppercase hover:bg-green-100 active:scale-95 transition-all">
+                    <MessageCircle className="w-4 h-4" /> WhatsApp
+                </button>
             </div>
         </div>
-        <div className={cn("p-1.5 rounded-full", highlight ? "bg-white text-green-600" : "bg-slate-50 text-slate-400")}><ArrowRight className="w-3 h-3" /></div>
-    </button>
-);
+    );
+}
