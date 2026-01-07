@@ -1,10 +1,11 @@
+
 'use client';
 
 import React from 'react';
 import { ArrowLeft, ShieldCheck, Lock, Mail, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-const Section = ({ title, children }: { title: string, children: React.ReactNode }) => (
+const Section = ({ title, children }: { title: string, children?: React.ReactNode }) => (
     <section>
         <h3 className="text-xl font-bold text-slate-900 mb-3">{title}</h3>
         <div className="text-slate-600 text-sm leading-relaxed">
@@ -120,4 +121,4 @@ export default function PrivacyPolicy() {
       </div>
     </div>
   );
-              }
+}

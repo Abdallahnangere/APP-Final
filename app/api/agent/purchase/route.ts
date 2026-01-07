@@ -7,7 +7,7 @@ import { callAmigoAPI, AMIGO_NETWORKS } from '../../../../lib/amigo';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { agentId, pin, type, payload, useCashback } = body;
+    const { agentId, pin, type, payload } = body;
 
     // 1. Verify Agent & PIN
     const agent = await prisma.agent.findUnique({ where: { id: agentId } });
@@ -17,20 +17,16 @@ export async function POST(req: Request) {
     if (!agent.isActive) return NextResponse.json({ error: 'Agent Account Suspended' }, { status: 403 });
 
     let amount = 0;
-    let cashbackEarned = 0;
     let description = '';
     let productDetails: any = {};
 
-    // 2. Calculate Amount & Cashback Logic
+    // 2. Calculate Amount
     if (type === 'data') {
         const plan = await prisma.dataPlan.findUnique({ where: { id: payload.planId } });
         if (!plan) return NextResponse.json({ error: 'Invalid Plan' }, { status: 400 });
         amount = plan.price;
         description = `Data: ${plan.network} ${plan.data}`;
         productDetails = { planId: plan.id };
-        
-        // Earn 10% Cashback on Data Sales
-        cashbackEarned = amount * 0.10;
     } else if (type === 'ecommerce') {
         const product = await prisma.product.findUnique({ where: { id: payload.productId } });
         if (!product) return NextResponse.json({ error: 'Invalid Product' }, { status: 400 });
@@ -47,30 +43,20 @@ export async function POST(req: Request) {
         }
     }
 
-    // 3. Determine Payment Splits
-    let cashbackToDeduct = 0;
-    let mainBalanceToDeduct = amount;
-
-    if (useCashback && agent.cashbackBalance > 0) {
-        cashbackToDeduct = Math.min(agent.cashbackBalance, amount);
-        mainBalanceToDeduct = amount - cashbackToDeduct;
-    }
-
-    // 4. Check Main Balance
-    if (agent.balance < mainBalanceToDeduct) {
-        return NextResponse.json({ error: 'Insufficient Main Wallet Balance' }, { status: 402 });
+    // 3. Check Main Balance
+    if (agent.balance < amount) {
+        return NextResponse.json({ error: 'Insufficient Wallet Balance' }, { status: 402 });
     }
 
     const tx_ref = `AGENT-${type.toUpperCase()}-${Date.now()}`;
 
-    // 5. Debit Wallet, Credit Cashback, Create Record
+    // 4. Debit Wallet & Create Record
     const result = await prisma.$transaction(async (prisma) => {
-        // Debit
+        // Debit Main Balance Only (Cashback feature removed)
         await prisma.agent.update({
             where: { id: agent.id },
             data: { 
-                balance: { decrement: mainBalanceToDeduct },
-                cashbackBalance: { decrement: cashbackToDeduct, increment: cashbackEarned }
+                balance: { decrement: amount }
             }
         });
 
@@ -82,8 +68,6 @@ export async function POST(req: Request) {
                 status: 'paid',
                 phone: payload.phone,
                 amount,
-                cashbackUsed: cashbackToDeduct,
-                cashbackEarned: cashbackEarned,
                 agentId: agent.id,
                 customerName: payload.name || agent.firstName,
                 deliveryState: payload.state || 'Agent Direct',
@@ -91,8 +75,7 @@ export async function POST(req: Request) {
                 ...productDetails,
                 deliveryData: {
                     method: 'Agent Wallet',
-                    manifest: description,
-                    payment_split: { wallet: mainBalanceToDeduct, cashback: cashbackToDeduct }
+                    manifest: description
                 }
             }
         });
@@ -100,7 +83,7 @@ export async function POST(req: Request) {
         return transaction;
     });
 
-    // 6. Fulfillment (If Data)
+    // 5. Fulfillment (If Data)
     if (type === 'data') {
         const plan = await prisma.dataPlan.findUnique({ where: { id: payload.planId } });
         if (plan) {
@@ -135,7 +118,7 @@ export async function POST(req: Request) {
     }
 
     const finalTx = await prisma.transaction.findUnique({ where: { id: result.id }, include: { product: true, dataPlan: true } });
-    return NextResponse.json({ success: true, transaction: finalTx, earned: cashbackEarned });
+    return NextResponse.json({ success: true, transaction: finalTx });
 
   } catch (error: any) {
     console.error('Agent Purchase Error:', error);

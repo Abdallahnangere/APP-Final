@@ -24,7 +24,6 @@ export interface Agent {
   lastName: string;
   phone: string;
   balance: number;
-  cashbackBalance: number;
   isActive: boolean;
   flwAccountNumber: string;
   flwAccountName: string;
@@ -40,8 +39,6 @@ export interface Transaction {
   status: 'pending' | 'paid' | 'delivered' | 'failed';
   phone: string;
   amount: number;
-  cashbackUsed: number;
-  cashbackEarned: number;
   planId?: string;
   productId?: string;
   agentId?: string;

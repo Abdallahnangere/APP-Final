@@ -1,3 +1,4 @@
+
 import { Product, DataPlan, Transaction, PaymentInitResponse, Agent } from '../types';
 
 const API_BASE = '/api';
@@ -60,7 +61,7 @@ export const api = {
     body: JSON.stringify(data),
   }),
 
-  agentGetBalance: (agentId: string) => fetcher<{ balance: number; cashbackBalance: number }>('/agent/balance?agentId=' + agentId),
+  agentGetBalance: (agentId: string) => fetcher<{ balance: number }>('/agent/balance?agentId=' + agentId),
 
   agentWalletPurchase: (data: { agentId: string; pin: string; type: 'data' | 'ecommerce'; payload: any }) => 
     fetcher<{ success: boolean; transaction: Transaction }>('/agent/purchase', {

@@ -47,31 +47,31 @@
   "screenshots": [
     {
       "src": "/screenshots/mobile-home.png",
-      "sizes": "1080x1920",
+      "sizes": "1080x2189",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Instant Data Dashboard"
     },
     {
       "src": "/screenshots/mobile-store.png",
-      "sizes": "1080x1920",
+      "sizes": "1080x2189",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Premium Gadget Store"
     },
     {
       "src": "/screenshots/mobile-data.png",
-      "sizes": "1080x1920",
+      "sizes": "1080x2189",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Fast Recharges"
     },
     {
-      "src": "/screenshots/desktop-dashboard.png",
-      "sizes": "1920x1080",
+      "src": "/screenshots/mobile-support.png",
+      "sizes": "1080x2189",
       "type": "image/png",
-      "form_factor": "wide",
-      "label": "Desktop Experience"
+      "form_factor": "narrow",
+      "label": "24/7 Support Center"
     }
   ],
   "shortcuts": [

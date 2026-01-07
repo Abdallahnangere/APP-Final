@@ -50,7 +50,8 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
     if (!silent) setIsRefreshing(true);
     try {
       const res = await api.agentGetBalance(agent.id);
-      setAgent(prev => prev ? { ...prev, balance: res.balance, cashbackBalance: res.cashbackBalance } : null);
+      // Cashback removed here
+      setAgent(prev => prev ? { ...prev, balance: res.balance } : null);
       if (!silent) {
            toast.success("Balances synced");
            playSound('success');
@@ -147,8 +148,6 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
       const totalGBToday = dailySales.reduce((acc, t) => acc + (parseInt(t.dataPlan?.data || '0') || 1), 0);
       const totalGBMonth = monthlySales.reduce((acc, t) => acc + (parseInt(t.dataPlan?.data || '0') || 1), 0);
       
-      // EXCLUDE WALLET FUNDING FROM "TOTAL SPENT"
-      // Only count Ecommerce and Data sales
       const totalSpent = history
         .filter(t => (t.type === 'data' || t.type === 'ecommerce') && (t.status === 'delivered' || t.status === 'paid'))
         .reduce((acc, t) => acc + t.amount, 0);
@@ -284,16 +283,12 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                                 </div>
 
                                 <div className="flex gap-3">
-                                    <div className="flex-1 bg-white/5 backdrop-blur-md rounded-xl p-3 border border-white/5">
+                                    <div className="w-full bg-white/5 backdrop-blur-md rounded-xl p-3 border border-white/5">
                                         <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest mb-1">Funding Acct</p>
                                         <div className="flex items-center gap-1.5">
                                             <span className="text-xs font-mono font-bold text-white tracking-tight">{agent.flwAccountNumber}</span>
                                             <button onClick={() => { navigator.clipboard.writeText(agent.flwAccountNumber!); toast.success("Copied"); }} className="text-slate-400 hover:text-white"><Copy className="w-3 h-3" /></button>
                                         </div>
-                                    </div>
-                                    <div className="flex-1 bg-white/5 backdrop-blur-md rounded-xl p-3 border border-white/5">
-                                        <p className="text-[8px] font-black uppercase text-green-400 tracking-widest mb-1">Cashback</p>
-                                        <span className="text-lg font-black text-white">{formatCurrency(agent.cashbackBalance)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -389,7 +384,6 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                                                 </div>
                                                 <div className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center"><TrendingDown className="w-5 h-5" /></div>
                                             </div>
-                                            <p className="text-[9px] text-slate-400 text-center italic">* Calculations exclude wallet deposits.</p>
                                         </div>
                                     );
                                 })()}
@@ -451,7 +445,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                              </div>
                              <div>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Total Liquidity</p>
-                                <p className="text-lg font-black text-slate-900 leading-none">{formatCurrency(agent.balance + agent.cashbackBalance)}</p>
+                                <p className="text-lg font-black text-slate-900 leading-none">{formatCurrency(agent.balance)}</p>
                              </div>
                          </div>
                     </div>
@@ -465,11 +459,11 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
   );
 };
 
-const NavBtn = ({ icon: Icon, label, active, onClick }: any) => (
-    <button onClick={onClick} className="flex flex-col items-center gap-1 group w-16">
-        <div className={cn("w-10 h-7 rounded-full flex items-center justify-center transition-all duration-300", active ? "bg-slate-900 text-white shadow-lg shadow-slate-200" : "text-slate-400 group-hover:bg-slate-50")}>
-            <Icon className="w-4 h-4" />
+const NavBtn = ({ icon: Icon, label, active, onClick }: { icon: any, label: string, active: boolean, onClick: () => void }) => (
+    <button onClick={onClick} className="flex flex-col items-center justify-center gap-1 min-w-[60px] active:scale-95 transition-transform group">
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300", active ? "bg-slate-900 text-white shadow-lg shadow-slate-200" : "text-slate-400 hover:bg-slate-50")}>
+            <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 2} />
         </div>
-        <span className={cn("text-[8px] font-bold uppercase tracking-tight transition-colors", active ? "text-slate-900" : "text-slate-400")}>{label}</span>
+        <span className={cn("text-[9px] font-black uppercase tracking-wider transition-colors", active ? "text-slate-900" : "text-slate-400")}>{label}</span>
     </button>
 );
