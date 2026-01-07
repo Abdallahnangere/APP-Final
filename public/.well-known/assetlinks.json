@@ -1,8 +1,11 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "online.saukimart.twa",
-        "sha256_cert_fingerprints": ["93:BE:9D:2F:9F:5C:E8:69:71:15:54:0F:11:AE:DA:10:12:5C:1E:9B:06:D0:19:A0:5A:2D:50:4A:A0:64:F6:26"]
-      }
-    }]
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "online.saukimart.twa",
+      "sha256_cert_fingerprints":
+        ["5C:14:A3:5F:97:86:2B:06:37:4A:0B:8F:49:DF:A6:28:02:AD:19:8D:6C:B1:4A:F0:FA:F8:FE:6E:60:99:8E:58"]
+    }
+  }
+]
