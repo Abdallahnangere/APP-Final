@@ -66,6 +66,13 @@
       "form_factor": "narrow",
       "label": "Fast Recharges"
     },
+      {
+      "src": "/screenshots/mobile-agent.png",
+      "sizes": "1080x2189",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Agent Interface"
+    },
     {
       "src": "/screenshots/mobile-support.png",
       "sizes": "1080x2189",
