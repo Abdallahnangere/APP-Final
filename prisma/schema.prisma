@@ -8,27 +8,27 @@ datasource db {
 }
 
 model Product {
-  id          String        @id @default(uuid())
-  name        String
-  description String?
-  price       Float
-  image       String
-  inStock     Boolean       @default(true)
-  category    String        @default("device") // Options: device, sim, package
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id           String        @id @default(uuid())
+  name         String
+  description  String?
+  price        Float
+  image        String
+  inStock      Boolean       @default(true)
+  category     String        @default("device")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   transactions Transaction[]
 }
 
 model DataPlan {
-  id          String        @id @default(uuid())
-  network     String        // Options: MTN, AIRTEL, GLO, 9MOBILE
-  data        String        // e.g. "1GB"
-  validity    String        // e.g. "30 Days"
-  price       Float
-  planId      Int           // The external API Plan ID (Amigo)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id           String        @id @default(uuid())
+  network      String        
+  data         String        
+  validity     String        
+  price        Float
+  planId       Int           
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   transactions Transaction[]
 }
 
@@ -37,16 +37,15 @@ model Agent {
   firstName        String
   lastName         String
   phone            String        @unique
-  pin              String        // 4-digit PIN stored as text
+  pin              String        
   balance          Float         @default(0.0)
   isActive         Boolean       @default(true)
-  
-  // Virtual Account Details (Flutterwave)
   flwAccountNumber String?
   flwAccountName   String?
   flwBankName      String?
-
-  joinedAt         DateTime      @default(now())
+  
+  // Changed from joinedAt to createdAt to match your API route
+  createdAt        DateTime      @default(now()) 
   updatedAt        DateTime      @updatedAt
   transactions     Transaction[]
 }
@@ -54,31 +53,21 @@ model Agent {
 model Transaction {
   id             String    @id @default(uuid())
   tx_ref         String    @unique
-  type           String    // Options: ecommerce, data, wallet_funding
-  status         String    // Options: pending, paid, delivered, failed
-  
+  type           String    
+  status         String    
   phone          String
   amount         Float
-  
-  // Optional Relations
   productId      String?
   product        Product?  @relation(fields: [productId], references: [id])
-  
   planId         String?
   dataPlan       DataPlan? @relation(fields: [planId], references: [id])
-  
   agentId        String?
   agent          Agent?    @relation(fields: [agentId], references: [id])
-
-  // E-commerce specific
   customerName   String?
   deliveryState  String?
-
-  // Technical / Data specific
   idempotencyKey String?   @unique
-  paymentData    Json?     // Stores full Gateway response
-  deliveryData   Json?     // Stores Amigo API response or Delivery Manifest
-
+  paymentData    Json?     
+  deliveryData   Json?     
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
@@ -87,7 +76,7 @@ model SupportTicket {
   id        String   @id @default(uuid())
   phone     String
   message   String
-  status    String   @default("open") // open, closed
+  status    String   @default("open")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -95,7 +84,7 @@ model SupportTicket {
 model SystemMessage {
   id        String   @id @default(uuid())
   content   String
-  type      String   @default("info") // info, warning, alert, PUSH
+  type      String   @default("info")
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
