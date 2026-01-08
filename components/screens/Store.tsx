@@ -57,6 +57,23 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
       interval = setInterval(async () => {
         try {
           const res = await api.verifyTransaction(paymentDetails.tx_ref);
+          
+          // UPDATE LOCAL STORAGE WITH STATUS
+          if (!agent) {
+              const currentTx = {
+                  tx_ref: paymentDetails.tx_ref,
+                  amount: paymentDetails.amount,
+                  createdAt: new Date().toISOString(),
+                  type: 'ecommerce' as any,
+                  status: res.status,
+                  product: selectedProduct || undefined,
+                  customerName: formData.name,
+                  phone: formData.phone,
+                  deliveryData: { manifest: selectedProduct?.name }
+              };
+              saveToLocalHistory(currentTx as any);
+          }
+
           if (res.status === 'paid' || res.status === 'delivered') {
             handleSuccess(res);
             setIsPolling(false);
@@ -146,6 +163,23 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
         ...formData
       });
       setPaymentDetails(res);
+      
+      // IMMEDIATE SAVE PENDING
+      if(!agent) {
+          saveToLocalHistory({
+              id: 'temp-' + Date.now(),
+              tx_ref: res.tx_ref,
+              type: 'ecommerce',
+              status: 'pending',
+              amount: res.amount,
+              createdAt: new Date().toISOString(),
+              product: selectedProduct,
+              customerName: formData.name,
+              phone: formData.phone,
+              deliveryData: { manifest: selectedProduct.name }
+          } as any);
+      }
+
       setStep('payment');
     } catch (e: any) {
       toast.error(e.message || "Error creating order");
@@ -265,7 +299,7 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
       <BottomSheet isOpen={!!selectedProduct} onClose={() => { setSelectedProduct(null); setStep('details'); }} title={step === 'payment' ? 'Order Fulfillment' : 'Product Showcase'}>
          {step === 'details' && selectedProduct && (
              <div className="space-y-6">
-                 {/* Product Details UI - Kept same as previous */}
+                 {/* Product Details UI */}
                  <div className="aspect-[4/3] bg-slate-50 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-8 border border-slate-100 shadow-inner">
                      <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply drop-shadow-2xl" />
                  </div>

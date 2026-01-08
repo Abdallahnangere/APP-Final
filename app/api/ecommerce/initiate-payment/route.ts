@@ -20,8 +20,6 @@ export async function POST(req: Request) {
 
     let totalAmount = product.price;
     let items = [{ name: product.name, price: product.price }];
-    
-    // Explicitly building the manifest string to include ALL items
     let manifestParts = [product.name];
     
     if (simId) {
@@ -34,22 +32,24 @@ export async function POST(req: Request) {
     }
 
     const fullManifest = manifestParts.join(" + ");
-    const tx_ref = `SAUKI-COMM-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    // Ensure unique ref
+    const tx_ref = `SAUKI-COM-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
+    // Flutterwave payload strict typing
     const flwPayload = {
       tx_ref: tx_ref,
-      amount: totalAmount.toString(),
-      email: "saukidatalinks@gmail.com",
+      amount: String(totalAmount), // Must be string
+      email: "saukidatalinks@gmail.com", // Generic email for guest checkout
       phone_number: phone,
       currency: "NGN",
       fullname: name,
-      narration: `SAUKI: ${fullManifest.substring(0, 50)}`, // Truncate specifically for Bank Narration limits
+      narration: `SAUKI ${fullManifest.substring(0, 20)}`, // Keep short
+      is_permanent: false,
+      // Simplified meta to avoid parsing errors on FLW side
       meta: {
-        customer_name: name,
-        delivery_address: state,
-        items: items
-      },
-      is_permanent: false
+        consumer_id: phone,
+        consumer_mac: "kgh94"
+      }
     };
 
     try {
@@ -67,6 +67,7 @@ export async function POST(req: Request) {
         const responseBody = flwResponse.data;
 
         if (responseBody.status !== 'success') {
+          console.error("FLW Error:", responseBody);
           throw new Error(responseBody.message || 'Payment initialization failed');
         }
 
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
         const bankInfo = metaObj?.authorization;
 
         if (!bankInfo || !bankInfo.transfer_bank || !bankInfo.transfer_account) {
-            throw new Error('Gateway error: Missing bank details.');
+            throw new Error('Gateway returned incomplete bank details.');
         }
 
         // Saving full details including the composed manifest
@@ -85,13 +86,13 @@ export async function POST(req: Request) {
             status: 'pending',
             phone,
             amount: totalAmount,
-            productId, // Main product ID link
+            productId, 
             customerName: name,
             deliveryState: state,
             idempotencyKey: uuidv4(),
             paymentData: responseBody,
             deliveryData: {
-                manifest: fullManifest, // <--- This is the key field for receipt display
+                manifest: fullManifest,
                 items: items,
                 address: state,
                 initiatedAt: new Date().toISOString()
@@ -109,11 +110,13 @@ export async function POST(req: Request) {
         });
 
     } catch (flwError: any) {
+        console.error("Axios/Gateway Error:", flwError.response?.data || flwError.message);
         const msg = flwError.response?.data?.message || flwError.message;
         return NextResponse.json({ error: 'Gateway Error', details: msg }, { status: 502 });
     }
 
   } catch (error: any) {
+    console.error("Internal Error:", error);
     return NextResponse.json({ error: error.message || 'Initiation failed' }, { status: 500 });
   }
 }

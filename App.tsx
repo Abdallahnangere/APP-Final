@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Home } from './components/screens/Home';
 import { Store } from './components/screens/Store';
 import { Data } from './components/screens/Data';
-import { Complaint } from './components/screens/Complaint';
 import { AgentHub } from './components/screens/Agent';
+import { History } from './components/screens/History';
 
 // Components
 import { BottomTabs } from './components/BottomTabs';
@@ -20,17 +20,14 @@ export default function App() {
 
   // Handle back button navigation with robust History API integration
   useEffect(() => {
-    // Initial state setup if needed
     if (!window.history.state) {
         try { window.history.replaceState({ tab: 'home' }, '', null); } catch(e) {}
     }
 
     const handlePopState = (event: PopStateEvent) => {
-      // If we have a state with a tab, use it
       if (event.state && event.state.tab) {
         setActiveTab(event.state.tab);
       } else {
-        // Fallback to home if no state (e.g. initial load or deep back)
         setActiveTab('home');
       }
     };
@@ -40,11 +37,9 @@ export default function App() {
   }, []);
 
   const navigate = (tab: string) => {
-    // Only push if it's a different tab to avoid stack pollution
     if (tab !== activeTab) {
         setActiveTab(tab);
         try {
-          // Pass null as URL to avoid SecurityError in blob/sandbox environments
           window.history.pushState({ tab }, '', null); 
         } catch (e) {
           console.warn('Navigation history update failed:', e);
@@ -54,14 +49,13 @@ export default function App() {
 
   const goHome = () => navigate('home');
 
-  // Defensive rendering to prevent crashes
   const renderContent = () => {
     switch (activeTab) {
       case 'home': return <Home onNavigate={navigate} />;
       case 'store': return <Store onBack={goHome} />;
       case 'data': return <Data onBack={goHome} />;
-      case 'track': return <Complaint onBack={goHome} />;
       case 'agent': return <AgentHub onBack={goHome} />;
+      case 'history': return <History onBack={goHome} />;
       default: return <Home onNavigate={navigate} />;
     }
   };
@@ -87,7 +81,7 @@ export default function App() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.02 }}
                 transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-                className="h-full overflow-y-auto no-scrollbar pb-24"
+                className="h-full overflow-y-auto no-scrollbar"
               >
                 {renderContent()}
               </MotionDiv>

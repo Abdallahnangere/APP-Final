@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -8,9 +9,9 @@ import { toast } from '../../lib/toast';
 import { SharedReceipt } from '../../components/SharedReceipt';
 import { toPng } from 'html-to-image';
 
-// Desktop-optimized layout override in styles via globals or specific wrapper
+// Force Desktop View Wrapper
 const DesktopWrapper = ({ children }: { children?: React.ReactNode }) => (
-    <div className="min-h-screen w-full bg-slate-50 flex flex-row overflow-hidden absolute inset-0 z-50">
+    <div className="min-h-screen min-w-[1024px] w-full bg-slate-50 flex flex-row overflow-hidden absolute inset-0 z-50">
         {children}
     </div>
 );

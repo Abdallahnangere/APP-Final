@@ -34,16 +34,26 @@ export function saveToLocalHistory(tx: Transaction) {
     if (typeof window === 'undefined') return;
     try {
         const raw = localStorage.getItem('sauki_user_history');
-        const history: Transaction[] = raw ? JSON.parse(raw) : [];
+        let history: Transaction[] = raw ? JSON.parse(raw) : [];
         
-        // Prevent duplicates
-        const exists = history.find(t => t.id === tx.id || t.tx_ref === tx.tx_ref);
-        if (!exists) {
+        // Check if exists
+        const index = history.findIndex(t => t.tx_ref === tx.tx_ref);
+        
+        if (index !== -1) {
+            // UPDATE existing record
+            history[index] = { ...history[index], ...tx };
+        } else {
+            // INSERT new record at top
             history.unshift(tx);
-            // Limit to last 50 transactions to save space
-            if (history.length > 50) history.pop();
-            localStorage.setItem('sauki_user_history', JSON.stringify(history));
         }
+
+        // Limit to last 50 transactions
+        if (history.length > 50) history = history.slice(0, 50);
+        
+        localStorage.setItem('sauki_user_history', JSON.stringify(history));
+        
+        // Dispatch event to update UI immediately if History tab is open
+        window.dispatchEvent(new Event('history-updated'));
     } catch (e) {
         console.error("Failed to save history", e);
     }
@@ -86,13 +96,9 @@ export function generateReceiptData(tx: Transaction, agent?: Agent | null) {
     
     // Priority 1: Agent Transaction
     if (agent || tx.agentId) {
-        // If we have the agent object passed directly
         if (agent) {
             finalCustomerName = `${agent.firstName} ${agent.lastName}`;
         } else {
-             // If we only have the ID in the TX, we might not be able to resolve name without fetching.
-             // But usually in the AgentHub, 'agent' is passed.
-             // If it's a customer receipt for an item they bought, use the shipping name.
              if (tx.customerName) finalCustomerName = tx.customerName;
              else finalCustomerName = "Authorized Agent";
         }

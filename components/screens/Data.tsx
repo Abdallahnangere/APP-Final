@@ -29,7 +29,6 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
   const [agentPin, setAgentPin] = useState('');
   const receiptRef = useRef<HTMLDivElement>(null);
   
-  // Track the final successful transaction to save to history
   const [finalTx, setFinalTx] = useState<any>(null);
 
   useEffect(() => {
@@ -52,6 +51,21 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
       interval = setInterval(async () => {
         try {
           const res = await api.verifyTransaction(paymentDetails.tx_ref);
+          
+          // UPDATE LOCAL STORAGE WITH LATEST STATUS
+          if (!agent) {
+              const currentTx = {
+                  tx_ref: paymentDetails.tx_ref,
+                  amount: selectedPlan?.price || 0,
+                  createdAt: new Date().toISOString(),
+                  type: 'data' as any,
+                  status: res.status,
+                  dataPlan: selectedPlan || undefined,
+                  phone: phone
+              };
+              saveToLocalHistory(currentTx as any);
+          }
+
           if (res.status === 'delivered') {
             handleSuccess(res);
             setIsPolling(false);
@@ -68,21 +82,22 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
   const handleSuccess = (tx: any) => {
       setStep('success');
       toast.success("Data Delivered!");
+      
+      const fullTx = {
+         ...tx,
+         createdAt: new Date().toISOString(),
+         amount: selectedPlan?.price || 0,
+         type: 'data',
+         dataPlan: selectedPlan,
+         tx_ref: paymentDetails?.tx_ref || tx.tx_ref,
+         status: 'delivered'
+      };
+
       if (!agent) {
-          // Construct a partial transaction object for local history if needed
-          const fullTx = {
-             ...tx,
-             // Ensure these exist for local history display
-             createdAt: new Date().toISOString(),
-             amount: selectedPlan?.price || 0,
-             type: 'data',
-             dataPlan: selectedPlan,
-             tx_ref: paymentDetails?.tx_ref || tx.tx_ref
-          };
           saveToLocalHistory(fullTx);
           setFinalTx(fullTx);
       } else {
-          setFinalTx(tx); // For receipt
+          setFinalTx(tx);
       }
   };
 
@@ -143,6 +158,21 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
     try {
         const res = await api.initiateDataPayment({ planId: selectedPlan!.id, phone });
         setPaymentDetails(res);
+        
+        // IMMEDIATE SAVE TO HISTORY AS PENDING
+        if(!agent) {
+            saveToLocalHistory({
+                id: 'temp-' + Date.now(),
+                tx_ref: res.tx_ref,
+                type: 'data',
+                status: 'pending',
+                phone: phone,
+                amount: selectedPlan!.price,
+                createdAt: new Date().toISOString(),
+                dataPlan: selectedPlan || undefined
+            } as any);
+        }
+
         setStep('payment');
     } catch(e: any) {
         toast.error(e.message || "Connection error. Try again.");
