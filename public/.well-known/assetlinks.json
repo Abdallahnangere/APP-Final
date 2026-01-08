@@ -1,11 +1,11 @@
+
 [
   {
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "online.saukimart.twa",
-      "sha256_cert_fingerprints":
-        ["5C:14:A3:5F:97:86:2B:06:37:4A:0B:8F:49:DF:A6:28:02:AD:19:8D:6C:B1:4A:F0:FA:F8:FE:6E:60:99:8E:58"]
+      "package_name": "com.saukimart.twa",
+      "sha256_cert_fingerprints": []
     }
   }
 ]

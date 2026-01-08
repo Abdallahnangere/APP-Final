@@ -1,6 +1,11 @@
 {
-  "name": "web sauki application plus agent",
-  "description": "Premium Mobile Commerce & Instant Data App",
+  "name": "Sauki Mart",
+  "short_name": "Sauki Mart",
+  "description": "Premium Mobile Commerce, Instant Data & Devices. SMEDAN Certified.",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#ffffff",
   "requestFramePermissions": [
     "camera",
     "microphone",

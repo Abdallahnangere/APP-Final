@@ -18,21 +18,31 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: true });
         }
 
-        if (action === 'credit') {
+        if (action === 'credit' || action === 'debit') {
+            const isDebit = action === 'debit';
+            
+            // Check balance for debit
+            if (isDebit) {
+                const agent = await prisma.agent.findUnique({ where: { id: agentId } });
+                if (!agent || agent.balance < amount) return NextResponse.json({ error: 'Insufficient funds for debit' }, { status: 400 });
+            }
+
             await prisma.$transaction([
                 prisma.agent.update({
                     where: { id: agentId },
-                    data: { balance: { increment: amount } }
+                    data: { 
+                        balance: isDebit ? { decrement: amount } : { increment: amount } 
+                    }
                 }),
                 prisma.transaction.create({
                     data: {
-                        tx_ref: `ADMIN-FUND-${uuidv4()}`,
-                        type: 'wallet_funding',
+                        tx_ref: `ADMIN-${action.toUpperCase()}-${uuidv4()}`,
+                        type: 'wallet_funding', // Re-using type but amount will clarify flow
                         status: 'delivered',
                         phone: 'ADMIN',
-                        amount: amount,
+                        amount: isDebit ? -amount : amount, // Store negative for debit log
                         agentId: agentId,
-                        deliveryData: { method: 'Admin Manual Credit' }
+                        deliveryData: { method: `Admin Manual ${action.toUpperCase()}` }
                     }
                 })
             ]);

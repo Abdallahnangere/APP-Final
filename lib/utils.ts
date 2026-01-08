@@ -1,7 +1,7 @@
 
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Transaction } from "../types";
+import { Transaction, Agent } from "../types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -29,9 +29,28 @@ export const NETWORK_BG_COLORS: Record<string, string> = {
   '9MOBILE': 'bg-lime-50 text-lime-700'
 };
 
+// --- LOCAL STORAGE HISTORY HELPER ---
+export function saveToLocalHistory(tx: Transaction) {
+    if (typeof window === 'undefined') return;
+    try {
+        const raw = localStorage.getItem('sauki_user_history');
+        const history: Transaction[] = raw ? JSON.parse(raw) : [];
+        
+        // Prevent duplicates
+        const exists = history.find(t => t.id === tx.id || t.tx_ref === tx.tx_ref);
+        if (!exists) {
+            history.unshift(tx);
+            // Limit to last 50 transactions to save space
+            if (history.length > 50) history.pop();
+            localStorage.setItem('sauki_user_history', JSON.stringify(history));
+        }
+    } catch (e) {
+        console.error("Failed to save history", e);
+    }
+}
+
 // --- UNIFIED RECEIPT GENERATOR ---
-// This ensures the receipt looks exactly the same whether generated now or in 1 year
-export function generateReceiptData(tx: Transaction) {
+export function generateReceiptData(tx: Transaction, agent?: Agent | null) {
     let description = "Unknown Item";
     let typeLabel = "Transaction";
 
@@ -46,7 +65,6 @@ export function generateReceiptData(tx: Transaction) {
         if (tx.dataPlan) {
             description = `${tx.dataPlan.network} ${tx.dataPlan.data} (${tx.dataPlan.validity})`;
         } else {
-            // Fallback if relation is broken but we know it's data
             description = "Mobile Data Top-up";
         }
     }
@@ -63,14 +81,39 @@ export function generateReceiptData(tx: Transaction) {
         description = "Agent Wallet Credit";
     }
 
+    // --- SMART NAME RESOLUTION ---
+    let finalCustomerName = "Sauki Customer";
+    
+    // Priority 1: Agent Transaction
+    if (agent || tx.agentId) {
+        // If we have the agent object passed directly
+        if (agent) {
+            finalCustomerName = `${agent.firstName} ${agent.lastName}`;
+        } else {
+             // If we only have the ID in the TX, we might not be able to resolve name without fetching.
+             // But usually in the AgentHub, 'agent' is passed.
+             // If it's a customer receipt for an item they bought, use the shipping name.
+             if (tx.customerName) finalCustomerName = tx.customerName;
+             else finalCustomerName = "Authorized Agent";
+        }
+    } 
+    // Priority 2: E-commerce Name
+    else if (tx.customerName && tx.customerName !== 'undefined') {
+        finalCustomerName = tx.customerName;
+    }
+    // Priority 3: Fallback for Data
+    else if (tx.type === 'data') {
+        finalCustomerName = "Sauki Customer"; 
+    }
+
     return {
         tx_ref: tx.tx_ref,
-        amount: tx.amount,
+        amount: Math.abs(tx.amount), // Ensure positive for receipt
         date: new Date(tx.createdAt).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }),
         type: typeLabel,
-        description: description, // This will now NEVER be empty if the TX exists
+        description: description,
         status: tx.status,
-        customerName: tx.customerName,
+        customerName: finalCustomerName,
         customerPhone: tx.phone,
         deliveryAddress: tx.deliveryState || (tx.deliveryData as any)?.address
     };

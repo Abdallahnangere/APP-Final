@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { MessageSquareWarning, MessageCircle, Headphones, AlertTriangle, CheckCircle, ArrowLeft } from 'lucide-react';
+import { MessageCircle, Headphones, AlertTriangle, CheckCircle, ArrowLeft } from 'lucide-react';
 import { toast } from '../../lib/toast';
 
 interface ComplaintProps {
@@ -31,8 +31,8 @@ export const Complaint: React.FC<ComplaintProps> = ({ onBack }) => {
       }
   };
 
-  const openWhatsApp = () => {
-      window.open(`https://wa.me/2348061934056?text=Hello Sauki Mart, I have an issue: ${encodeURIComponent(form.message)}`, '_blank');
+  const openWhatsApp = (number: string) => {
+      window.open(`https://wa.me/234${number.substring(1)}?text=Hello Sauki Mart, I have an urgent issue: ${encodeURIComponent(form.message)}`, '_blank');
   };
 
   return (
@@ -92,9 +92,15 @@ export const Complaint: React.FC<ComplaintProps> = ({ onBack }) => {
                        <AlertTriangle className="w-5 h-5" /> Need Urgent Help?
                    </h4>
                    <p className="text-xs font-bold text-amber-700 mb-6">If this is an emergency, contact us directly on WhatsApp with your Ticket ID.</p>
-                   <Button onClick={openWhatsApp} className="h-14 bg-green-600 hover:bg-green-700 text-white rounded-2xl uppercase font-black shadow-lg shadow-green-100 w-full">
-                       <MessageCircle className="w-5 h-5 mr-2" /> Chat on WhatsApp
-                   </Button>
+                   
+                   <div className="space-y-3">
+                        <Button onClick={() => openWhatsApp('08061934056')} className="h-14 bg-green-600 hover:bg-green-700 text-white rounded-2xl uppercase font-black shadow-lg shadow-green-100 w-full">
+                            <MessageCircle className="w-5 h-5 mr-2" /> Chat Line 1
+                        </Button>
+                        <Button onClick={() => openWhatsApp('07044647081')} className="h-14 bg-green-600 hover:bg-green-700 text-white rounded-2xl uppercase font-black shadow-lg shadow-green-100 w-full">
+                            <MessageCircle className="w-5 h-5 mr-2" /> Chat Line 2
+                        </Button>
+                   </div>
                </div>
                
                <Button variant="ghost" onClick={() => setSubmitted(false)}>Open New Ticket</Button>

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Product, PaymentInitResponse, Agent } from '../../types';
 import { api } from '../../lib/api';
-import { formatCurrency, cn } from '../../lib/utils';
+import { formatCurrency, cn, saveToLocalHistory, generateReceiptData } from '../../lib/utils';
 import { BottomSheet } from '../ui/BottomSheet';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -31,6 +31,8 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
+  
+  const [finalTx, setFinalTx] = useState<any>(null);
 
   useEffect(() => {
       loadProducts();
@@ -56,16 +58,39 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
         try {
           const res = await api.verifyTransaction(paymentDetails.tx_ref);
           if (res.status === 'paid' || res.status === 'delivered') {
-            setStep('success');
+            handleSuccess(res);
             setIsPolling(false);
             clearInterval(interval);
-            toast.success("Payment confirmed!");
           }
         } catch (e) { }
       }, 3000); 
     }
     return () => clearInterval(interval);
   }, [paymentDetails, step]);
+
+  const handleSuccess = (tx: any) => {
+      setStep('success');
+      toast.success("Payment confirmed!");
+      
+      const fullTx = {
+          ...tx,
+          createdAt: new Date().toISOString(),
+          amount: tx.amount || paymentDetails?.amount || 0,
+          type: 'ecommerce',
+          product: selectedProduct,
+          customerName: formData.name,
+          phone: formData.phone,
+          tx_ref: paymentDetails?.tx_ref || tx.tx_ref,
+          deliveryData: { manifest: selectedProduct?.name }
+      };
+      
+      if (!agent) {
+          saveToLocalHistory(fullTx);
+          setFinalTx(fullTx);
+      } else {
+          setFinalTx(tx);
+      }
+  };
 
   const handleBuyNow = () => {
     if (formData.name && formData.phone && formData.state) {
@@ -103,8 +128,7 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
               account_name: 'WALLET',
               bank: 'WALLET'
           });
-          setStep('success');
-          toast.success("Wallet Debited. Order Placed.");
+          handleSuccess(res.transaction);
       } catch (e: any) {
           toast.error(e.message || "Purchase failed");
       } finally {
@@ -136,8 +160,7 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
       try {
           const res = await api.verifyTransaction(paymentDetails.tx_ref);
           if (res.status === 'paid' || res.status === 'delivered') {
-              setStep('success');
-              toast.success("Payment confirmed!");
+              handleSuccess(res);
           } else {
               toast.info("Payment not received yet.");
           }
@@ -242,6 +265,7 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
       <BottomSheet isOpen={!!selectedProduct} onClose={() => { setSelectedProduct(null); setStep('details'); }} title={step === 'payment' ? 'Order Fulfillment' : 'Product Showcase'}>
          {step === 'details' && selectedProduct && (
              <div className="space-y-6">
+                 {/* Product Details UI - Kept same as previous */}
                  <div className="aspect-[4/3] bg-slate-50 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-8 border border-slate-100 shadow-inner">
                      <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply drop-shadow-2xl" />
                  </div>
@@ -351,7 +375,7 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
 
          {step === 'payment' && paymentDetails && !agent && (
              <div className="space-y-6">
-                 {/* ... Existing Flutterwave UI ... */}
+                 {/* ... Payment UI same as previous ... */}
                  <div className="bg-orange-50 border-2 border-orange-100 p-8 rounded-[2.5rem] text-center relative overflow-hidden shadow-inner">
                      {isPolling && <MotionDiv animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} className="absolute top-4 right-4 text-[9px] text-orange-600 font-black uppercase tracking-widest flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Verifying</MotionDiv>}
                      <p className="text-[10px] text-orange-800 mb-2 font-black uppercase tracking-widest">Transfer EXACTLY</p>
@@ -401,16 +425,17 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
              <div className="text-center space-y-6 py-4">
                  <SharedReceipt 
                     ref={receiptRef}
-                    transaction={{
+                    transaction={generateReceiptData(finalTx || {
                         tx_ref: paymentDetails.tx_ref,
                         amount: paymentDetails.amount,
-                        date: new Date().toLocaleString(),
-                        type: 'Corporate Order',
+                        createdAt: new Date().toISOString(),
+                        type: 'ecommerce',
+                        product: selectedProduct,
                         description: selectedProduct.name + (upsellSim ? ` + ${upsellSim.name}` : ''),
                         status: 'paid',
                         customerName: formData.name,
                         customerPhone: formData.phone
-                    }}
+                    }, agent)}
                  />
 
                  <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-green-200 animate-in zoom-in duration-500 scale-110">

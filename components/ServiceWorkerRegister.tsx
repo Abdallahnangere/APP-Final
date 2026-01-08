@@ -8,12 +8,7 @@ export default function ServiceWorkerRegister() {
     if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
       navigator.serviceWorker
         .register('/sw.js')
-        .then((registration) => {
-          console.log('SW Registered: ', registration);
-        })
-        .catch((error) => {
-          console.error('SW Registration failed: ', error);
-        });
+        .catch(() => {}); // Silent catch to prevent console noise
     }
   }, []);
 

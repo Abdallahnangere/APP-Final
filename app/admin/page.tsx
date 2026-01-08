@@ -1,13 +1,19 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { cn, formatCurrency } from '../../lib/utils';
-import { Loader2, Lock, Trash2, Edit2, Send, Search, Package, Wifi, LayoutDashboard, Users, Activity, Terminal, Megaphone, Server, Save, Plus, Ban, ArrowUpCircle, RefreshCw, FileText, CheckCircle2, AlertCircle, ShoppingBag, Truck, MessageSquare, Download, UploadCloud, Bell, X, ChevronRight, Smartphone } from 'lucide-react';
+import { cn, formatCurrency, generateReceiptData } from '../../lib/utils';
+import { Loader2, Lock, Trash2, Edit2, Send, Search, Package, Wifi, LayoutDashboard, Users, Activity, Terminal, Megaphone, Server, Save, Plus, Ban, ArrowUpCircle, RefreshCw, FileText, CheckCircle2, AlertCircle, ShoppingBag, Truck, MessageSquare, Download, UploadCloud, Bell, X, ChevronRight, Smartphone, ArrowDownCircle, Banknote, Landmark } from 'lucide-react';
 import { DataPlan, Product, Transaction, Agent } from '../../types';
 import { toast } from '../../lib/toast';
 import { SharedReceipt } from '../../components/SharedReceipt';
 import { toPng } from 'html-to-image';
+
+// Desktop-optimized layout override in styles via globals or specific wrapper
+const DesktopWrapper = ({ children }: { children?: React.ReactNode }) => (
+    <div className="min-h-screen w-full bg-slate-50 flex flex-row overflow-hidden absolute inset-0 z-50">
+        {children}
+    </div>
+);
 
 export default function AdminPage() {
   const [password, setPassword] = useState('');
@@ -16,7 +22,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Data State - Initialize as arrays to prevent blank page errors
+  // Data State
   const [products, setProducts] = useState<Product[]>([]);
   const [plans, setPlans] = useState<DataPlan[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -54,7 +60,6 @@ export default function AdminPage() {
   const refreshAll = async () => {
     setLoading(true);
     try {
-        // Parallel fetching for dashboard to avoid waterfall delay
         if (view === 'dashboard') {
             await Promise.all([fetchProducts(), fetchPlans(), fetchAgents(), fetchTransactions()]);
         }
@@ -95,7 +100,7 @@ export default function AdminPage() {
   const fetchBroadcast = async () => {
       try {
         const res = await fetch('/api/system/message').then(r => r.json());
-        if(res) setBroadcastForm(res);
+        if(res && res.type !== 'PUSH') setBroadcastForm(res); // Only load if not push
       } catch(e) {}
   };
   
@@ -107,7 +112,6 @@ export default function AdminPage() {
       } catch (e) { setTickets([]); }
   };
 
-  // --- AGENT DRILL DOWN ---
   const openAgentDetails = async (agent: Agent) => {
       setSelectedAgent(agent);
       setLoadingHistory(true);
@@ -167,6 +171,7 @@ export default function AdminPage() {
           body: JSON.stringify(planForm)
       });
       setEditMode(false);
+      setPlanForm({ network: 'MTN', data: '', validity: '30 Days', price: 0, planId: 0 });
       fetchPlans();
       toast.success("Plan Saved");
   };
@@ -177,15 +182,16 @@ export default function AdminPage() {
       fetchPlans();
   };
 
-  const fundAgent = async (agentId: string) => {
-      const amount = prompt("Amount to credit:");
+  // UPDATED: Fund Agent now handles credit AND debit
+  const fundAgent = async (agentId: string, type: 'credit' | 'debit') => {
+      const amount = prompt(`Amount to ${type.toUpperCase()}:`);
       if(!amount) return;
       await fetch('/api/admin/agent-fund', {
           method: 'POST',
-          body: JSON.stringify({ agentId, amount: Number(amount), password, action: 'credit' })
+          body: JSON.stringify({ agentId, amount: Number(amount), password, action: type })
       });
       fetchAgents();
-      toast.success("Wallet Funded");
+      toast.success(`Wallet ${type === 'credit' ? 'Funded' : 'Debited'}`);
   };
 
   const toggleAgent = async (agentId: string) => {
@@ -202,7 +208,7 @@ export default function AdminPage() {
           method: 'POST',
           body: JSON.stringify({ ...broadcastForm, password })
       });
-      toast.success("Broadcast Updated");
+      toast.success("Ticker Updated");
   };
 
   const sendPushNotification = async () => {
@@ -212,7 +218,7 @@ export default function AdminPage() {
               method: 'POST',
               body: JSON.stringify({ ...pushForm, password })
           });
-          toast.success(`Push Sent: ${pushForm.title}`);
+          toast.success(`Push Sent`);
           setPushForm({ title: '', body: '' });
       } catch(e) {
           toast.error("Push failed");
@@ -254,11 +260,19 @@ export default function AdminPage() {
           body: JSON.stringify({ tx_ref, status: 'delivered', password })
       });
       fetchTransactions();
-      toast.success("Order marked as Delivered");
+      toast.success("Marked Delivered");
   };
 
+  // UPDATED: Uses centralized helper for consistent receipts
   const generateReceipt = (tx: Transaction) => {
-      setReceiptTx(tx);
+      // Find agent if agentId exists
+      let agent = undefined;
+      if (tx.agentId) {
+          agent = agents.find(a => a.id === tx.agentId);
+      }
+      const enrichedTx = generateReceiptData(tx, agent);
+      setReceiptTx(enrichedTx);
+      
       setTimeout(async () => {
           if (receiptRef.current) {
               const dataUrl = await toPng(receiptRef.current, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff' });
@@ -291,10 +305,15 @@ export default function AdminPage() {
   );
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans">
-        {receiptTx && <SharedReceipt ref={receiptRef} transaction={receiptTx} />}
+    <DesktopWrapper>
+        {receiptTx && (
+            <SharedReceipt 
+                ref={receiptRef} 
+                transaction={receiptTx}
+            />
+        )}
 
-        <aside className="w-64 bg-slate-900 text-white hidden lg:flex flex-col fixed h-full z-10 shadow-2xl">
+        <aside className="w-72 bg-slate-900 text-white flex flex-col h-full z-10 shadow-2xl shrink-0">
             <div className="p-8 border-b border-slate-800">
                 <h1 className="text-xl font-black tracking-tighter">SAUKI MART</h1>
                 <p className="text-blue-400 text-[10px] font-black uppercase tracking-widest">Master Control</p>
@@ -320,26 +339,47 @@ export default function AdminPage() {
             </nav>
         </aside>
 
-        <main className="flex-1 lg:ml-64 p-8 overflow-y-auto h-screen bg-slate-50 relative">
+        <main className="flex-1 p-8 overflow-y-auto h-screen bg-slate-50 relative">
              <header className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">{view.replace('_', ' ')}</h2>
-                <button onClick={refreshAll} className="p-3 bg-white rounded-xl shadow-sm border border-slate-100 hover:bg-slate-50"><RefreshCw className={cn("w-5 h-5", loading && "animate-spin")} /></button>
+                <div className="flex gap-4 items-center">
+                    <div className="flex flex-col text-right mr-4 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-100">
+                        <span className="text-[9px] font-black uppercase text-slate-400">Admin Wallet</span>
+                        <div className="flex items-center gap-2">
+                             <Landmark className="w-4 h-4 text-slate-900" />
+                             <span className="text-sm font-bold">Zenith Bank: 1210631613</span>
+                        </div>
+                    </div>
+                    <button onClick={refreshAll} className="p-3 bg-white rounded-xl shadow-sm border border-slate-100 hover:bg-slate-50"><RefreshCw className={cn("w-5 h-5", loading && "animate-spin")} /></button>
+                </div>
             </header>
 
             {/* VIEWS */}
             {view === 'dashboard' && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-red-500 rounded-full blur-[40px] opacity-10"></div>
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pending Orders</p>
-                        <h3 className="text-4xl font-black text-slate-900">{pendingOrders.length}</h3>
+                        <h3 className="text-4xl font-black text-slate-900 mt-2">{pendingOrders.length}</h3>
+                        <div className="mt-4 flex items-center gap-2 text-red-500 text-xs font-bold">
+                            <ShoppingBag className="w-4 h-4" /> Action Required
+                        </div>
                     </div>
-                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500 rounded-full blur-[40px] opacity-10"></div>
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Agents</p>
-                        <h3 className="text-4xl font-black text-slate-900">{agents?.length || 0}</h3>
+                        <h3 className="text-4xl font-black text-slate-900 mt-2">{agents?.length || 0}</h3>
+                        <div className="mt-4 flex items-center gap-2 text-blue-500 text-xs font-bold">
+                            <Users className="w-4 h-4" /> Partner Network
+                        </div>
                     </div>
-                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-green-500 rounded-full blur-[40px] opacity-10"></div>
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Inventory</p>
-                        <h3 className="text-4xl font-black text-slate-900">{products?.length || 0} Items</h3>
+                        <h3 className="text-4xl font-black text-slate-900 mt-2">{products?.length || 0} Items</h3>
+                         <div className="mt-4 flex items-center gap-2 text-green-500 text-xs font-bold">
+                            <Package className="w-4 h-4" /> Stock Status
+                        </div>
                     </div>
                 </div>
             )}
@@ -358,10 +398,7 @@ export default function AdminPage() {
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                    <p className="font-black text-lg">{formatCurrency(tx.amount)}</p>
-                                    <p className="text-[9px] bg-blue-100 text-blue-700 px-2 rounded-full inline-block font-bold uppercase">Paid</p>
-                                </div>
+                                <button onClick={() => generateReceipt(tx)} className="text-blue-600 p-2"><Download className="w-5 h-5" /></button>
                                 <button onClick={() => markDelivered(tx.tx_ref)} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black uppercase text-[10px] flex items-center gap-2 hover:bg-slate-800">
                                     <Truck className="w-4 h-4" /> Mark Delivered
                                 </button>
@@ -374,6 +411,7 @@ export default function AdminPage() {
             {view === 'products' && (
                 <div className="space-y-6">
                     <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                        <h4 className="font-black text-xs text-slate-400 uppercase tracking-widest mb-4">{editMode ? 'Edit Product' : 'Add New Product'}</h4>
                         <div className="grid grid-cols-2 gap-4 mb-4">
                             <input className="p-3 border rounded-xl" placeholder="Name" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} />
                             <input className="p-3 border rounded-xl" placeholder="Price" type="number" value={productForm.price || ''} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} />
@@ -386,24 +424,29 @@ export default function AdminPage() {
                                 <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
                             </label>
                         </div>
-                        <button onClick={saveProduct} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black uppercase text-xs">Save Product</button>
+                        <div className="flex gap-2">
+                             <button onClick={saveProduct} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black uppercase text-xs">Save</button>
+                             {editMode && <button onClick={() => { setEditMode(false); setProductForm({ name: '', description: '', price: 0, image: '', category: 'device' }); }} className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-black uppercase text-xs">Cancel</button>}
+                        </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {products?.map(p => (
-                            <div key={p.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
+                            <div key={p.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4 group hover:shadow-md transition-all">
                                 <img src={p.image} className="w-12 h-12 rounded-lg object-cover" />
                                 <div className="flex-1 min-w-0">
                                     <p className="font-bold text-sm truncate">{p.name}</p>
                                     <p className="text-blue-600 font-black text-xs">{formatCurrency(p.price)}</p>
                                 </div>
-                                <button onClick={() => deleteProduct(p.id)} className="text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                <div className="flex flex-col gap-1">
+                                    <button onClick={() => { setProductForm(p); setEditMode(true); }} className="text-blue-500 hover:bg-blue-50 p-1 rounded"><Edit2 className="w-4 h-4" /></button>
+                                    <button onClick={() => deleteProduct(p.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 className="w-4 h-4" /></button>
+                                </div>
                             </div>
                         ))}
                     </div>
                 </div>
             )}
 
-            {/* PLANS (FIXED BLANK PAGE) */}
             {view === 'plans' && (
                 <div className="space-y-6">
                      <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
@@ -416,7 +459,10 @@ export default function AdminPage() {
                             <input className="p-3 border rounded-xl" placeholder="Price" type="number" value={planForm.price || ''} onChange={e => setPlanForm({...planForm, price: Number(e.target.value)})} />
                             <input className="p-3 border rounded-xl" placeholder="Amigo Plan ID" type="number" value={planForm.planId || ''} onChange={e => setPlanForm({...planForm, planId: Number(e.target.value)})} />
                         </div>
-                        <button onClick={savePlan} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2"><Save className="w-4 h-4" /> Save</button>
+                        <div className="flex gap-2">
+                            <button onClick={savePlan} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2"><Save className="w-4 h-4" /> Save</button>
+                            {editMode && <button onClick={() => { setEditMode(false); setPlanForm({ network: 'MTN', data: '', validity: '30 Days', price: 0, planId: 0 }); }} className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-black uppercase text-xs">Cancel</button>}
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {plans?.length > 0 ? plans.map(p => (
@@ -456,7 +502,7 @@ export default function AdminPage() {
                                         <td className="p-4 font-bold">{formatCurrency(tx.amount)}</td>
                                         <td className="p-4"><span className={cn("px-2 py-1 rounded text-[9px] font-black uppercase", tx.status === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-slate-100')}>{tx.status}</span></td>
                                         <td className="p-4">
-                                            <button onClick={() => generateReceipt(tx)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg"><Download className="w-4 h-4" /></button>
+                                            <button onClick={() => generateReceipt(tx)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg flex items-center gap-1 text-[10px] font-black uppercase"><Download className="w-4 h-4" /> Receipt</button>
                                         </td>
                                     </tr>
                                 ))}
@@ -466,23 +512,8 @@ export default function AdminPage() {
                 </div>
             )}
 
-            {view === 'support' && (
-                <div className="space-y-4">
-                    {tickets?.map(t => (
-                        <div key={t.id} className="bg-white p-5 rounded-2xl border border-slate-100">
-                            <div className="flex justify-between mb-2">
-                                <span className="font-black text-slate-900">{t.phone}</span>
-                                <span className="text-[10px] bg-slate-100 px-2 py-1 rounded uppercase font-bold">{t.status}</span>
-                            </div>
-                            <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-xl">{t.message}</p>
-                            <p className="text-[10px] text-slate-400 mt-2 text-right">{new Date(t.createdAt).toLocaleString()}</p>
-                        </div>
-                    ))}
-                </div>
-            )}
-
             {view === 'communication' && (
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* BROADCAST SECTION */}
                     <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 text-center">
                         <Megaphone className="w-10 h-10 text-slate-900 mx-auto mb-4" />
@@ -511,47 +542,7 @@ export default function AdminPage() {
                     </div>
                 </div>
             )}
-
-            {view === 'console' && (
-                <div className="bg-slate-900 rounded-[2rem] p-6 text-white min-h-[500px] flex flex-col">
-                    <div className="flex gap-4 mb-6">
-                        <button onClick={() => setConsoleType('amigo')} className={cn("px-4 py-2 rounded-lg text-xs font-black uppercase", consoleType === 'amigo' ? "bg-blue-600" : "bg-white/10")}>Amigo</button>
-                        <button onClick={() => setConsoleType('flutterwave')} className={cn("px-4 py-2 rounded-lg text-xs font-black uppercase", consoleType === 'flutterwave' ? "bg-orange-600" : "bg-white/10")}>Flutterwave</button>
-                        <div className="ml-auto flex gap-2">
-                            <button onClick={() => applyTemplate('amigo_data')} className="px-3 py-1 bg-white/5 rounded text-[10px] uppercase font-bold hover:bg-white/20">Template: Data</button>
-                            <button onClick={() => applyTemplate('flw_verify')} className="px-3 py-1 bg-white/5 rounded text-[10px] uppercase font-bold hover:bg-white/20">Template: Verify</button>
-                        </div>
-                    </div>
-                    <div className="flex gap-2 mb-4">
-                        <select value={consoleMethod} onChange={e => setConsoleMethod(e.target.value)} className="bg-black/30 p-3 rounded-xl text-xs font-bold"><option>GET</option><option>POST</option></select>
-                        <input className="flex-1 bg-black/30 p-3 rounded-xl text-xs font-mono" value={consoleEndpoint} onChange={e => setConsoleEndpoint(e.target.value)} placeholder="/endpoint" />
-                        <button onClick={executeConsole} className="bg-green-600 px-6 rounded-xl font-black uppercase text-xs">Send</button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 flex-1">
-                        <textarea className="bg-black/30 p-4 rounded-xl font-mono text-xs text-green-400 resize-none" value={consolePayload} onChange={e => setConsolePayload(e.target.value)} />
-                        <div className="bg-black/50 p-4 rounded-xl font-mono text-xs overflow-auto"><pre>{consoleOutput ? JSON.stringify(consoleOutput, null, 2) : '// Response...'}</pre></div>
-                    </div>
-                </div>
-            )}
-
-            {/* WEBHOOKS LOGS (FIXED BLANK PAGE) */}
-            {view === 'webhooks' && (
-                <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-4 px-2">Recent Webhook Logs</h3>
-                    <div className="space-y-2">
-                        {webhooks?.length > 0 ? webhooks.map((log: any) => (
-                            <div key={log.id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm font-mono text-xs text-slate-600">
-                                <div className="flex justify-between items-center mb-2 pb-2 border-b border-slate-50">
-                                    <span className="font-bold text-blue-600 uppercase">{log.source}</span>
-                                    <span className="text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
-                                </div>
-                                <pre className="overflow-x-auto text-[10px] bg-slate-50 p-2 rounded-lg">{JSON.stringify(log.payload, null, 2)}</pre>
-                            </div>
-                        )) : <div className="text-center text-slate-400 py-10">No logs found yet</div>}
-                    </div>
-                </div>
-            )}
-
+            
             {/* AGENTS WITH DRILLDOWN SIDE PANEL */}
             {view === 'agents' && (
                 <div className="flex h-full gap-4">
@@ -576,9 +567,10 @@ export default function AdminPage() {
                                 </div>
 
                                 <div className="flex gap-2 relative z-20">
-                                    <button onClick={() => fundAgent(agent.id)} className="flex-1 bg-slate-900 text-white p-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 hover:bg-slate-800"><ArrowUpCircle className="w-4 h-4" /> Credit</button>
-                                    <button onClick={() => toggleAgent(agent.id)} className={cn("flex-1 p-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2", agent.isActive ? "bg-red-100 text-red-600 hover:bg-red-200" : "bg-green-100 text-green-600 hover:bg-green-200")}>
-                                        <Ban className="w-4 h-4" /> {agent.isActive ? 'Suspend' : 'Activate'}
+                                    <button onClick={() => fundAgent(agent.id, 'credit')} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 hover:bg-green-700"><ArrowUpCircle className="w-4 h-4" /> Credit</button>
+                                    <button onClick={() => fundAgent(agent.id, 'debit')} className="flex-1 bg-slate-900 text-white p-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 hover:bg-slate-800"><ArrowDownCircle className="w-4 h-4" /> Debit</button>
+                                    <button onClick={() => toggleAgent(agent.id)} className={cn("p-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2", agent.isActive ? "bg-red-100 text-red-600 hover:bg-red-200" : "bg-green-100 text-green-600 hover:bg-green-200")}>
+                                        <Ban className="w-4 h-4" />
                                     </button>
                                     <button onClick={() => openAgentDetails(agent)} className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100"><ChevronRight className="w-4 h-4" /></button>
                                 </div>
@@ -600,7 +592,7 @@ export default function AdminPage() {
                                 {loadingHistory ? <div className="text-center py-10"><Loader2 className="animate-spin mx-auto text-slate-300" /></div> : (
                                     <table className="w-full text-left text-xs">
                                         <thead className="text-slate-400 uppercase font-black border-b border-slate-100">
-                                            <tr><th className="py-2">Type</th><th>Amount</th><th>Status</th><th>Date</th></tr>
+                                            <tr><th className="py-2">Type</th><th>Amount</th><th>Status</th><th>Receipt</th></tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
                                             {agentHistory.map(tx => (
@@ -608,7 +600,7 @@ export default function AdminPage() {
                                                     <td className="py-3 font-bold uppercase">{tx.type}</td>
                                                     <td className="py-3">{formatCurrency(tx.amount)}</td>
                                                     <td className="py-3"><span className={cn("px-2 py-0.5 rounded text-[9px] font-black uppercase", tx.status === 'delivered' ? "bg-green-100 text-green-700" : "bg-slate-100")}>{tx.status}</span></td>
-                                                    <td className="py-3 text-slate-400">{new Date(tx.createdAt).toLocaleDateString()}</td>
+                                                    <td className="py-3"><button onClick={() => generateReceipt(tx)} className="text-blue-500"><Download className="w-4 h-4"/></button></td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -619,8 +611,46 @@ export default function AdminPage() {
                     )}
                 </div>
             )}
+            
+            {/* Fallbacks for other views ... */}
+            {view === 'webhooks' && <div className="p-10 text-center text-slate-400 font-bold uppercase">Check Logs API</div>}
+            {view === 'console' && (
+                <div className="bg-slate-900 rounded-[2rem] p-6 text-white min-h-[500px] flex flex-col">
+                    <div className="flex gap-4 mb-6">
+                        <button onClick={() => setConsoleType('amigo')} className={cn("px-4 py-2 rounded-lg text-xs font-black uppercase", consoleType === 'amigo' ? "bg-blue-600" : "bg-white/10")}>Amigo</button>
+                        <button onClick={() => setConsoleType('flutterwave')} className={cn("px-4 py-2 rounded-lg text-xs font-black uppercase", consoleType === 'flutterwave' ? "bg-orange-600" : "bg-white/10")}>Flutterwave</button>
+                        <div className="ml-auto flex gap-2">
+                            <button onClick={() => applyTemplate('amigo_data')} className="px-3 py-1 bg-white/5 rounded text-[10px] uppercase font-bold hover:bg-white/20">Template: Data</button>
+                            <button onClick={() => applyTemplate('flw_verify')} className="px-3 py-1 bg-white/5 rounded text-[10px] uppercase font-bold hover:bg-white/20">Template: Verify</button>
+                        </div>
+                    </div>
+                    <div className="flex gap-2 mb-4">
+                        <select value={consoleMethod} onChange={e => setConsoleMethod(e.target.value)} className="bg-black/30 p-3 rounded-xl text-xs font-bold"><option>GET</option><option>POST</option></select>
+                        <input className="flex-1 bg-black/30 p-3 rounded-xl text-xs font-mono" value={consoleEndpoint} onChange={e => setConsoleEndpoint(e.target.value)} placeholder="/endpoint" />
+                        <button onClick={executeConsole} className="bg-green-600 px-6 rounded-xl font-black uppercase text-xs">Send</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 flex-1">
+                        <textarea className="bg-black/30 p-4 rounded-xl font-mono text-xs text-green-400 resize-none" value={consolePayload} onChange={e => setConsolePayload(e.target.value)} />
+                        <div className="bg-black/50 p-4 rounded-xl font-mono text-xs overflow-auto"><pre>{consoleOutput ? JSON.stringify(consoleOutput, null, 2) : '// Response...'}</pre></div>
+                    </div>
+                </div>
+            )}
+             {view === 'support' && (
+                <div className="space-y-4">
+                    {tickets?.map(t => (
+                        <div key={t.id} className="bg-white p-5 rounded-2xl border border-slate-100">
+                            <div className="flex justify-between mb-2">
+                                <span className="font-black text-slate-900">{t.phone}</span>
+                                <span className="text-[10px] bg-slate-100 px-2 py-1 rounded uppercase font-bold">{t.status}</span>
+                            </div>
+                            <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-xl">{t.message}</p>
+                            <p className="text-[10px] text-slate-400 mt-2 text-right">{new Date(t.createdAt).toLocaleString()}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
 
         </main>
-    </div>
+    </DesktopWrapper>
   );
 }

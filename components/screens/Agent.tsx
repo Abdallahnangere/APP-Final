@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Lock, Wallet, RefreshCw, ArrowRight, ShieldCheck, ShoppingBag, Wifi, Copy, History, Download, ChevronRight, Settings, BarChart2, ArrowUpRight, LogOut, LayoutDashboard, TrendingDown, CreditCard } from 'lucide-react';
@@ -17,6 +18,22 @@ import { playSound } from '../../lib/sounds';
 interface AgentHubProps {
     onBack?: () => void;
 }
+
+// MOVED UP: Defined before usage to prevent ReferenceErrors
+const NavBtn = ({ icon: Icon, label, active, onClick }: { icon: any, label: string, active: boolean, onClick: () => void }) => (
+    <button onClick={onClick} className="group flex flex-col items-center justify-center w-16">
+        <div className={cn(
+            "p-2.5 rounded-2xl mb-1 transition-all duration-300",
+            active ? "bg-slate-900 text-white shadow-lg shadow-slate-300 scale-110" : "text-slate-400 group-hover:bg-slate-50"
+        )}>
+            <Icon className="w-5 h-5" />
+        </div>
+        <span className={cn(
+            "text-[9px] font-black uppercase tracking-widest transition-all duration-300",
+            active ? "text-slate-900" : "text-slate-400"
+        )}>{label}</span>
+    </button>
+);
 
 export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
   const [view, setView] = useState<'login' | 'register' | 'reg_terms' | 'success' | 'dashboard'>('login');
@@ -38,7 +55,6 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
     let interval: any;
     if (view === 'dashboard' && agent) {
       fetchHistory();
-      // Auto refresh balance every 30s silently
       interval = setInterval(() => { refreshBalance(true); }, 30000);
     }
     return () => clearInterval(interval);
@@ -49,7 +65,6 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
     if (!silent) setIsRefreshing(true);
     try {
       const res = await api.agentGetBalance(agent.id);
-      // Cashback removed here
       setAgent(prev => prev ? { ...prev, balance: res.balance } : null);
       if (!silent) {
            toast.success("Balances synced");
@@ -80,7 +95,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
       setAgent(res.agent);
       setView('dashboard');
       playSound('success');
-      toast.success("Welcome, Agent " + res.agent.firstName);
+      toast.success("Welcome, " + res.agent.firstName);
     } catch (e: any) {
       playSound('error');
       toast.error(e.message);
@@ -135,7 +150,6 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
       }, 500);
   };
 
-  // Analytics Calculation
   const getAnalytics = () => {
       const today = new Date().toDateString();
       const thirtyDaysAgo = new Date();
@@ -162,7 +176,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
       {receiptTx && (
         <SharedReceipt 
             ref={receiptRef}
-            transaction={generateReceiptData(receiptTx)}
+            transaction={generateReceiptData(receiptTx, agent)}
         />
       )}
 
@@ -182,7 +196,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
              <div className="flex-1 flex flex-col justify-center px-8 pb-20">
                  <div className="mb-10">
                      <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-2">Agent<br/>Portal</h1>
-                     <p className="text-slate-500 font-medium text-sm">Please identify yourself to access the terminal.</p>
+                     <p className="text-slate-500 font-medium text-sm">Identify yourself to access the secure terminal.</p>
                  </div>
                  
                  <div className="space-y-6">
@@ -202,7 +216,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                         className="h-16 text-center text-4xl font-black tracking-[0.5em] bg-white" 
                         placeholder="••••" 
                     />
-                     <Button onClick={handleLogin} isLoading={isLoading} className="h-16 bg-blue-600 rounded-[2rem] font-black uppercase tracking-widest text-white shadow-xl shadow-blue-200 mt-4">
+                     <Button onClick={handleLogin} isLoading={isLoading} className="h-16 bg-purple-600 rounded-[2rem] font-black uppercase tracking-widest text-white shadow-xl shadow-purple-200 mt-4">
                         Secure Login <Lock className="w-5 h-5 ml-2" />
                      </Button>
                  </div>
@@ -244,52 +258,60 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
 
         {/* DASHBOARD */}
         {view === 'dashboard' && agent && (
-            <MotionDiv key="dash" initial={{opacity:0}} animate={{opacity:1}} className="flex flex-col h-screen overflow-hidden">
+            <MotionDiv key="dash" initial={{opacity:0}} animate={{opacity:1}} className="flex flex-col h-screen overflow-hidden bg-slate-100">
                 
                 {/* Header & Wallet Section (Fixed) */}
-                <div className="px-5 pt-10 pb-4 bg-slate-50 shrink-0">
-                    <div className="flex justify-between items-center mb-4">
+                <div className="px-5 pt-10 pb-6 bg-slate-100 shrink-0">
+                    <div className="flex justify-between items-center mb-6">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                                    <span className="font-black text-slate-600">{agent.firstName[0]}</span>
+                                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                    <span className="font-black text-slate-900">{agent.firstName[0]}</span>
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Agent ID: {agent.phone.slice(-4)}</p>
                                     <p className="font-bold text-sm text-slate-900">{agent.firstName} {agent.lastName}</p>
                                 </div>
                             </div>
-                            <button onClick={() => { setAgent(null); setView('login'); }} className="p-2 bg-red-50 text-red-500 rounded-full hover:bg-red-100 transition-colors"><LogOut className="w-5 h-5" /></button>
+                            <button onClick={() => { setAgent(null); setView('login'); }} className="p-2 bg-white text-red-500 rounded-full hover:bg-red-50 transition-colors shadow-sm"><LogOut className="w-5 h-5" /></button>
                     </div>
 
-                    {/* Compact Glassmorphism Wallet Card */}
-                    <div className="relative overflow-hidden bg-slate-900 rounded-[2rem] p-5 shadow-2xl shadow-slate-300">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl opacity-30"></div>
+                    {/* Premium Glassmorphism Wallet Card */}
+                    <div className="relative overflow-hidden bg-slate-900 rounded-[2.5rem] p-6 shadow-2xl shadow-slate-300">
+                            {/* Decorative Background */}
+                            <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500 rounded-full -translate-y-1/2 translate-x-1/2 blur-[60px] opacity-40"></div>
+                            <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500 rounded-full translate-y-1/2 -translate-x-1/2 blur-[40px] opacity-30"></div>
                             
                             <div className="relative z-10">
-                                <div className="flex justify-between items-start mb-4">
+                                <div className="flex justify-between items-start mb-6">
                                     <div>
-                                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Total Balance</p>
-                                        <h2 className="text-3xl font-black tracking-tighter text-white">{formatCurrency(agent.balance)}</h2>
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Total Balance</p>
+                                        <h2 className="text-4xl font-black tracking-tighter text-white">{formatCurrency(agent.balance)}</h2>
                                     </div>
                                     <MotionButton 
                                     animate={isRefreshing ? { rotate: 360 } : {}}
                                     transition={{ duration: 1, ease: 'easeInOut' }}
                                     onClick={() => refreshBalance()}
-                                    className="p-2 bg-white/10 rounded-xl hover:bg-white/20 text-white backdrop-blur-md border border-white/5"
+                                    className="p-2.5 bg-white/10 rounded-2xl hover:bg-white/20 text-white backdrop-blur-md border border-white/10"
                                     >
-                                        <RefreshCw className="w-4 h-4" />
+                                        <RefreshCw className="w-5 h-5" />
                                     </MotionButton>
                                 </div>
 
-                                <div className="flex gap-3">
-                                    <div className="w-full bg-white/5 backdrop-blur-md rounded-xl p-3 border border-white/5">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Funding Acct</p>
-                                            <span className="text-[10px] font-black text-white bg-blue-600 px-2 rounded-md">Sterling Bank</span>
+                                {/* Bank Account Display */}
+                                <div className="space-y-3">
+                                    <div className="w-full bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/5">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Funding Account</p>
+                                            <span className="text-[9px] font-black text-white bg-blue-600 px-2 py-0.5 rounded-lg">{agent.flwBankName || 'STERLING BANK'}</span>
                                         </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-xs font-mono font-bold text-white tracking-tight">{agent.flwAccountNumber}</span>
-                                            <button onClick={() => { navigator.clipboard.writeText(agent.flwAccountNumber!); toast.success("Copied"); }} className="text-slate-400 hover:text-white"><Copy className="w-3 h-3" /></button>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                 <p className="text-xl font-mono font-bold text-white tracking-widest">{agent.flwAccountNumber || 'Unavailable'}</p>
+                                                 <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold">{agent.flwAccountName || agent.firstName + ' ' + agent.lastName}</p>
+                                            </div>
+                                            <button onClick={() => { navigator.clipboard.writeText(agent.flwAccountNumber!); toast.success("Copied"); }} className="p-2 bg-white/10 rounded-xl text-white hover:bg-white/20">
+                                                <Copy className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -303,50 +325,50 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                         <div className="flex flex-col h-full space-y-4">
                             {/* Quick Actions - Fixed Height */}
                             <div className="shrink-0">
-                                <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] pl-2 mb-2">Quick Actions</h4>
+                                <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] pl-2 mb-2">Terminal Actions</h4>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <button onClick={() => setShowPurchase('data')} className="bg-white p-4 rounded-[2rem] shadow-[0_5px_20px_-5px_rgba(0,0,0,0.05)] border border-slate-100 flex flex-col justify-between h-32 active:scale-95 transition-all">
-                                        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center"><Wifi className="w-5 h-5" /></div>
+                                    <button onClick={() => setShowPurchase('data')} className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-200/50 flex flex-col justify-between h-36 active:scale-95 transition-all hover:border-blue-200">
+                                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center"><Wifi className="w-6 h-6" /></div>
                                         <div>
-                                            <span className="text-base font-black text-slate-900 block leading-none mb-1">Data</span>
-                                            <span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Resell Bundle</span>
+                                            <span className="text-lg font-black text-slate-900 block leading-none mb-1">Data</span>
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Resell Bundle</span>
                                         </div>
                                     </button>
-                                    <button onClick={() => setShowPurchase('store')} className="bg-white p-4 rounded-[2rem] shadow-[0_5px_20px_-5px_rgba(0,0,0,0.05)] border border-slate-100 flex flex-col justify-between h-32 active:scale-95 transition-all">
-                                        <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center"><ShoppingBag className="w-5 h-5" /></div>
+                                    <button onClick={() => setShowPurchase('store')} className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-200/50 flex flex-col justify-between h-36 active:scale-95 transition-all hover:border-purple-200">
+                                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center"><ShoppingBag className="w-6 h-6" /></div>
                                         <div>
-                                            <span className="text-base font-black text-slate-900 block leading-none mb-1">Store</span>
-                                            <span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Device Order</span>
+                                            <span className="text-lg font-black text-slate-900 block leading-none mb-1">Store</span>
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Device Order</span>
                                         </div>
                                     </button>
                                 </div>
                             </div>
 
                             {/* Recent Transactions - Scrollable */}
-                            <div className="flex-1 bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-0">
-                                    <div className="p-4 border-b border-slate-50 flex justify-between items-center shrink-0">
+                            <div className="flex-1 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-0">
+                                    <div className="p-5 border-b border-slate-100 flex justify-between items-center shrink-0">
                                         <h5 className="text-[9px] font-black uppercase tracking-widest text-slate-400">Recent Transactions</h5>
-                                        <span className="text-blue-600 text-[9px] font-black uppercase flex items-center gap-1">History <ChevronRight className="w-3 h-3" /></span>
+                                        <span className="text-blue-600 text-[9px] font-black uppercase flex items-center gap-1">View All <ChevronRight className="w-3 h-3" /></span>
                                     </div>
                                     <div className="overflow-y-auto flex-1 divide-y divide-slate-50 no-scrollbar">
                                         {history.length === 0 ? (
                                             <div className="p-8 text-center text-slate-400 text-xs font-bold uppercase">No records found</div>
                                         ) : (
                                             history.map(tx => {
-                                                const recData = generateReceiptData(tx);
+                                                const recData = generateReceiptData(tx, agent);
                                                 return (
-                                                <div key={tx.id} onClick={() => generateReceipt(tx)} className="p-4 flex justify-between items-center active:bg-slate-50 transition-colors cursor-pointer">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", tx.type === 'wallet_funding' ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-600")}>
-                                                            {tx.type === 'wallet_funding' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+                                                <div key={tx.id} onClick={() => generateReceipt(tx)} className="p-5 flex justify-between items-center active:bg-slate-50 transition-colors cursor-pointer group">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-colors", tx.type === 'wallet_funding' ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-600 group-hover:bg-slate-200")}>
+                                                            {tx.type === 'wallet_funding' ? <ArrowUpRight className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <p className="text-[10px] font-black uppercase text-slate-900 truncate w-24">{tx.type === 'wallet_funding' ? 'Deposit' : recData.description}</p>
-                                                            <p className="text-[8px] text-slate-400 font-bold">{tx.status}</p>
+                                                            <p className="text-[11px] font-black uppercase text-slate-900 truncate w-32">{tx.type === 'wallet_funding' ? 'Deposit' : recData.description}</p>
+                                                            <p className="text-[9px] text-slate-400 font-bold">{tx.status}</p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className={cn("text-xs font-black", tx.type === 'wallet_funding' ? "text-green-600" : "text-slate-900")}>
+                                                        <p className={cn("text-sm font-black", tx.type === 'wallet_funding' ? "text-green-600" : "text-slate-900")}>
                                                             {tx.type === 'wallet_funding' ? '+' : '-'}{formatCurrency(tx.amount)}
                                                         </p>
                                                     </div>
@@ -394,13 +416,13 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
 
                     {activeTab === 'settings' && (
                         <div className="space-y-4 h-full overflow-y-auto no-scrollbar">
-                                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm">
                                     <div className="text-center mb-6">
-                                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400">
-                                            <Users className="w-8 h-8" />
+                                        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                                            <Users className="w-10 h-10" />
                                         </div>
-                                        <h3 className="text-lg font-black text-slate-900">{agent.firstName} {agent.lastName}</h3>
-                                        <p className="text-[10px] font-bold text-slate-400">{agent.phone}</p>
+                                        <h3 className="text-xl font-black text-slate-900 uppercase">{agent.firstName} {agent.lastName}</h3>
+                                        <p className="text-xs font-bold text-slate-400">{agent.phone}</p>
                                     </div>
 
                                     <div className="space-y-3">
@@ -415,7 +437,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                                     </div>
                                 </div>
 
-                                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm">
                                     <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Security Settings</h4>
                                     <Input 
                                     type="password" 
@@ -425,14 +447,14 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                                     value={newPin}
                                     onChange={e => setNewPin(e.target.value)}
                                     />
-                                    <Button onClick={updatePin} isLoading={isLoading} className="h-14 bg-slate-900 text-white rounded-2xl uppercase font-black tracking-wide text-xs">Update Security PIN</Button>
+                                    <Button onClick={updatePin} isLoading={isLoading} className="h-14 bg-slate-900 text-white rounded-2xl uppercase font-black tracking-wide text-xs shadow-lg shadow-slate-300">Update Security PIN</Button>
                                 </div>
                         </div>
                     )}
                 </div>
 
                 {/* Bottom Navigation */}
-                <div className="bg-white/80 backdrop-blur-xl border-t border-slate-200/50 px-8 py-4 flex justify-between items-center shadow-2xl relative z-20 pb-safe h-[5.5rem] shrink-0">
+                <div className="bg-white/90 backdrop-blur-xl border-t border-slate-200/50 px-8 py-4 flex justify-between items-center shadow-2xl relative z-20 pb-safe h-[5.5rem] shrink-0">
                     <NavBtn icon={LayoutDashboard} label="Home" active={activeTab === 'home'} onClick={() => setActiveTab('home')} />
                     <NavBtn icon={BarChart2} label="Stats" active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} />
                     <NavBtn icon={Settings} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
@@ -460,12 +482,3 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
     </div>
   );
 };
-
-const NavBtn = ({ icon: Icon, label, active, onClick }: { icon: any, label: string, active: boolean, onClick: () => void }) => (
-    <button onClick={onClick} className="flex flex-col items-center justify-center gap-1 min-w-[60px] active:scale-95 transition-transform group">
-        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300", active ? "bg-slate-900 text-white shadow-lg shadow-slate-200" : "text-slate-400 hover:bg-slate-50")}>
-            <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 2} />
-        </div>
-        <span className={cn("text-[9px] font-black uppercase tracking-wider transition-colors", active ? "text-slate-900" : "text-slate-400")}>{label}</span>
-    </button>
-);

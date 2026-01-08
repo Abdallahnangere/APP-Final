@@ -78,7 +78,7 @@ These Terms of Service constitute a legally binding agreement between you and Sa
 The App acts as an intermediary platform facilitating:
 - Purchase and instant delivery of airtime and data bundles.
 - Purchase and delivery of physical mobile devices.
-- Payment processing.
+- Payment processing via secure gateways.
 
 2. PAYMENTS AND REFUNDS
 - Digital Products (Airtime/Data Bundles): Sales are final and non-refundable once successfully delivered.
@@ -89,7 +89,7 @@ The App acts as an intermediary platform facilitating:
 You agree to provide accurate information, including correct phone numbers for VTU transactions.
 
 4. LIMITATION OF LIABILITY
-Services are provided "as is". We are not liable for network failures of Telecommunication Providers.
+Services are provided "as is". We are not liable for network failures of third-party Telecommunication Providers.
 
 5. CONTACT US
 Email: saukidatalinks@gmail.com

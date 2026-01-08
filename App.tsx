@@ -1,67 +1,103 @@
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// Screens
 import { Home } from './components/screens/Home';
 import { Store } from './components/screens/Store';
 import { Data } from './components/screens/Data';
 import { Complaint } from './components/screens/Complaint';
-import { AgentHub } from './components/screens/Agent'; 
+import { AgentHub } from './components/screens/Agent';
+
+// Components
 import { BottomTabs } from './components/BottomTabs';
 import { ToastContainer } from './components/ui/Toast';
-import { motion, AnimatePresence } from 'framer-motion';
 import { SmartEntry } from './components/SmartEntry';
 
-const App: React.FC = () => {
+export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [showEntry, setShowEntry] = useState(true);
 
-  // Helper to go back to home
-  const goHome = () => setActiveTab('home');
+  // Handle back button navigation with robust History API integration
+  useEffect(() => {
+    // Initial state setup if needed
+    if (!window.history.state) {
+        try { window.history.replaceState({ tab: 'home' }, '', null); } catch(e) {}
+    }
 
-  const renderScreen = () => {
+    const handlePopState = (event: PopStateEvent) => {
+      // If we have a state with a tab, use it
+      if (event.state && event.state.tab) {
+        setActiveTab(event.state.tab);
+      } else {
+        // Fallback to home if no state (e.g. initial load or deep back)
+        setActiveTab('home');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigate = (tab: string) => {
+    // Only push if it's a different tab to avoid stack pollution
+    if (tab !== activeTab) {
+        setActiveTab(tab);
+        try {
+          // Pass null as URL to avoid SecurityError in blob/sandbox environments
+          window.history.pushState({ tab }, '', null); 
+        } catch (e) {
+          console.warn('Navigation history update failed:', e);
+        }
+    }
+  };
+
+  const goHome = () => navigate('home');
+
+  // Defensive rendering to prevent crashes
+  const renderContent = () => {
     switch (activeTab) {
-      case 'home': return <Home onNavigate={setActiveTab} />;
+      case 'home': return <Home onNavigate={navigate} />;
       case 'store': return <Store onBack={goHome} />;
       case 'data': return <Data onBack={goHome} />;
       case 'track': return <Complaint onBack={goHome} />;
       case 'agent': return <AgentHub onBack={goHome} />;
-      default: return <Home onNavigate={setActiveTab} />;
+      default: return <Home onNavigate={navigate} />;
     }
   };
 
   const MotionDiv = motion.div as any;
-  const MotionMain = motion.main as any;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 text-slate-900 dark:text-white font-sans selection:bg-slate-200 transition-colors duration-300">
+    <div className="min-h-full bg-[#f8fafc] text-slate-900 selection:bg-slate-200">
+      <ToastContainer />
+
       <AnimatePresence>
         {showEntry && <SmartEntry onComplete={() => setShowEntry(false)} />}
       </AnimatePresence>
 
-      <ToastContainer />
-      
       {!showEntry && (
-          <MotionDiv
-             initial={{ opacity: 0 }}
-             animate={{ opacity: 1 }}
-             transition={{ duration: 0.5 }}
-          >
-              <AnimatePresence mode="wait">
-                <MotionMain
-                  key={activeTab}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="pb-24 max-w-md mx-auto min-h-screen bg-white dark:bg-slate-900 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden relative"
-                >
-                  {renderScreen()}
-                </MotionMain>
-              </AnimatePresence>
-              <BottomTabs activeTab={activeTab} onChange={setActiveTab} />
-          </MotionDiv>
+        <div className="flex flex-col h-full max-w-[480px] mx-auto bg-white shadow-2xl relative">
+          {/* Main Content Area */}
+          <div className="flex-1 relative overflow-hidden">
+            <AnimatePresence mode="wait">
+              <MotionDiv
+                key={activeTab}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.02 }}
+                transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+                className="h-full overflow-y-auto no-scrollbar pb-24"
+              >
+                {renderContent()}
+              </MotionDiv>
+            </AnimatePresence>
+          </div>
+
+          {/* Navigation Bar */}
+          <BottomTabs activeTab={activeTab} onChange={navigate} />
+        </div>
       )}
     </div>
   );
-};
-
-export default App;
+}

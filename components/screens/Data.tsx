@@ -3,11 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { DataPlan, NetworkType, PaymentInitResponse, Agent } from '../../types';
 import { api } from '../../lib/api';
-import { formatCurrency, NETWORK_BG_COLORS, cn } from '../../lib/utils';
+import { formatCurrency, NETWORK_BG_COLORS, cn, saveToLocalHistory, generateReceiptData } from '../../lib/utils';
 import { BottomSheet } from '../ui/BottomSheet';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { CheckCircle2, Copy, Download, RefreshCw, Loader2, Wifi, ArrowRight, Wallet } from 'lucide-react';
+import { CheckCircle2, Copy, Download, RefreshCw, Loader2, Wifi, Wallet } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { SharedReceipt } from '../SharedReceipt';
 import { toast } from '../../lib/toast';
@@ -28,6 +28,9 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
   const [isPolling, setIsPolling] = useState(false);
   const [agentPin, setAgentPin] = useState('');
   const receiptRef = useRef<HTMLDivElement>(null);
+  
+  // Track the final successful transaction to save to history
+  const [finalTx, setFinalTx] = useState<any>(null);
 
   useEffect(() => {
     loadPlans();
@@ -50,10 +53,9 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
         try {
           const res = await api.verifyTransaction(paymentDetails.tx_ref);
           if (res.status === 'delivered') {
-            setStep('success');
+            handleSuccess(res);
             setIsPolling(false);
             clearInterval(interval);
-            toast.success("Payment received! Data sent.");
           } else if (res.status === 'paid') {
              // wait for delivery
           }
@@ -62,6 +64,27 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
     }
     return () => clearInterval(interval);
   }, [paymentDetails, step]);
+
+  const handleSuccess = (tx: any) => {
+      setStep('success');
+      toast.success("Data Delivered!");
+      if (!agent) {
+          // Construct a partial transaction object for local history if needed
+          const fullTx = {
+             ...tx,
+             // Ensure these exist for local history display
+             createdAt: new Date().toISOString(),
+             amount: selectedPlan?.price || 0,
+             type: 'data',
+             dataPlan: selectedPlan,
+             tx_ref: paymentDetails?.tx_ref || tx.tx_ref
+          };
+          saveToLocalHistory(fullTx);
+          setFinalTx(fullTx);
+      } else {
+          setFinalTx(tx); // For receipt
+      }
+  };
 
   const filteredPlans = selectedNetwork 
     ? plans.filter(p => p.network === selectedNetwork)
@@ -107,8 +130,7 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
               account_name: 'WALLET',
               bank: 'WALLET'
           });
-          setStep('success');
-          toast.success("Data Sent Successfully!");
+          handleSuccess(res.transaction);
       } catch (e: any) {
           toast.error(e.message || "Purchase failed");
       } finally {
@@ -123,10 +145,7 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
         setPaymentDetails(res);
         setStep('payment');
     } catch(e: any) {
-        // Display Real Error from API
-        const errorMsg = e.message || "Connection error. Try again.";
-        toast.error(errorMsg);
-        console.error(e);
+        toast.error(e.message || "Connection error. Try again.");
     } finally {
         setIsLoading(false);
     }
@@ -138,8 +157,7 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
       try {
           const res = await api.verifyTransaction(paymentDetails.tx_ref);
           if (res.status === 'delivered') {
-              setStep('success');
-              toast.success("Confirmed! Data delivered.");
+              handleSuccess(res);
           } else if (res.status === 'paid') {
               toast.info("Payment confirmed. Delivery processing...");
           } else {
@@ -162,7 +180,6 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
         link.click();
         toast.success("Receipt downloaded");
     } catch (err) {
-        console.error('Could not generate receipt', err);
         toast.error("Failed to generate receipt");
     }
   };
@@ -348,15 +365,15 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                  
                  <SharedReceipt 
                     ref={receiptRef}
-                    transaction={{
+                    transaction={generateReceiptData(finalTx || {
                         tx_ref: paymentDetails.tx_ref,
                         amount: selectedPlan.price,
-                        date: new Date().toLocaleString(),
-                        type: 'Data Bundle',
-                        description: `${selectedPlan.network} ${selectedPlan.data} (${selectedPlan.validity})`,
+                        createdAt: new Date().toISOString(),
+                        type: 'data',
+                        dataPlan: selectedPlan,
                         status: 'delivered',
-                        customerPhone: phone
-                    }}
+                        phone: phone
+                    }, agent)}
                  />
 
                  <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-green-200 animate-in zoom-in duration-300">

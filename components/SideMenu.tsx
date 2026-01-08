@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Bell, Moon, Sun, Info, ShieldCheck, CheckCircle, Volume2, Smartphone, LogIn } from 'lucide-react';
+import { X, Bell, Moon, Sun, Info, ShieldCheck, CheckCircle, Volume2, Smartphone, LogIn, History } from 'lucide-react';
 import { toast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { playSound, triggerHaptic } from '../lib/sounds';
@@ -10,10 +10,11 @@ interface SideMenuProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenLegal?: () => void;
+  onOpenHistory?: () => void;
   onAgentLogin?: () => void;
 }
 
-export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal, onAgentLogin }) => {
+export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal, onOpenHistory, onAgentLogin }) => {
   const [settings, setSettings] = useState({
       notifications: true,
       darkMode: false,
@@ -118,6 +119,7 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal
                     <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] mb-5">Enterprise</h3>
                     <div className="space-y-2">
                          <MenuItem icon={LogIn} label="Agent / Admin Login" subLabel="Partner Access" onClick={() => { onClose(); onAgentLogin?.(); }} />
+                         <MenuItem icon={History} label="Transaction History" subLabel="Local Records" onClick={() => { onClose(); onOpenHistory?.(); }} />
                         <MenuItem icon={Info} label="About Sauki Mart" subLabel="Our Vision" onClick={() => { onClose(); onOpenLegal?.(); }} />
                         <MenuItem icon={ShieldCheck} label="Legal & Privacy" subLabel="Compliance" onClick={() => { onClose(); onOpenLegal?.(); }} />
                     </div>

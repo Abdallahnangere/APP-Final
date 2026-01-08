@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, ShoppingBag, Wifi, MessageSquareWarning, Users } from 'lucide-react';
+import { Home, ShoppingBag, Wifi, MessageSquare, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { triggerHaptic } from '../lib/sounds';
 
@@ -15,7 +15,7 @@ export const BottomTabs: React.FC<BottomTabsProps> = ({ activeTab, onChange }) =
     { id: 'store', icon: ShoppingBag, label: 'Store' },
     { id: 'data', icon: Wifi, label: 'Data' },
     { id: 'agent', icon: Users, label: 'Agent' },
-    { id: 'track', icon: MessageSquareWarning, label: 'Complaint' },
+    { id: 'track', icon: MessageSquare, label: 'Complaint' },
   ];
 
   const handlePress = (id: string) => {

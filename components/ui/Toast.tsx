@@ -21,6 +21,8 @@ export const ToastContainer: React.FC = () => {
   }, []);
 
   // 2. Poll for Admin "Push" Notifications
+  // NOTE: This logic separates PUSH from BROADCAST. 
+  // Broadcasts are handled in Home.tsx (Ticker). This handles Pop-ups.
   useEffect(() => {
       const interval = setInterval(async () => {
           try {
@@ -28,16 +30,15 @@ export const ToastContainer: React.FC = () => {
               const data = await res.json();
               if (data && data.type === 'PUSH' && data.isActive) {
                   const content = JSON.parse(data.content);
-                  // Check if we already showed this one (simple localstorage check or just session state)
                   const seen = sessionStorage.getItem('lastPushId');
                   if (seen !== data.id) {
                       setPushNotification(content);
                       sessionStorage.setItem('lastPushId', data.id);
-                      playSound('success'); // Use notification sound
+                      playSound('success'); 
                   }
               }
           } catch(e) {}
-      }, 10000); // Check every 10 seconds
+      }, 10000); 
       return () => clearInterval(interval);
   }, []);
 
