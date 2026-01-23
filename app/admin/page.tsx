@@ -613,8 +613,32 @@ export default function AdminPage() {
                 </div>
             )}
             
-            {/* Fallbacks for other views ... */}
-            {view === 'webhooks' && <div className="p-10 text-center text-slate-400 font-bold uppercase">Check Logs API</div>}
+            {view === 'webhooks' && (
+                <div className="space-y-4">
+                    <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden">
+                        {webhooks.length === 0 ? (
+                            <div className="p-10 text-center text-slate-400 font-bold uppercase">No Webhook Logs Yet</div>
+                        ) : (
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                                    <tr><th className="p-4">Timestamp</th><th className="p-4">Source</th><th className="p-4">Status</th><th className="p-4">Payload</th></tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50 max-h-[600px] overflow-y-auto">
+                                    {webhooks.map(log => (
+                                        <tr key={log.id} className="hover:bg-slate-50/50">
+                                            <td className="p-4 text-xs text-slate-500 font-mono">{new Date(log.createdAt).toLocaleString()}</td>
+                                            <td className="p-4 font-bold uppercase text-xs"><span className="bg-orange-100 text-orange-700 px-2 py-1 rounded">{log.source}</span></td>
+                                            <td className="p-4"><span className="bg-green-100 text-green-700 px-2 py-1 rounded text-[9px] font-black uppercase">Received</span></td>
+                                            <td className="p-4"><button onClick={() => alert(JSON.stringify(log.payload, null, 2))} className="text-blue-600 hover:underline text-xs font-bold">View</button></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                    <div className="text-xs text-slate-500 text-center font-mono">Total: {webhooks.length} logs</div>
+                </div>
+            )}
             {view === 'console' && (
                 <div className="bg-slate-900 rounded-[2rem] p-6 text-white min-h-[500px] flex flex-col">
                     <div className="flex gap-4 mb-6">

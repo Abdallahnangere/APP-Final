@@ -14,11 +14,10 @@ export async function POST(req: Request) {
 
         const logs = await prisma.webhookLog.findMany({
             orderBy: { createdAt: 'desc' },
-            take: 20
+            take: 100
         });
 
-        return NextResponse.json({ logs });
-    } catch (e) {
-        return NextResponse.json({ error: 'Server Error' }, { status: 500 });
-    }
-}
+        return NextResponse.json({ logs, count: logs.length });
+    } catch (e: any) {
+        console.error('Webhook logs error:', e);
+        return NextResponse.json({ error: e?.message || 'Server Error', logs: [] }, { status: 500 });

@@ -3,9 +3,9 @@
   "name": "SAUKI MART Premium",
   "short_name": "SAUKI MART",
   "description": "The #1 App for Instant MTN, Airtel, Glo Data, Airtime Recharge, and Premium Gadgets in Nigeria. SMEDAN Certified Business.",
-  "id": "/?source=pwa",
-  "start_url": "/?source=pwa",
-  "scope": "/",
+  "id": "https://www.saukimart.online/?source=pwa",
+  "start_url": "https://www.saukimart.online/?source=pwa",
+  "scope": "https://www.saukimart.online/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#f8fafc",
@@ -100,7 +100,7 @@
   "related_applications": [],
   "scope_extensions": [
     {
-      "origin": "https://saukimart.online"
+      "origin": "https://www.saukimart.online"
     }
   ]
 }

@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
     // Create Virtual Account on Flutterwave
     const tx_ref = `AGENT-REG-${uuidv4()}`;
-    const email = `agent.${phone}@saukimart.com`; // Generate synthetic email for agent
+    const email = `agent.${phone}@www.saukimart.online`; // Generate synthetic email for agent
     
     // Using environment BVN as requested
     const bvn = process.env.MY_BVN; 

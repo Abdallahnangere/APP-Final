@@ -24,11 +24,11 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_NG",
-    url: "https://saukimart.online",
+    url: "https://www.saukimart.online",
     siteName: "Sauki Mart",
     title: "SAUKI MART | Instant Data & Devices",
     description: "Secure, Fast, and Reliable Mobile Commerce.",
-    images: [{ url: "/logo.png", width: 512, height: 512, alt: "Sauki Mart Logo" }],
+    images: [{ url: "https://www.saukimart.online/logo.png", width: 512, height: 512, alt: "Sauki Mart Logo" }],
   }
 };
 
@@ -70,7 +70,7 @@ export default function RootLayout({
         {
             "@type": "LocalBusiness",
             "name": "Sauki Data Links",
-            "image": "https://saukimart.online/logo.png",
+            "image": "https://www.saukimart.online/logo.png",
             "telephone": "+2348061934056",
             "email": "saukidatalinks@gmail.com",
             "address": {

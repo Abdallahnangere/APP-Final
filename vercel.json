@@ -1,5 +1,17 @@
 {
   "framework": "nextjs",
-  "regions": ["lhr1"], 
+  "regions": ["lhr1"],
+  "env": {
+    "NEXT_PUBLIC_DOMAIN": "www.saukimart.online"
+  },
+  "domains": [
+    {
+      "domain": "saukimart.online",
+      "redirect": "www.saukimart.online"
+    },
+    {
+      "domain": "www.saukimart.online"
+    }
+  ],
   "crons": []
 }
