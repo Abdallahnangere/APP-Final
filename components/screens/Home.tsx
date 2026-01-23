@@ -57,10 +57,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       )}
 
       {/* PREMIUM HEADER - Apple Large Title Style */}
-      <header className="px-6 pt-safe mt-4 flex justify-between items-center z-10 shrink-0 mb-2">
+      <header className="px-6 pt-safe pb-4 flex justify-between items-center z-10 shrink-0 mb-0">
         <div>
-            <p className="text-xs font-semibold text-primary-500 uppercase tracking-wide mb-1">Welcome back</p>
-            <h1 className="text-3xl font-bold text-primary-900 tracking-tight leading-none">SAUKI</h1>
+            <h1 className="text-3xl font-bold text-primary-900 tracking-tight leading-none">SAUKI MART</h1>
         </div>
         <MotionDiv
           whileTap={{ scale: 0.95 }}
@@ -72,7 +71,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       </header>
 
       {/* SCROLLABLE CONTENT */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-4 pt-2 space-y-4 pb-32">
+      <div className="flex-1 overflow-y-auto no-scrollbar px-4 pt-4 space-y-4 pb-20">
         
         {/* TICKER (Marquee) */}
         {ticker && (

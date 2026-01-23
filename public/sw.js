@@ -86,3 +86,73 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// PUSH NOTIFICATION HANDLER
+self.addEventListener('push', (event) => {
+  try {
+    const data = event.data ? event.data.json() : {};
+    const title = data.title || 'SAUKI MART Notification';
+    const options = {
+      body: data.body || 'You have a new message',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-192x192.png',
+      tag: 'sauki-notification',
+      requireInteraction: false,
+      vibrate: [200, 100, 200],
+      data: {
+        url: data.url || '/',
+        timestamp: new Date().toISOString()
+      },
+      actions: [
+        {
+          action: 'open',
+          title: 'Open',
+          icon: '/icons/icon-192x192.png'
+        },
+        {
+          action: 'close',
+          title: 'Dismiss',
+          icon: '/icons/icon-192x192.png'
+        }
+      ]
+    };
+
+    event.waitUntil(
+      self.registration.showNotification(title, options)
+    );
+  } catch (error) {
+    console.error('Push notification error:', error);
+  }
+});
+
+// NOTIFICATION CLICK HANDLER
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  if (event.action === 'close') {
+    return;
+  }
+
+  const urlToOpen = event.notification.data?.url || '/';
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Check if there's already a window open with the URL
+      for (let i = 0; i < clientList.length; i++) {
+        const client = clientList[i];
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // If not, open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
+
+// NOTIFICATION CLOSE HANDLER
+self.addEventListener('notificationclose', (event) => {
+  // Analytics or cleanup can go here
+});

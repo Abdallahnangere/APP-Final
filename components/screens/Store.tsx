@@ -31,7 +31,7 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
-  
+  const [receiptTx, setReceiptTx] = useState<any>(null);
   const [finalTx, setFinalTx] = useState<any>(null);
 
   useEffect(() => {
@@ -239,147 +239,192 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
   const MotionDiv = motion.div as any;
 
   return (
-    <div className="p-6 pb-32">
-      <div className="flex items-center gap-3 mb-4">
-        {onBack && <button onClick={onBack} className="bg-slate-100 p-2 rounded-xl text-slate-500 font-bold text-xs uppercase tracking-widest">Back</button>}
-        <h1 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-            <div className={cn("w-11 h-11 rounded-2xl flex items-center justify-center shadow-xl shadow-slate-200", agent ? "bg-purple-600 text-white" : "bg-slate-900 text-white")}>
-                <ShoppingBag className="w-5 h-5" />
-            </div>
-            {agent ? 'Agent Store' : 'Premium Store'}
-        </h1>
-      </div>
-
-      <div className="flex p-1.5 bg-slate-100 rounded-[1.5rem] mb-6 overflow-x-auto no-scrollbar">
-          <button 
-            onClick={() => setActiveTab('device')}
-            className={cn("flex-1 min-w-[100px] whitespace-nowrap px-4 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", activeTab === 'device' ? "bg-white text-slate-900 shadow-md" : "text-slate-500")}
-          >
-            Devices
-          </button>
-          <button 
-            onClick={() => setActiveTab('sim')}
-            className={cn("flex-1 min-w-[100px] whitespace-nowrap px-4 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", activeTab === 'sim' ? "bg-white text-slate-900 shadow-md" : "text-slate-500")}
-          >
-            Data SIMs
-          </button>
-          <button 
-            onClick={() => setActiveTab('package')}
-            className={cn("flex-1 min-w-[120px] whitespace-nowrap px-4 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", activeTab === 'package' ? "bg-white text-slate-900 shadow-md" : "text-slate-500")}
-          >
-            Full Package
-          </button>
-      </div>
-      
-      {isLoading && products.length === 0 ? (
-          <div className="flex justify-center py-20"><Loader2 className="animate-spin w-8 h-8 text-slate-200" /></div>
-      ) : (
-        <div className="grid grid-cols-2 gap-4">
-            {displayedProducts.length === 0 ? (
-                <div className="col-span-2 text-center text-slate-400 py-20 font-black uppercase tracking-widest text-[10px]">No Inventory Available</div>
-            ) : displayedProducts.map((product) => (
-            <MotionDiv
-                key={product.id}
-                whileTap={{ scale: 0.96 }}
-                className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 flex flex-col cursor-pointer hover:shadow-2xl hover:shadow-slate-100 transition-all group"
-                onClick={() => setSelectedProduct(product)}
-            >
-                <div className="aspect-square bg-slate-50 rounded-2xl mb-4 relative overflow-hidden flex items-center justify-center p-4">
-                    <img src={product.image} alt={product.name} className="object-contain w-full h-full mix-blend-multiply group-hover:scale-110 transition-transform duration-700" />
-                </div>
-                <h3 className="font-black text-slate-900 text-[10px] line-clamp-2 min-h-[32px] leading-tight mb-2 uppercase tracking-tight">{product.name}</h3>
-                <div className="mt-auto">
-                   <div className="font-black text-blue-600 text-sm tracking-tighter">{formatCurrency(product.price)}</div>
-                </div>
-            </MotionDiv>
-            ))}
-        </div>
+    <div className="h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex flex-col overflow-hidden">
+      {receiptTx && (
+          <SharedReceipt ref={receiptRef} transaction={generateReceiptData(finalTx || {})} />
       )}
 
-      <BottomSheet isOpen={!!selectedProduct} onClose={() => { setSelectedProduct(null); setStep('details'); }} title={step === 'payment' ? 'Order Fulfillment' : 'Product Showcase'}>
-         {step === 'details' && selectedProduct && (
-             <div className="space-y-6">
-                 {/* Product Details UI */}
-                 <div className="aspect-[4/3] bg-slate-50 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-8 border border-slate-100 shadow-inner">
-                     <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply drop-shadow-2xl" />
-                 </div>
-                 
-                 <div className="space-y-4">
-                     <div className="flex justify-between items-start">
-                        <div>
-                            <h2 className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(selectedProduct.price)}</h2>
-                            <p className="text-lg font-black text-slate-900 mt-1 uppercase leading-none tracking-tight">{selectedProduct.name}</p>
-                        </div>
-                        <div className="bg-green-50 text-green-600 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase border border-green-100 flex items-center gap-1 shadow-sm">
-                            <Zap className="w-3 h-3 fill-green-600" /> In Stock
-                        </div>
-                     </div>
+      {/* Header */}
+      <div className="px-6 pt-safe pb-4 bg-white/80 backdrop-blur-xl border-b border-slate-100 shrink-0 flex items-center gap-4">
+        {onBack && <button onClick={onBack} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 font-bold text-xs uppercase transition-colors">← Back</button>}
+        <div className="flex-1">
+          <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3 uppercase">
+              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shadow-lg", agent ? "bg-purple-600 text-white" : "bg-gradient-to-br from-slate-900 to-slate-800 text-white")}>
+                  <ShoppingBag className="w-5 h-5" />
+              </div>
+              {agent ? 'Agent Store' : 'Premium Store'}
+          </h1>
+        </div>
+      </div>
 
-                     <div className="grid grid-cols-3 gap-2">
-                        <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center text-center">
-                            <ShieldCheck className="w-5 h-5 text-blue-600 mb-1" />
-                            <span className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Premium</span>
-                        </div>
-                        <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center text-center">
-                            <Truck className="w-5 h-5 text-blue-600 mb-1" />
-                            <span className="text-[8px] font-black uppercase text-slate-400 tracking-widest">NATIONWIDE</span>
-                        </div>
-                        <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center text-center">
-                            <Zap className="w-5 h-5 text-blue-600 mb-1" />
-                            <span className="text-[8px] font-black uppercase text-slate-400 tracking-widest">INSTANT</span>
-                        </div>
-                     </div>
+      {!selectedProduct ? (
+        <>
+          {/* Category Tabs */}
+          <div className="px-6 pt-6 shrink-0 pb-2">
+            <div className="flex p-2 bg-slate-100 rounded-[1.5rem] overflow-x-auto no-scrollbar gap-1">
+                <button 
+                  onClick={() => setActiveTab('device')}
+                  className={cn("flex-1 min-w-[120px] whitespace-nowrap px-4 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all", activeTab === 'device' ? "bg-white text-slate-900 shadow-lg" : "text-slate-500 hover:text-slate-700")}
+                >
+                  Devices
+                </button>
+                <button 
+                  onClick={() => setActiveTab('sim')}
+                  className={cn("flex-1 min-w-[120px] whitespace-nowrap px-4 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all", activeTab === 'sim' ? "bg-white text-slate-900 shadow-lg" : "text-slate-500 hover:text-slate-700")}
+                >
+                  Data SIMs
+                </button>
+                <button 
+                  onClick={() => setActiveTab('package')}
+                  className={cn("flex-1 min-w-[140px] whitespace-nowrap px-4 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all", activeTab === 'package' ? "bg-white text-slate-900 shadow-lg" : "text-slate-500 hover:text-slate-700")}
+                >
+                  Full Package
+                </button>
+            </div>
+          </div>
 
-                     <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100">
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Product Description</h4>
-                        <p className="text-slate-600 text-sm font-medium leading-relaxed italic">
-                            {selectedProduct.description || "Unleash high-speed performance with Sauki Mart's flagship connectivity suite. Optimized for maximum network stability across all Nigerian regions."}
-                        </p>
-                     </div>
+          {/* Products Grid - SCROLLABLE */}
+          <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-4 pb-32">
+            {isLoading && products.length === 0 ? (
+                <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin w-8 h-8 text-slate-300" /></div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                  {displayedProducts.length === 0 ? (
+                      <div className="col-span-2 text-center text-slate-400 py-12 font-black uppercase tracking-widest text-xs">No Inventory Available</div>
+                  ) : displayedProducts.map((product) => (
+                  <MotionDiv
+                      key={product.id}
+                      whileTap={{ scale: 0.94 }}
+                      whileHover={{ y: -8 }}
+                      className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 flex flex-col cursor-pointer hover:shadow-xl hover:shadow-slate-200/50 transition-all group overflow-hidden"
+                      onClick={() => setSelectedProduct(product)}
+                  >
+                      <div className="aspect-square bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl mb-4 relative overflow-hidden flex items-center justify-center p-4 border border-slate-100 group-hover:border-slate-200">
+                          <img src={product.image} alt={product.name} className="object-contain w-full h-full mix-blend-multiply group-hover:scale-110 transition-transform duration-700" />
+                      </div>
+                      <div className="flex-1 flex flex-col">
+                        <h3 className="font-black text-slate-900 text-xs line-clamp-2 min-h-[32px] leading-tight mb-3 uppercase tracking-tight">{product.name}</h3>
+                        <div className="mt-auto">
+                           <div className="font-black text-blue-600 text-lg tracking-tighter">{formatCurrency(product.price)}</div>
+                           <p className="text-[10px] text-slate-400 font-semibold mt-1">Instant Delivery</p>
+                        </div>
+                      </div>
+                  </MotionDiv>
+                  ))}
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        /* PRODUCT DETAIL VIEW */
+        <BottomSheet isOpen={!!selectedProduct} onClose={() => { setSelectedProduct(null); setStep('details'); }} title={step === 'payment' ? 'Order Fulfillment' : step === 'success' ? 'Order Confirmed!' : 'Product Showcase'}>
+           {step === 'details' && selectedProduct && (
+               <div className="space-y-6">
+                   {/* Product Image */}
+                   <div className="aspect-[4/3] bg-gradient-to-br from-slate-50 to-slate-100 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-8 border border-slate-100 shadow-inner">
+                       <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply drop-shadow-2xl" />
+                   </div>
+                   
+                   <div className="space-y-4">
+                       <div className="flex justify-between items-start">
+                          <div>
+                              <h2 className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(selectedProduct.price)}</h2>
+                              <p className="text-lg font-black text-slate-900 mt-2 uppercase leading-none tracking-tight max-w-xs">{selectedProduct.name}</p>
+                          </div>
+                          <div className="bg-green-50 text-green-600 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase border border-green-100 flex items-center gap-1 shadow-sm shrink-0">
+                              <Zap className="w-3 h-3 fill-green-600" /> In Stock
+                          </div>
+                       </div>
 
-                     {(selectedProduct.category === 'device' || selectedProduct.category === 'package') && availableSims.length > 0 && (
-                         <div className="bg-slate-900 p-6 rounded-[2rem] shadow-2xl shadow-slate-200">
-                             <label className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-3 block flex items-center gap-2">
-                                 <Plus className="w-4 h-4 text-blue-400" /> Component Upsell?
-                             </label>
-                             <select 
-                                className="w-full p-4 rounded-2xl border-none bg-white/10 text-white font-black text-sm backdrop-blur-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none"
-                                value={selectedSimId}
-                                onChange={(e) => setSelectedSimId(e.target.value)}
-                                style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.5em' }}
-                             >
-                                 <option value="" className="text-slate-900">None, Just the Base Item</option>
-                                 {availableSims.map(sim => (
-                                     <option key={sim.id} value={sim.id} className="text-slate-900">
-                                         {sim.name} (+{formatCurrency(sim.price)})
-                                     </option>
-                                 ))}
-                             </select>
-                         </div>
-                     )}
-                 </div>
+                       {/* Features Grid */}
+                       <div className="grid grid-cols-3 gap-3">
+                          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-50/50 rounded-2xl border border-blue-100 flex flex-col items-center text-center">
+                              <ShieldCheck className="w-5 h-5 text-blue-600 mb-2" />
+                              <span className="text-[10px] font-black uppercase text-blue-700 tracking-widest">Premium<br/>Quality</span>
+                          </div>
+                          <div className="p-4 bg-gradient-to-br from-green-50 to-green-50/50 rounded-2xl border border-green-100 flex flex-col items-center text-center">
+                              <Truck className="w-5 h-5 text-green-600 mb-2" />
+                              <span className="text-[10px] font-black uppercase text-green-700 tracking-widest">NATIONWIDE<br/>SHIPPING</span>
+                          </div>
+                          <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-50/50 rounded-2xl border border-purple-100 flex flex-col items-center text-center">
+                              <Zap className="w-5 h-5 text-purple-600 mb-2" />
+                              <span className="text-[10px] font-black uppercase text-purple-700 tracking-widest">INSTANT<br/>DISPATCH</span>
+                          </div>
+                       </div>
 
-                 <Button onClick={handleBuyNow} className={cn("h-16 text-xl font-black text-white shadow-2xl shadow-slate-200 rounded-[2rem] uppercase tracking-tighter", agent ? "bg-purple-600" : "bg-slate-900")}>
-                     {agent ? "Proceed to Wallet Pay" : "Confirm & Purchase"} {upsellSim && `(${formatCurrency(currentTotal)})`}
-                 </Button>
-             </div>
-         )}
+                       {/* Description */}
+                       <div className="bg-gradient-to-br from-slate-50 to-slate-50/50 p-5 rounded-[2rem] border border-slate-100">
+                          <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] mb-3">Product Description</h4>
+                          <p className="text-slate-700 text-sm font-medium leading-relaxed">
+                              {selectedProduct.description || "Premium quality product from Sauki Mart. Fully inspected, instantly dispatched nationwide. Get authentic products with guaranteed delivery within your preferred timeframe."}
+                          </p>
+                       </div>
+
+                       {/* SIM Upsell */}
+                       {(selectedProduct.category === 'device' || selectedProduct.category === 'package') && availableSims.length > 0 && (
+                           <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-[2rem] shadow-2xl shadow-slate-300 border border-slate-700">
+                               <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4 block flex items-center gap-2">
+                                   <Plus className="w-4 h-4 text-blue-400" /> Bundle with SIM?
+                               </label>
+                               <select 
+                                  className="w-full p-4 rounded-2xl border-none bg-white/10 text-white font-black text-sm backdrop-blur-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none placeholder-white/50"
+                                  value={selectedSimId}
+                                  onChange={(e) => setSelectedSimId(e.target.value)}
+                                  style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.5em', paddingRight: '3rem' }}
+                               >
+                                   <option value="" className="text-slate-900">None - Just the Device</option>
+                                   {availableSims.map(sim => (
+                                       <option key={sim.id} value={sim.id} className="text-slate-900">
+                                           {sim.name} — +{formatCurrency(sim.price)}
+                                       </option>
+                                   ))}
+                               </select>
+                               {upsellSim && (
+                                 <p className="text-xs text-blue-300 font-semibold mt-3 flex items-center gap-2">
+                                   <CheckCircle2 className="w-4 h-4" /> Bundle total: {formatCurrency(currentTotal)}
+                                 </p>
+                               )}
+                           </div>
+                       )}
+                   </div>
+
+                   <Button onClick={handleBuyNow} className={cn("h-16 text-lg font-black text-white shadow-2xl shadow-slate-300 rounded-[2rem] uppercase tracking-tighter w-full", agent ? "bg-gradient-to-r from-purple-600 to-purple-700 hover:shadow-purple-200" : "bg-gradient-to-r from-blue-600 to-blue-700 hover:shadow-blue-200")}>
+                       {agent ? "Proceed to Wallet Pay" : "Confirm & Purchase"} {upsellSim && `(${formatCurrency(currentTotal)})`}
+                   </Button>
+               </div>
+           )}
 
          {step === 'form' && selectedProduct && (
-             <div className="space-y-4">
-                 <div className="bg-slate-50 p-5 rounded-[1.5rem] mb-4 flex items-center gap-4 border border-slate-100 shadow-inner">
-                    <img src={selectedProduct.image} className="w-14 h-14 object-contain mix-blend-multiply" />
-                    <div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Order Summary</p>
-                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{selectedProduct.name} {upsellSim && `+ ${upsellSim.name}`}</p>
-                        <p className="text-blue-600 font-black text-xs">{formatCurrency(currentTotal)} Total</p>
+             <div className="space-y-6">
+                 {/* Order Summary */}
+                 <div className="bg-gradient-to-br from-slate-50 to-slate-50/50 p-5 rounded-2xl border border-slate-100 flex items-center gap-4 shadow-inner">
+                    <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center p-3 border border-slate-100">
+                      <img src={selectedProduct.image} className="w-full h-full object-contain mix-blend-multiply" />
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Order Summary</p>
+                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight mt-1">{selectedProduct.name} {upsellSim && `+ ${upsellSim.name}`}</p>
+                        <p className="text-lg font-black text-blue-600 mt-2">{formatCurrency(currentTotal)}</p>
                     </div>
                  </div>
-                 <Input label="Receiver Full Name" placeholder="e.g. John Doe" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="rounded-2xl h-14 font-black text-sm uppercase" />
-                 <Input label="Contact Phone" type="tel" placeholder="080..." value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="rounded-2xl h-14 font-black text-sm" />
-                 <Input label="Detailed Delivery Address" placeholder="Street, City, State" value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} className="rounded-2xl h-14 font-black text-sm uppercase" />
+
+                 {/* Form Fields */}
+                 <div className="space-y-4">
+                   <div>
+                     <label className="text-xs font-black text-slate-600 uppercase tracking-widest mb-2 block">Full Name</label>
+                     <Input placeholder="John Doe" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="rounded-2xl h-14 font-semibold text-sm bg-white border border-slate-200" />
+                   </div>
+                   <div>
+                     <label className="text-xs font-black text-slate-600 uppercase tracking-widest mb-2 block">Contact Phone</label>
+                     <Input type="tel" placeholder="0801234567" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="rounded-2xl h-14 font-semibold text-sm bg-white border border-slate-200" />
+                   </div>
+                   <div>
+                     <label className="text-xs font-black text-slate-600 uppercase tracking-widest mb-2 block">Delivery Address</label>
+                     <Input placeholder="Apartment, Street, City, State" value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} className="rounded-2xl h-14 font-semibold text-sm bg-white border border-slate-200" />
+                   </div>
+                 </div>
                  
-                 <Button onClick={handleBuyNow} isLoading={isLoading} className={cn("mt-4 h-16 text-xl font-black rounded-[2rem] uppercase tracking-tighter shadow-xl", agent ? "bg-purple-600 shadow-purple-100" : "bg-blue-600 shadow-blue-100")}>
+                 <Button onClick={handleBuyNow} isLoading={isLoading} className={cn("h-16 text-lg font-black rounded-[2rem] uppercase tracking-tighter shadow-xl w-full text-white", agent ? "bg-gradient-to-r from-purple-600 to-purple-700" : "bg-gradient-to-r from-blue-600 to-blue-700")}>
                      {agent ? "Authorize Charge" : "Initialize Payment"} ({formatCurrency(currentTotal)})
                  </Button>
              </div>
@@ -500,6 +545,7 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
              </div>
          )}
       </BottomSheet>
+      )}
     </div>
   );
 };

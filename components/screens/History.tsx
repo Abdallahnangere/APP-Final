@@ -123,13 +123,13 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
   );
 
   return (
-    <div className="min-h-screen bg-primary-50 pb-32">
+    <div className="h-screen bg-primary-50 flex flex-col overflow-hidden">
         {receiptTx && (
             <SharedReceipt ref={receiptRef} transaction={generateReceiptData(receiptTx)} />
         )}
 
         {/* Header */}
-        <div className="bg-white/80 backdrop-blur-xl border-b border-primary-100 px-6 pt-12 pb-6 sticky top-0 z-10">
+        <div className="bg-white/80 backdrop-blur-xl border-b border-primary-100 px-6 pt-6 pb-4 shrink-0">
             <div className="flex items-center justify-between mb-4">
                 <div>
                     <h1 className="text-3xl font-bold text-primary-900">Activity</h1>
@@ -158,8 +158,8 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
             </div>
         </div>
 
-        {/* Transactions List */}
-        <div className="p-4 space-y-3">
+        {/* Transactions List - SCROLLABLE */}
+        <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3">
             {filteredHistory.length === 0 ? (
                 <div className="text-center py-24 opacity-60">
                     <div className="w-16 h-16 mx-auto mb-4 bg-primary-100 rounded-2xl flex items-center justify-center">
@@ -315,4 +315,3 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
     </div>
   );
 };
-

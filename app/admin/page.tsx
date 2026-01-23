@@ -11,7 +11,7 @@ import { toPng } from 'html-to-image';
 
 // Force Desktop View Wrapper - Premium Styling
 const DesktopWrapper = ({ children }: { children?: React.ReactNode }) => (
-    <div className="min-h-screen min-w-[1024px] w-full bg-gradient-to-br from-primary-50 via-white to-primary-50 flex flex-row overflow-hidden absolute inset-0 z-50">
+    <div className="min-h-screen w-screen flex flex-row overflow-hidden fixed inset-0 z-50 bg-gradient-to-br from-primary-50 via-white to-primary-50">
         {children}
     </div>
 );
@@ -350,8 +350,8 @@ export default function AdminPage() {
             />
         )}
 
-        <aside className="w-80 bg-gradient-to-b from-primary-900 via-primary-800 to-primary-900 text-white flex flex-col h-full z-10 shadow-2xl shrink-0 border-r border-primary-700">
-            <div className="p-8 border-b border-primary-700/50">
+        <aside className="w-72 bg-gradient-to-b from-primary-900 via-primary-800 to-primary-900 text-white flex flex-col h-full z-10 shadow-2xl shrink-0 border-r border-primary-700 overflow-hidden">
+            <div className="p-6 border-b border-primary-700/50 shrink-0">
                 <div className="flex items-center gap-3 mb-1">
                     <div className="w-10 h-10 bg-gradient-to-br from-accent-blue to-accent-purple rounded-lg flex items-center justify-center font-bold">S</div>
                     <h1 className="text-2xl font-bold tracking-tight">SAUKI</h1>
@@ -362,14 +362,14 @@ export default function AdminPage() {
                 {[
                     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
                     { id: 'orders', label: 'Store Orders', icon: ShoppingBag, badge: pendingOrders.length },
-                    { id: 'transactions', label: 'Transactions', icon: FileText },
+                    { id: 'transactions', label: 'All Transactions', icon: FileText },
                     { id: 'products', label: 'Inventory', icon: Package },
                     { id: 'plans', label: 'Data Plans', icon: Wifi },
                     { id: 'agents', label: 'Agents', icon: Users },
-                    { id: 'support', label: 'Support', icon: MessageSquare },
-                    { id: 'communication', label: 'Comms & Push', icon: Megaphone },
+                    { id: 'support', label: 'Support Tickets', icon: MessageSquare },
+                    { id: 'communication', label: 'Notifications', icon: Megaphone },
                     { id: 'console', label: 'API Console', icon: Terminal },
-                    { id: 'webhooks', label: 'Webhooks', icon: Activity },
+                    { id: 'webhooks', label: 'Webhooks Log', icon: Activity },
                 ].map(item => (
                     <button 
                       key={item.id} 
@@ -395,20 +395,20 @@ export default function AdminPage() {
             </nav>
             
             {/* Admin Footer Info */}
-            <div className="p-4 border-t border-primary-700/50 space-y-3">
+            <div className="p-4 border-t border-primary-700/50 space-y-3 shrink-0">
                 <div className="bg-white/10 backdrop-blur rounded-lg p-3 text-[10px] space-y-1">
                     <p className="text-primary-400 font-semibold uppercase tracking-wide">Admin Wallet</p>
                     <p className="text-white font-bold flex items-center gap-1.5">
                         <Landmark className="w-3.5 h-3.5" />
-                        Zenith Bank: 1210631613
+                        Zenith: 1210631613
                     </p>
                 </div>
             </div>
         </aside>
 
-        <main className="flex-1 p-8 overflow-y-auto h-screen bg-primary-50 relative">
+        <main className="flex-1 p-6 overflow-y-auto h-screen bg-primary-50 relative flex flex-col">
              {/* Header */}
-             <header className="flex justify-between items-center mb-10">
+             <header className="flex justify-between items-center mb-8 shrink-0">
                 <div>
                     <p className="text-primary-600 text-sm font-semibold uppercase tracking-wide mb-1">Control Panel</p>
                     <h2 className="text-4xl font-bold text-primary-900 uppercase tracking-tight">{view.replace('_', ' ')}</h2>
@@ -424,8 +424,9 @@ export default function AdminPage() {
                 </div>
             </header>
 
-            {/* VIEWS */}
-            {view === 'dashboard' && (
+            {/* Content Area - Scrollable */}
+            <div className="flex-1 overflow-y-auto">
+                {view === 'dashboard' && (
                 <div className="space-y-8">
                     {/* Key Metrics Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -592,18 +593,19 @@ export default function AdminPage() {
 
             {view === 'transactions' && (
                 <div className="space-y-4">
-                     <div className="bg-white p-4 rounded-[2rem] border border-slate-100 flex gap-4">
+                     <div className="bg-white p-4 rounded-[2rem] border border-slate-100 flex gap-4 shrink-0">
                         <Search className="w-5 h-5 text-slate-400" />
-                        <input className="flex-1 outline-none font-bold" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                        <input className="flex-1 outline-none font-bold" placeholder="Search by reference or phone..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                     </div>
-                    <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden">
+                    <div className="bg-white rounded-[2rem] border border-slate-100 overflow-auto flex-1">
                         <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                                <tr><th className="p-4">Ref</th><th className="p-4">Phone</th><th className="p-4">Type</th><th className="p-4">Amount</th><th className="p-4">Status</th><th className="p-4">Action</th></tr>
+                            <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase text-slate-400 tracking-widest sticky top-0">
+                                <tr><th className="p-4">Date & Time</th><th className="p-4">Ref</th><th className="p-4">Phone</th><th className="p-4">Type</th><th className="p-4">Amount</th><th className="p-4">Status</th><th className="p-4">Action</th></tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {filteredTransactions.map(tx => (
                                     <tr key={tx.id} className="hover:bg-slate-50/50">
+                                        <td className="p-4 font-mono text-xs text-slate-600 whitespace-nowrap">{new Date(tx.createdAt).toLocaleString()}</td>
                                         <td className="p-4 font-mono font-bold text-xs">{tx.tx_ref.slice(0, 12)}</td>
                                         <td className="p-4 font-bold text-xs">{tx.phone}</td>
                                         <td className="p-4 font-black uppercase text-xs">{tx.type}</td>
@@ -622,7 +624,7 @@ export default function AdminPage() {
                                                     className="bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded text-[9px] font-black uppercase flex items-center gap-1 hover:bg-yellow-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                                 >
                                                     {updatingTx === tx.tx_ref ? <Loader2 className="w-3 h-3 animate-spin" /> : <Banknote className="w-3 h-3" />}
-                                                    Toggle Paid
+                                                    Paid
                                                 </button>
                                             )}
                                             <button onClick={() => generateReceipt(tx)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg flex items-center gap-1 text-[10px] font-black uppercase"><Download className="w-4 h-4" /> Receipt</button>
@@ -797,6 +799,7 @@ export default function AdminPage() {
                 </div>
             )}
 
+            </div>
         </main>
     </DesktopWrapper>
   );
