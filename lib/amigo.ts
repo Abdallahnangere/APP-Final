@@ -74,6 +74,6 @@ export async function callAmigoAPI(endpoint: string, payload: any, idempotencyKe
 export const AMIGO_NETWORKS: Record<string, number> = {
   'MTN': 1,
   'GLO': 2,
-  'AIRTEL': 3,
-  '9MOBILE': 4
+  'AIRTEL': 4,
+  '9MOBILE': 9
 };
