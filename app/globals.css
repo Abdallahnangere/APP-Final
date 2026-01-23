@@ -15,25 +15,29 @@ html, body {
     margin: 0;
     padding: 0;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background-color: #e2e8f0; /* Darker background for desktop void area */
-  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
   -webkit-tap-highlight-color: transparent;
   display: flex;
   justify-content: center;
 }
 
-/* The Main App Container */
+/* The Main App Container - Premium Mobile Frame */
 #root {
     width: 100%;
     max-width: var(--app-max-width);
     min-height: 100vh;
-    background: linear-gradient(to bottom, transparent, rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
+    background: linear-gradient(to bottom, #ffffff, #fafbfc);
     position: relative;
-    box-shadow: 0 0 40px rgba(0,0,0,0.1); /* Drop shadow on desktop */
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.1);
+    border-radius: 40px;
+    overflow: hidden;
 }
 
 /* Hide scrollbar for clean UI */
@@ -60,4 +64,60 @@ body {
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: 100%;
+}
+
+/* Premium Animations */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Smooth transitions for all interactive elements */
+button, input, select, textarea {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus ring styling (accessible and beautiful) */
+*:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+/* Premium scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Smooth backdrop blur support */
+@supports (backdrop-filter: blur(10px)) {
+  .backdrop-blur {
+    backdrop-filter: blur(10px);
+  }
 }

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Transaction } from '../../types';
 import { formatCurrency, generateReceiptData, cn } from '../../lib/utils';
-import { Trash2, Download, Smartphone, Wifi, ArrowUpRight, Search, RefreshCw, Clock } from 'lucide-react';
+import { Trash2, Download, Smartphone, Wifi, ArrowUpRight, Search, RefreshCw, Clock, CheckCircle2, AlertCircle, TrendingUp } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { SharedReceipt } from '../SharedReceipt';
 import { toast } from '../../lib/toast';
@@ -16,6 +16,7 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
   const [history, setHistory] = useState<Transaction[]>([]);
   const [filter, setFilter] = useState('');
   const [checkingId, setCheckingId] = useState<string | null>(null);
+  const [detailedCheck, setDetailedCheck] = useState<{ tx_ref: string; payment: boolean; delivery: boolean; checking: boolean } | null>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
   const [receiptTx, setReceiptTx] = useState<any>(null);
 
@@ -33,9 +34,22 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
   const handleCheckPending = async (tx: Transaction) => {
       if (tx.status !== 'pending') return;
       setCheckingId(tx.tx_ref);
-      toast.info("Checking transaction status...");
+      setDetailedCheck({ tx_ref: tx.tx_ref, payment: false, delivery: false, checking: true });
+      toast.info("Verifying transaction status...");
+      
       try {
           const res = await api.verifyTransaction(tx.tx_ref);
+          
+          // Determine payment and delivery status
+          const paymentConfirmed = res.status === 'paid' || res.status === 'delivered';
+          const dataDelivered = res.status === 'delivered';
+          
+          setDetailedCheck({ 
+            tx_ref: tx.tx_ref, 
+            payment: paymentConfirmed, 
+            delivery: dataDelivered, 
+            checking: false 
+          });
           
           // Update local storage with new status
           const raw = localStorage.getItem('sauki_user_history');
@@ -50,14 +64,12 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
           }
           
           if (res.status === 'delivered') {
-              // For data transactions, this means amigo delivery was successful
               if (tx.type === 'data') {
                   toast.success("✓ Data delivered! Check your balance.");
               } else {
                   toast.success("✓ Transaction Complete: Item Delivered!");
               }
           } else if (res.status === 'paid') {
-              // For data, amigo delivery will be triggered automatically on backend
               if (tx.type === 'data') {
                   toast.success("✓ Payment confirmed! Data is being sent...");
               } else {
@@ -70,8 +82,12 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
           } else {
               toast.info("Status: " + res.status);
           }
+          
+          // Auto-hide detailed check after 5 seconds
+          setTimeout(() => setDetailedCheck(null), 5000);
       } catch (e) {
           toast.error("Failed to check status. Verify your connection.");
+          setDetailedCheck(null);
           console.error(e);
       } finally {
           setCheckingId(null);
@@ -107,98 +123,196 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-32">
+    <div className="min-h-screen bg-primary-50 pb-32">
         {receiptTx && (
             <SharedReceipt ref={receiptRef} transaction={generateReceiptData(receiptTx)} />
         )}
 
-        <div className="bg-white/80 backdrop-blur-xl border-b border-slate-200 px-6 pt-12 pb-4 sticky top-0 z-10 flex items-center justify-between">
-            <div>
-                <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">My Activity</h1>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Local Records</p>
+        {/* Header */}
+        <div className="bg-white/80 backdrop-blur-xl border-b border-primary-100 px-6 pt-12 pb-6 sticky top-0 z-10">
+            <div className="flex items-center justify-between mb-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-primary-900">Activity</h1>
+                    <p className="text-xs font-medium text-primary-500 mt-1 uppercase tracking-wide">Transaction History</p>
+                </div>
+                {history.length > 0 && (
+                    <button 
+                      onClick={clearHistory} 
+                      className="w-11 h-11 bg-accent-red/10 text-accent-red rounded-xl flex items-center justify-center hover:bg-accent-red/20 transition-colors shadow-elevation-2"
+                      title="Clear history"
+                    >
+                        <Trash2 className="w-5 h-5" />
+                    </button>
+                )}
             </div>
-            {history.length > 0 && (
-                <button onClick={clearHistory} className="w-10 h-10 bg-red-50 text-red-500 rounded-full flex items-center justify-center hover:bg-red-100 transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                </button>
-            )}
-        </div>
-
-        <div className="p-6">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center gap-3 mb-6 shadow-sm">
-                <Search className="w-5 h-5 text-slate-400" />
+            
+            {/* Search Bar */}
+            <div className="bg-primary-100/50 px-4 py-3 rounded-xl flex items-center gap-3 border border-primary-200/50">
+                <Search className="w-5 h-5 text-primary-400" />
                 <input 
-                    className="flex-1 outline-none text-sm font-bold text-slate-700 placeholder:text-slate-300"
-                    placeholder="Search Reference or Phone..."
+                    className="flex-1 outline-none text-sm font-medium text-primary-900 bg-transparent placeholder:text-primary-400"
+                    placeholder="Search by reference or phone..."
                     value={filter}
                     onChange={e => setFilter(e.target.value)}
                 />
             </div>
+        </div>
 
-            <div className="space-y-4">
-                {filteredHistory.length === 0 ? (
-                    <div className="text-center py-20 opacity-50">
-                        <HistoryIcon className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                        <p className="font-bold text-slate-400 uppercase text-xs tracking-widest">No Transactions Found</p>
+        {/* Transactions List */}
+        <div className="p-4 space-y-3">
+            {filteredHistory.length === 0 ? (
+                <div className="text-center py-24 opacity-60">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-primary-100 rounded-2xl flex items-center justify-center">
+                        <TrendingUp className="w-8 h-8 text-primary-400" />
                     </div>
-                ) : (
-                    filteredHistory.map((tx, idx) => (
-                        <div key={idx} className="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm flex items-center justify-between group active:scale-98 transition-transform">
-                            <div className="flex items-center gap-4">
-                                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner relative", 
-                                    tx.type === 'data' ? "bg-blue-50 text-blue-600" : 
-                                    tx.type === 'wallet_funding' ? "bg-green-50 text-green-600" :
-                                    "bg-purple-50 text-purple-600"
+                    <p className="font-semibold text-primary-600 uppercase text-xs tracking-wide">No Transactions Yet</p>
+                    <p className="text-primary-400 text-xs mt-2">Your activity will appear here</p>
+                </div>
+            ) : (
+                filteredHistory.map((tx, idx) => (
+                    <div key={idx} className="relative">
+                        <div className="bg-white rounded-2xl border border-primary-100/50 shadow-elevation-2 overflow-hidden hover:shadow-elevation-4 transition-shadow">
+                            {/* Transaction Item */}
+                            <div className="p-4 flex items-start gap-4">
+                                {/* Icon */}
+                                <div className={cn(
+                                    "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 font-semibold flex-center",
+                                    tx.type === 'data' ? "bg-accent-blue/10 text-accent-blue" : 
+                                    tx.type === 'wallet_funding' ? "bg-accent-green/10 text-accent-green" :
+                                    "bg-accent-purple/10 text-accent-purple"
                                 )}>
                                     {tx.type === 'data' ? <Wifi className="w-6 h-6" /> : 
                                      tx.type === 'wallet_funding' ? <ArrowUpRight className="w-6 h-6" /> : 
                                      <Smartphone className="w-6 h-6" />}
-                                    {tx.status === 'pending' && (
-                                        <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-yellow-400 rounded-full border-2 border-white animate-pulse"></div>
-                                    )}
                                 </div>
-                                <div>
-                                    <p className="text-xs font-black text-slate-900 uppercase tracking-tight">
-                                        {tx.type === 'data' ? 'Data Bundle' : tx.type === 'ecommerce' ? 'Store Purchase' : 'Funding'}
+
+                                {/* Info */}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-primary-900 uppercase tracking-tight">
+                                        {tx.type === 'data' ? 'Data Bundle' : tx.type === 'ecommerce' ? 'Store Purchase' : 'Wallet Funding'}
                                     </p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">{new Date(tx.createdAt).toLocaleDateString()}</p>
-                                    <p className={cn("text-[9px] font-mono mt-1", 
-                                        tx.status === 'pending' ? "text-yellow-600 font-bold" :
-                                        tx.status === 'failed' ? "text-red-600 font-bold" :
-                                        tx.status === 'paid' ? "text-blue-600 font-bold" :
-                                        "text-green-600 font-bold"
+                                    <p className="text-xs text-primary-500 font-medium mt-0.5">
+                                        {new Date(tx.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                    <p className={cn(
+                                        "text-xs font-mono mt-1.5 truncate",
+                                        tx.status === 'pending' ? "text-accent-orange font-semibold" :
+                                        tx.status === 'failed' ? "text-accent-red font-semibold" :
+                                        tx.status === 'paid' ? "text-accent-blue font-semibold" :
+                                        "text-accent-green font-semibold"
                                     )}>
-                                        {tx.tx_ref.slice(0, 18)}... • {tx.status.toUpperCase()}
+                                        {tx.tx_ref.slice(0, 20)}... • {tx.status.toUpperCase()}
                                     </p>
+                                </div>
+
+                                {/* Amount */}
+                                <div className="text-right flex-shrink-0">
+                                    <p className="font-bold text-primary-900 text-lg">{formatCurrency(tx.amount)}</p>
                                 </div>
                             </div>
-                            <div className="flex flex-col items-end gap-2">
-                                <span className="font-black text-slate-900 text-sm">{formatCurrency(tx.amount)}</span>
-                                <div className="flex gap-1">
-                                    {tx.status === 'pending' && (
-                                        <button 
-                                            onClick={() => handleCheckPending(tx)}
-                                            disabled={checkingId === tx.tx_ref}
-                                            className="bg-yellow-100 text-yellow-700 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 hover:bg-yellow-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <Clock className={cn("w-3 h-3", checkingId === tx.tx_ref && "animate-spin")} />
-                                            Check
-                                        </button>
-                                    )}
-                                    <button onClick={() => handleReceipt(tx)} className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 hover:bg-slate-200 transition-colors">
-                                        <Download className="w-3 h-3" /> Receipt
+
+                            {/* Action Buttons */}
+                            <div className="px-4 pb-4 flex gap-2 border-t border-primary-100/50 pt-3">
+                                {tx.status === 'pending' && (
+                                    <button 
+                                        onClick={() => handleCheckPending(tx)}
+                                        disabled={checkingId === tx.tx_ref}
+                                        className={cn(
+                                            "flex-1 px-3 py-2 rounded-lg text-xs font-semibold uppercase flex items-center justify-center gap-1.5 transition-all",
+                                            checkingId === tx.tx_ref 
+                                              ? "bg-accent-orange/20 text-accent-orange" 
+                                              : "bg-accent-orange/10 text-accent-orange hover:bg-accent-orange/20 shadow-elevation-2"
+                                        )}
+                                    >
+                                        <RefreshCw className={cn("w-3.5 h-3.5", checkingId === tx.tx_ref && "animate-spin")} />
+                                        Check Status
                                     </button>
-                                </div>
+                                )}
+                                <button 
+                                  onClick={() => handleReceipt(tx)} 
+                                  className="flex-1 px-3 py-2 rounded-lg text-xs font-semibold uppercase bg-primary-100 text-primary-700 hover:bg-primary-200 transition-colors shadow-elevation-2 flex items-center justify-center gap-1.5"
+                                >
+                                    <Download className="w-3.5 h-3.5" /> Receipt
+                                </button>
                             </div>
                         </div>
-                    ))
-                )}
-            </div>
+
+                        {/* Detailed Check Modal */}
+                        {detailedCheck?.tx_ref === tx.tx_ref && detailedCheck && (
+                            <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center z-50 backdrop-blur-sm">
+                                <div className="bg-white rounded-2xl p-5 mx-4 shadow-elevation-8">
+                                    {detailedCheck.checking ? (
+                                        <div className="flex flex-col items-center gap-3 py-6">
+                                            <div className="w-12 h-12 border-3 border-accent-blue/20 border-t-accent-blue rounded-full animate-spin"></div>
+                                            <p className="text-sm font-semibold text-primary-900">Verifying...</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4 min-w-[280px]">
+                                            <h3 className="font-bold text-primary-900 text-lg">Transaction Verification</h3>
+                                            
+                                            {/* Payment Status */}
+                                            <div className="flex items-center gap-3 p-3 rounded-xl bg-primary-50 border border-primary-100">
+                                                {detailedCheck.payment ? (
+                                                    <CheckCircle2 className="w-5 h-5 text-accent-green flex-shrink-0" />
+                                                ) : (
+                                                    <AlertCircle className="w-5 h-5 text-accent-orange flex-shrink-0" />
+                                                )}
+                                                <div>
+                                                    <p className="text-xs font-semibold text-primary-600 uppercase">Payment Status</p>
+                                                    <p className={cn(
+                                                        "text-sm font-bold",
+                                                        detailedCheck.payment ? "text-accent-green" : "text-accent-orange"
+                                                    )}>
+                                                        {detailedCheck.payment ? "✓ Confirmed" : "⏳ Pending"}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Data Delivery Status (for data transactions) */}
+                                            {tx.type === 'data' && (
+                                                <div className="flex items-center gap-3 p-3 rounded-xl bg-primary-50 border border-primary-100">
+                                                    {detailedCheck.delivery ? (
+                                                        <CheckCircle2 className="w-5 h-5 text-accent-green flex-shrink-0" />
+                                                    ) : (
+                                                        <AlertCircle className="w-5 h-5 text-accent-orange flex-shrink-0" />
+                                                    )}
+                                                    <div>
+                                                        <p className="text-xs font-semibold text-primary-600 uppercase">Data Delivery</p>
+                                                        <p className={cn(
+                                                            "text-sm font-bold",
+                                                            detailedCheck.delivery ? "text-accent-green" : "text-accent-orange"
+                                                        )}>
+                                                            {detailedCheck.delivery ? "✓ Delivered" : "⏳ In Progress"}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Message */}
+                                            <p className="text-xs text-primary-500 text-center py-2">
+                                                {detailedCheck.payment && detailedCheck.delivery 
+                                                  ? "All systems go! Your transaction is complete."
+                                                  : detailedCheck.payment && !detailedCheck.delivery 
+                                                  ? "Payment confirmed. Delivery in progress..."
+                                                  : "Please wait while we verify..."}
+                                            </p>
+
+                                            <button 
+                                              onClick={() => setDetailedCheck(null)}
+                                              className="w-full bg-accent-blue text-white font-semibold py-2 rounded-xl transition-all active:scale-95"
+                                            >
+                                                Close
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ))
+            )}
         </div>
     </div>
   );
 };
 
-const HistoryIcon = (props: any) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
-);

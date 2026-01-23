@@ -4,21 +4,39 @@ import { cn } from '../../lib/utils';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
+  error?: string;
+  icon?: React.ReactNode;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, ...props }, ref) => {
+  ({ className, label, error, icon, ...props }, ref) => {
     return (
       <div className="space-y-2 w-full group">
-        {label && <label className="text-xs font-semibold text-slate-500 ml-1 uppercase tracking-wide group-focus-within:text-blue-600 transition-colors">{label}</label>}
-        <input
-          className={cn(
-            "flex h-14 w-full rounded-2xl bg-slate-100 px-5 py-3 text-lg ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-400 focus-visible:outline-none focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300 shadow-sm border-transparent focus:border-blue-500/20 text-slate-900 font-medium",
-            className
+        {label && (
+          <label className="text-xs font-semibold text-primary-600 ml-0.5 uppercase tracking-wide group-focus-within:text-accent-blue transition-colors">
+            {label}
+          </label>
+        )}
+        <div className="relative">
+          {icon && (
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-400 group-focus-within:text-accent-blue transition-colors">
+              {icon}
+            </div>
           )}
-          ref={ref}
-          {...props}
-        />
+          <input
+            className={cn(
+              "flex h-12 w-full rounded-xl bg-primary-50 px-4 py-3 text-base ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-primary-400 focus-visible:outline-none focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-accent-blue/30 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 shadow-elevation-2 border border-primary-200/50 focus:border-accent-blue/30 text-primary-900 font-medium",
+              icon && "pl-11",
+              error && "border-accent-red/50 focus:border-accent-red/30 focus:ring-accent-red/20",
+              className
+            )}
+            ref={ref}
+            {...props}
+          />
+        </div>
+        {error && (
+          <p className="text-xs font-medium text-accent-red">{error}</p>
+        )}
       </div>
     );
   }

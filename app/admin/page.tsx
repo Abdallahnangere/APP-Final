@@ -9,9 +9,9 @@ import { toast } from '../../lib/toast';
 import { SharedReceipt } from '../../components/SharedReceipt';
 import { toPng } from 'html-to-image';
 
-// Force Desktop View Wrapper
+// Force Desktop View Wrapper - Premium Styling
 const DesktopWrapper = ({ children }: { children?: React.ReactNode }) => (
-    <div className="min-h-screen min-w-[1024px] w-full bg-slate-50 flex flex-row overflow-hidden absolute inset-0 z-50">
+    <div className="min-h-screen min-w-[1024px] w-full bg-gradient-to-br from-primary-50 via-white to-primary-50 flex flex-row overflow-hidden absolute inset-0 z-50">
         {children}
     </div>
 );
@@ -312,12 +312,31 @@ export default function AdminPage() {
   const pendingOrders = transactions?.filter(t => t.type === 'ecommerce' && t.status === 'paid') || [];
 
   if (!isAuthenticated) return (
-     <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6">
-        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center border border-slate-100">
-            <Lock className="w-12 h-12 text-slate-900 mx-auto mb-6" />
-            <h1 className="text-2xl font-black mb-6">SAUKI ADMIN</h1>
-            <input type="password" className="border-2 border-slate-100 p-5 rounded-2xl w-full mb-6 text-center text-2xl font-black tracking-widest" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
-            <button onClick={checkAuth} className="bg-slate-900 text-white p-5 rounded-[1.5rem] w-full font-black uppercase tracking-widest">{loading ? <Loader2 className="animate-spin mx-auto" /> : 'Enter'}</button>
+     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 p-6 relative overflow-hidden">
+        {/* Background elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-blue/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent-purple/20 rounded-full blur-3xl"></div>
+        
+        <div className="bg-white/95 backdrop-blur-xl p-12 rounded-3xl shadow-elevation-8 w-full max-w-md text-center border border-white/20 relative z-10">
+            <div className="w-16 h-16 bg-gradient-to-br from-accent-blue to-accent-purple rounded-2xl flex items-center justify-center text-white mx-auto mb-8 shadow-elevation-4">
+                <Lock className="w-8 h-8" />
+            </div>
+            <h1 className="text-3xl font-bold text-primary-900 mb-2">SAUKI Admin</h1>
+            <p className="text-primary-500 text-sm font-medium mb-8">Master Control Panel</p>
+            <input 
+              type="password" 
+              className="border border-primary-200 p-4 rounded-2xl w-full mb-6 text-center text-2xl font-bold tracking-widest focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20 transition-all" 
+              placeholder="••••••••" 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+            />
+            <button 
+              onClick={checkAuth} 
+              className="bg-accent-blue text-white p-4 rounded-xl w-full font-bold uppercase tracking-wide shadow-elevation-4 hover:bg-blue-600 active:scale-95 transition-all"
+            >
+              {loading ? <Loader2 className="animate-spin mx-auto" /> : 'Enter Dashboard'}
+            </button>
+            <p className="text-xs text-primary-400 mt-6">Secured access • Encrypted connection</p>
         </div>
     </div>
   );
@@ -331,12 +350,15 @@ export default function AdminPage() {
             />
         )}
 
-        <aside className="w-72 bg-slate-900 text-white flex flex-col h-full z-10 shadow-2xl shrink-0">
-            <div className="p-8 border-b border-slate-800">
-                <h1 className="text-xl font-black tracking-tighter">SAUKI MART</h1>
-                <p className="text-blue-400 text-[10px] font-black uppercase tracking-widest">Master Control</p>
+        <aside className="w-80 bg-gradient-to-b from-primary-900 via-primary-800 to-primary-900 text-white flex flex-col h-full z-10 shadow-2xl shrink-0 border-r border-primary-700">
+            <div className="p-8 border-b border-primary-700/50">
+                <div className="flex items-center gap-3 mb-1">
+                    <div className="w-10 h-10 bg-gradient-to-br from-accent-blue to-accent-purple rounded-lg flex items-center justify-center font-bold">S</div>
+                    <h1 className="text-2xl font-bold tracking-tight">SAUKI</h1>
+                </div>
+                <p className="text-accent-blue text-xs font-semibold uppercase tracking-widest">Master Control</p>
             </div>
-            <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto no-scrollbar">
+            <nav className="flex-1 p-4 space-y-1 overflow-y-auto no-scrollbar">
                 {[
                     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
                     { id: 'orders', label: 'Store Orders', icon: ShoppingBag, badge: pendingOrders.length },
@@ -344,59 +366,126 @@ export default function AdminPage() {
                     { id: 'products', label: 'Inventory', icon: Package },
                     { id: 'plans', label: 'Data Plans', icon: Wifi },
                     { id: 'agents', label: 'Agents', icon: Users },
-                    { id: 'support', label: 'Support Tickets', icon: MessageSquare },
-                    { id: 'console', label: 'API Console', icon: Terminal },
+                    { id: 'support', label: 'Support', icon: MessageSquare },
                     { id: 'communication', label: 'Comms & Push', icon: Megaphone },
-                    { id: 'webhooks', label: 'Webhook Logs', icon: Activity },
+                    { id: 'console', label: 'API Console', icon: Terminal },
+                    { id: 'webhooks', label: 'Webhooks', icon: Activity },
                 ].map(item => (
-                    <button key={item.id} onClick={() => setView(item.id as any)} className={cn("flex items-center justify-between w-full p-4 rounded-2xl text-xs font-black transition-all", view === item.id ? "bg-white text-slate-900" : "text-slate-500 hover:bg-slate-800")}>
-                        <div className="flex items-center gap-4"><item.icon className="w-5 h-5" /> {item.label}</div>
-                        {item.badge ? <span className="bg-red-500 text-white px-2 py-0.5 rounded-full text-[9px]">{item.badge}</span> : null}
+                    <button 
+                      key={item.id} 
+                      onClick={() => setView(item.id as any)} 
+                      className={cn(
+                        "flex items-center justify-between w-full px-4 py-3 rounded-xl text-xs font-semibold transition-all group",
+                        view === item.id 
+                          ? "bg-white text-primary-900 shadow-elevation-4" 
+                          : "text-primary-300 hover:bg-white/10"
+                      )}
+                    >
+                        <div className="flex items-center gap-3">
+                          <item.icon className="w-4 h-4" /> 
+                          <span>{item.label}</span>
+                        </div>
+                        {item.badge ? (
+                          <span className="bg-accent-red text-white px-2 py-0.5 rounded-full text-[9px] font-bold animate-pulse">
+                            {item.badge}
+                          </span>
+                        ) : null}
                     </button>
                 ))}
             </nav>
+            
+            {/* Admin Footer Info */}
+            <div className="p-4 border-t border-primary-700/50 space-y-3">
+                <div className="bg-white/10 backdrop-blur rounded-lg p-3 text-[10px] space-y-1">
+                    <p className="text-primary-400 font-semibold uppercase tracking-wide">Admin Wallet</p>
+                    <p className="text-white font-bold flex items-center gap-1.5">
+                        <Landmark className="w-3.5 h-3.5" />
+                        Zenith Bank: 1210631613
+                    </p>
+                </div>
+            </div>
         </aside>
 
-        <main className="flex-1 p-8 overflow-y-auto h-screen bg-slate-50 relative">
-             <header className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">{view.replace('_', ' ')}</h2>
+        <main className="flex-1 p-8 overflow-y-auto h-screen bg-primary-50 relative">
+             {/* Header */}
+             <header className="flex justify-between items-center mb-10">
+                <div>
+                    <p className="text-primary-600 text-sm font-semibold uppercase tracking-wide mb-1">Control Panel</p>
+                    <h2 className="text-4xl font-bold text-primary-900 uppercase tracking-tight">{view.replace('_', ' ')}</h2>
+                </div>
                 <div className="flex gap-4 items-center">
-                    <div className="flex flex-col text-right mr-4 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-100">
-                        <span className="text-[9px] font-black uppercase text-slate-400">Admin Wallet</span>
-                        <div className="flex items-center gap-2">
-                             <Landmark className="w-4 h-4 text-slate-900" />
-                             <span className="text-sm font-bold">Zenith Bank: 1210631613</span>
-                        </div>
-                    </div>
-                    <button onClick={refreshAll} className="p-3 bg-white rounded-xl shadow-sm border border-slate-100 hover:bg-slate-50"><RefreshCw className={cn("w-5 h-5", loading && "animate-spin")} /></button>
+                    <button 
+                      onClick={refreshAll} 
+                      className="p-3 bg-white rounded-xl shadow-elevation-2 border border-primary-100 hover:bg-primary-50 transition-all"
+                      title="Refresh data"
+                    >
+                        <RefreshCw className={cn("w-5 h-5 text-primary-600", loading && "animate-spin")} />
+                    </button>
                 </div>
             </header>
 
             {/* VIEWS */}
             {view === 'dashboard' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-red-500 rounded-full blur-[40px] opacity-10"></div>
-                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pending Orders</p>
-                        <h3 className="text-4xl font-black text-slate-900 mt-2">{pendingOrders.length}</h3>
-                        <div className="mt-4 flex items-center gap-2 text-red-500 text-xs font-bold">
-                            <ShoppingBag className="w-4 h-4" /> Action Required
+                <div className="space-y-8">
+                    {/* Key Metrics Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Pending Orders Card */}
+                        <div className="bg-gradient-to-br from-white to-primary-50/50 p-8 rounded-2xl border border-primary-100/50 shadow-elevation-4 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-accent-red/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+                            <div className="relative z-10">
+                                <p className="text-primary-600 text-xs font-semibold uppercase tracking-widest mb-2">Pending Orders</p>
+                                <h3 className="text-5xl font-bold text-primary-900 mb-4">{pendingOrders.length}</h3>
+                                <div className="flex items-center gap-2 text-accent-red text-sm font-semibold">
+                                    <ShoppingBag className="w-5 h-5" /> Action Required
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Total Agents Card */}
+                        <div className="bg-gradient-to-br from-white to-primary-50/50 p-8 rounded-2xl border border-primary-100/50 shadow-elevation-4 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-accent-blue/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+                            <div className="relative z-10">
+                                <p className="text-primary-600 text-xs font-semibold uppercase tracking-widest mb-2">Partner Network</p>
+                                <h3 className="text-5xl font-bold text-primary-900 mb-4">{agents?.length || 0}</h3>
+                                <div className="flex items-center gap-2 text-accent-blue text-sm font-semibold">
+                                    <Users className="w-5 h-5" /> Active Agents
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Inventory Card */}
+                        <div className="bg-gradient-to-br from-white to-primary-50/50 p-8 rounded-2xl border border-primary-100/50 shadow-elevation-4 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-accent-green/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+                            <div className="relative z-10">
+                                <p className="text-primary-600 text-xs font-semibold uppercase tracking-widest mb-2">Inventory</p>
+                                <h3 className="text-5xl font-bold text-primary-900 mb-4">{products?.length || 0}</h3>
+                                <div className="flex items-center gap-2 text-accent-green text-sm font-semibold">
+                                    <Package className="w-5 h-5" /> Items
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500 rounded-full blur-[40px] opacity-10"></div>
-                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Agents</p>
-                        <h3 className="text-4xl font-black text-slate-900 mt-2">{agents?.length || 0}</h3>
-                        <div className="mt-4 flex items-center gap-2 text-blue-500 text-xs font-bold">
-                            <Users className="w-4 h-4" /> Partner Network
-                        </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-green-500 rounded-full blur-[40px] opacity-10"></div>
-                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Inventory</p>
-                        <h3 className="text-4xl font-black text-slate-900 mt-2">{products?.length || 0} Items</h3>
-                         <div className="mt-4 flex items-center gap-2 text-green-500 text-xs font-bold">
-                            <Package className="w-4 h-4" /> Stock Status
+
+                    {/* Quick Actions */}
+                    <div className="bg-white rounded-2xl border border-primary-100/50 shadow-elevation-2 p-8">
+                        <h3 className="text-lg font-bold text-primary-900 mb-6 uppercase tracking-tight">Quick Actions</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <button onClick={() => setView('orders')} className="p-4 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors border border-primary-100 font-semibold text-primary-900 text-sm">
+                                <ShoppingBag className="w-5 h-5 mx-auto mb-2" />
+                                View Orders
+                            </button>
+                            <button onClick={() => setView('agents')} className="p-4 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors border border-primary-100 font-semibold text-primary-900 text-sm">
+                                <Users className="w-5 h-5 mx-auto mb-2" />
+                                Manage Agents
+                            </button>
+                            <button onClick={() => setView('products')} className="p-4 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors border border-primary-100 font-semibold text-primary-900 text-sm">
+                                <Package className="w-5 h-5 mx-auto mb-2" />
+                                Inventory
+                            </button>
+                            <button onClick={() => setView('communication')} className="p-4 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors border border-primary-100 font-semibold text-primary-900 text-sm">
+                                <Megaphone className="w-5 h-5 mx-auto mb-2" />
+                                Send Message
+                            </button>
                         </div>
                     </div>
                 </div>

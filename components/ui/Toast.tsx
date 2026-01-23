@@ -21,8 +21,6 @@ export const ToastContainer: React.FC = () => {
   }, []);
 
   // 2. Poll for Admin "Push" Notifications
-  // NOTE: This logic separates PUSH from BROADCAST. 
-  // Broadcasts are handled in Home.tsx (Ticker). This handles Pop-ups.
   useEffect(() => {
       const interval = setInterval(async () => {
           try {
@@ -47,58 +45,56 @@ export const ToastContainer: React.FC = () => {
   return (
     <>
     <AnimatePresence>
-      {/* Standard Toast */}
+      {/* Standard Toast - Apple Style */}
       {activeToast && (
         <MotionDiv
-          initial={{ opacity: 0, y: -50, scale: 0.9 }}
+          initial={{ opacity: 0, y: -60, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.9 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          exit={{ opacity: 0, y: -30, scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
           className="fixed top-6 left-4 right-4 z-[100] flex justify-center pointer-events-none"
         >
-          <div className="bg-white/95 backdrop-blur-md border border-slate-100 shadow-2xl rounded-2xl p-4 flex items-center gap-4 min-w-[300px] max-w-md pointer-events-auto">
-            <div className={`p-2 rounded-full ${
-              activeToast.type === 'success' ? 'bg-green-100 text-green-600' :
-              activeToast.type === 'error' ? 'bg-red-100 text-red-600' :
-              'bg-blue-100 text-blue-600'
-            }`}>
+          <div className={cn(
+            "backdrop-blur-2xl border shadow-elevation-8 rounded-2xl p-4 flex items-center gap-3 min-w-[280px] max-w-sm pointer-events-auto",
+            activeToast.type === 'success' ? 'bg-accent-green/95 border-accent-green/20 text-white' :
+            activeToast.type === 'error' ? 'bg-accent-red/95 border-accent-red/20 text-white' :
+            'bg-accent-blue/95 border-accent-blue/20 text-white'
+          )}>
+            <div className="flex-shrink-0">
               {activeToast.type === 'success' && <CheckCircle2 className="w-5 h-5" />}
               {activeToast.type === 'error' && <AlertCircle className="w-5 h-5" />}
               {activeToast.type === 'info' && <Info className="w-5 h-5" />}
             </div>
-            <div className="flex-1">
-              <p className="font-semibold text-slate-900 text-sm">
-                {activeToast.type === 'success' ? 'Success' : activeToast.type === 'error' ? 'Error' : 'Notice'}
-              </p>
-              <p className="text-slate-500 text-xs">{activeToast.message}</p>
-            </div>
-            <button onClick={() => setActiveToast(null)} className="text-slate-400 hover:text-slate-600">
+            <p className="font-medium text-sm flex-1">{activeToast.message}</p>
+            <button onClick={() => setActiveToast(null)} className="text-white/60 hover:text-white transition-colors flex-shrink-0">
               <X className="w-4 h-4" />
             </button>
           </div>
         </MotionDiv>
       )}
 
-      {/* Push Notification Modal (High Priority) */}
+      {/* Push Notification Modal - Premium Style */}
       {pushNotification && (
           <MotionDiv
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-6"
+            exit={{ opacity: 0, scale: 0.92 }}
+            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-md p-4"
           >
-              <div className="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-2 bg-blue-600"></div>
-                  <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 text-blue-600">
-                      <Bell className="w-6 h-6" />
+              <div className="bg-white rounded-3xl p-7 max-w-sm w-full shadow-elevation-8 relative overflow-hidden">
+                  {/* Accent bar */}
+                  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-accent-blue to-accent-purple"></div>
+                  
+                  <div className="w-14 h-14 bg-gradient-to-br from-accent-blue/10 to-accent-blue/5 rounded-2xl flex items-center justify-center mb-4 text-accent-blue">
+                      <Bell className="w-7 h-7" />
                   </div>
-                  <h3 className="text-xl font-black text-slate-900 mb-2">{pushNotification.title}</h3>
-                  <p className="text-slate-600 leading-relaxed text-sm mb-6">{pushNotification.body}</p>
+                  <h3 className="text-xl font-bold text-primary-900 mb-2">{pushNotification.title}</h3>
+                  <p className="text-primary-600 leading-relaxed text-sm mb-6">{pushNotification.body}</p>
                   <button 
                     onClick={() => setPushNotification(null)}
-                    className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl uppercase tracking-widest text-xs active:scale-95 transition-transform"
+                    className="w-full bg-accent-blue text-white font-semibold py-3 rounded-xl transition-all active:scale-95 shadow-elevation-4"
                   >
-                      Dismiss
+                      Got It
                   </button>
               </div>
           </MotionDiv>
@@ -107,3 +103,7 @@ export const ToastContainer: React.FC = () => {
     </>
   );
 };
+
+function cn(...classes: (string | undefined | null | false)[]): string {
+  return classes.filter(Boolean).join(' ');
+}
