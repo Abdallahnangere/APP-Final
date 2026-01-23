@@ -22,6 +22,7 @@ export default function AdminPage() {
   const [view, setView] = useState<'dashboard' | 'products' | 'plans' | 'transactions' | 'orders' | 'agents' | 'support' | 'console' | 'communication' | 'webhooks'>('dashboard');
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [updatingTx, setUpdatingTx] = useState<string | null>(null);
   
   // Data State
   const [products, setProducts] = useState<Product[]>([]);
@@ -264,6 +265,22 @@ export default function AdminPage() {
       toast.success("Marked Delivered");
   };
 
+  const toggleToPaid = async (tx_ref: string) => {
+      setUpdatingTx(tx_ref);
+      try {
+          await fetch('/api/admin/transactions/update', {
+              method: 'POST',
+              body: JSON.stringify({ tx_ref, status: 'paid', password })
+          });
+          await fetchTransactions();
+          toast.success("Transaction marked as paid. User can now proceed.");
+      } catch (e) {
+          toast.error("Failed to update transaction");
+      } finally {
+          setUpdatingTx(null);
+      }
+  };
+
   // UPDATED: Uses centralized helper for consistent receipts
   const generateReceipt = (tx: Transaction) => {
       // Find agent if agentId exists
@@ -493,16 +510,32 @@ export default function AdminPage() {
                     <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                                <tr><th className="p-4">Ref</th><th className="p-4">Type</th><th className="p-4">Amount</th><th className="p-4">Status</th><th className="p-4">Action</th></tr>
+                                <tr><th className="p-4">Ref</th><th className="p-4">Phone</th><th className="p-4">Type</th><th className="p-4">Amount</th><th className="p-4">Status</th><th className="p-4">Action</th></tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {filteredTransactions.map(tx => (
                                     <tr key={tx.id} className="hover:bg-slate-50/50">
-                                        <td className="p-4 font-mono font-bold text-xs">{tx.tx_ref}</td>
+                                        <td className="p-4 font-mono font-bold text-xs">{tx.tx_ref.slice(0, 12)}</td>
+                                        <td className="p-4 font-bold text-xs">{tx.phone}</td>
                                         <td className="p-4 font-black uppercase text-xs">{tx.type}</td>
                                         <td className="p-4 font-bold">{formatCurrency(tx.amount)}</td>
-                                        <td className="p-4"><span className={cn("px-2 py-1 rounded text-[9px] font-black uppercase", tx.status === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-slate-100')}>{tx.status}</span></td>
-                                        <td className="p-4">
+                                        <td className="p-4"><span className={cn("px-2 py-1 rounded text-[9px] font-black uppercase", 
+                                            tx.status === 'delivered' ? 'bg-green-100 text-green-700' : 
+                                            tx.status === 'paid' ? 'bg-blue-100 text-blue-700' :
+                                            tx.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-slate-100'
+                                        )}>{tx.status}</span></td>
+                                        <td className="p-4 flex gap-2">
+                                            {tx.status === 'pending' && (
+                                                <button 
+                                                    onClick={() => toggleToPaid(tx.tx_ref)}
+                                                    disabled={updatingTx === tx.tx_ref}
+                                                    className="bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded text-[9px] font-black uppercase flex items-center gap-1 hover:bg-yellow-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                >
+                                                    {updatingTx === tx.tx_ref ? <Loader2 className="w-3 h-3 animate-spin" /> : <Banknote className="w-3 h-3" />}
+                                                    Toggle Paid
+                                                </button>
+                                            )}
                                             <button onClick={() => generateReceipt(tx)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg flex items-center gap-1 text-[10px] font-black uppercase"><Download className="w-4 h-4" /> Receipt</button>
                                         </td>
                                     </tr>

@@ -2,10 +2,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Transaction } from '../../types';
 import { formatCurrency, generateReceiptData, cn } from '../../lib/utils';
-import { Trash2, Download, Smartphone, Wifi, ArrowUpRight, Search } from 'lucide-react';
+import { Trash2, Download, Smartphone, Wifi, ArrowUpRight, Search, RefreshCw, Clock } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { SharedReceipt } from '../SharedReceipt';
 import { toast } from '../../lib/toast';
+import { api } from '../../lib/api';
 
 interface HistoryProps {
     onBack?: () => void;
@@ -14,6 +15,7 @@ interface HistoryProps {
 export const History: React.FC<HistoryProps> = ({ onBack }) => {
   const [history, setHistory] = useState<Transaction[]>([]);
   const [filter, setFilter] = useState('');
+  const [checkingId, setCheckingId] = useState<string | null>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
   const [receiptTx, setReceiptTx] = useState<any>(null);
 
@@ -26,6 +28,54 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
           const raw = localStorage.getItem('sauki_user_history');
           if (raw) setHistory(JSON.parse(raw));
       } catch(e) {}
+  };
+
+  const handleCheckPending = async (tx: Transaction) => {
+      if (tx.status !== 'pending') return;
+      setCheckingId(tx.tx_ref);
+      toast.info("Checking transaction status...");
+      try {
+          const res = await api.verifyTransaction(tx.tx_ref);
+          
+          // Update local storage with new status
+          const raw = localStorage.getItem('sauki_user_history');
+          if (raw) {
+              const historyList: Transaction[] = JSON.parse(raw);
+              const index = historyList.findIndex(h => h.tx_ref === tx.tx_ref);
+              if (index !== -1) {
+                  historyList[index] = { ...historyList[index], status: res.status };
+                  localStorage.setItem('sauki_user_history', JSON.stringify(historyList));
+                  setHistory(historyList);
+              }
+          }
+          
+          if (res.status === 'delivered') {
+              // For data transactions, this means amigo delivery was successful
+              if (tx.type === 'data') {
+                  toast.success("✓ Data delivered! Check your balance.");
+              } else {
+                  toast.success("✓ Transaction Complete: Item Delivered!");
+              }
+          } else if (res.status === 'paid') {
+              // For data, amigo delivery will be triggered automatically on backend
+              if (tx.type === 'data') {
+                  toast.success("✓ Payment confirmed! Data is being sent...");
+              } else {
+                  toast.success("✓ Payment confirmed! Processing your order...");
+              }
+          } else if (res.status === 'pending') {
+              toast.error("⏳ Still awaiting payment confirmation. Try again later.");
+          } else if (res.status === 'failed') {
+              toast.error("✗ Transaction failed. Contact support.");
+          } else {
+              toast.info("Status: " + res.status);
+          }
+      } catch (e) {
+          toast.error("Failed to check status. Verify your connection.");
+          console.error(e);
+      } finally {
+          setCheckingId(null);
+      }
   };
 
   const clearHistory = () => {
@@ -95,7 +145,7 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
                     filteredHistory.map((tx, idx) => (
                         <div key={idx} className="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm flex items-center justify-between group active:scale-98 transition-transform">
                             <div className="flex items-center gap-4">
-                                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner", 
+                                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner relative", 
                                     tx.type === 'data' ? "bg-blue-50 text-blue-600" : 
                                     tx.type === 'wallet_funding' ? "bg-green-50 text-green-600" :
                                     "bg-purple-50 text-purple-600"
@@ -103,20 +153,42 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
                                     {tx.type === 'data' ? <Wifi className="w-6 h-6" /> : 
                                      tx.type === 'wallet_funding' ? <ArrowUpRight className="w-6 h-6" /> : 
                                      <Smartphone className="w-6 h-6" />}
+                                    {tx.status === 'pending' && (
+                                        <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-yellow-400 rounded-full border-2 border-white animate-pulse"></div>
+                                    )}
                                 </div>
                                 <div>
                                     <p className="text-xs font-black text-slate-900 uppercase tracking-tight">
                                         {tx.type === 'data' ? 'Data Bundle' : tx.type === 'ecommerce' ? 'Store Purchase' : 'Funding'}
                                     </p>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">{new Date(tx.createdAt).toLocaleDateString()}</p>
-                                    <p className="text-[9px] font-mono text-slate-300 mt-1">{tx.tx_ref.slice(0, 18)}...</p>
+                                    <p className={cn("text-[9px] font-mono mt-1", 
+                                        tx.status === 'pending' ? "text-yellow-600 font-bold" :
+                                        tx.status === 'failed' ? "text-red-600 font-bold" :
+                                        tx.status === 'paid' ? "text-blue-600 font-bold" :
+                                        "text-green-600 font-bold"
+                                    )}>
+                                        {tx.tx_ref.slice(0, 18)}... • {tx.status.toUpperCase()}
+                                    </p>
                                 </div>
                             </div>
                             <div className="flex flex-col items-end gap-2">
                                 <span className="font-black text-slate-900 text-sm">{formatCurrency(tx.amount)}</span>
-                                <button onClick={() => handleReceipt(tx)} className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 hover:bg-slate-200 transition-colors">
-                                    <Download className="w-3 h-3" /> Receipt
-                                </button>
+                                <div className="flex gap-1">
+                                    {tx.status === 'pending' && (
+                                        <button 
+                                            onClick={() => handleCheckPending(tx)}
+                                            disabled={checkingId === tx.tx_ref}
+                                            className="bg-yellow-100 text-yellow-700 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 hover:bg-yellow-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <Clock className={cn("w-3 h-3", checkingId === tx.tx_ref && "animate-spin")} />
+                                            Check
+                                        </button>
+                                    )}
+                                    <button onClick={() => handleReceipt(tx)} className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 hover:bg-slate-200 transition-colors">
+                                        <Download className="w-3 h-3" /> Receipt
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ))
