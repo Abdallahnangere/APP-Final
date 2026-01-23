@@ -20,4 +20,5 @@ export async function POST(req: Request) {
         return NextResponse.json({ logs, count: logs.length });
     } catch (e: any) {
         console.error('Webhook logs error:', e);
-        return NextResponse.json({ error: e?.message || 'Server Error', logs: [] }, { status: 500 });
+        return NextResponse.json({ error: e?.message || 'Server Error', logs: [] }, { status: 500 });    }
+}
