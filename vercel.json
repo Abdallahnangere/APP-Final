@@ -4,14 +4,5 @@
   "env": {
     "NEXT_PUBLIC_DOMAIN": "www.saukimart.online"
   },
-  "domains": [
-    {
-      "domain": "saukimart.online",
-      "redirect": "www.saukimart.online"
-    },
-    {
-      "domain": "www.saukimart.online"
-    }
-  ],
   "crons": []
 }
