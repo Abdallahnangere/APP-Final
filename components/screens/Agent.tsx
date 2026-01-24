@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Lock, Wallet, RefreshCw, ArrowRight, ShieldCheck, ShoppingBag, Wifi, Copy, History, Download, ChevronRight, Settings, BarChart2, ArrowUpRight, LogOut, LayoutDashboard, TrendingDown, Phone, MessageCircle, CheckCircle2, ArrowLeft, Plus } from 'lucide-react';
+import { Users, Lock, Wallet, RefreshCw, ArrowRight, ShieldCheck, ShoppingBag, Wifi, Copy, History, Download, ChevronRight, Settings, BarChart2, ArrowUpRight, LogOut, LayoutDashboard, TrendingDown, Phone, MessageCircle, CheckCircle2, ArrowLeft, Plus, Target, Calendar, Award } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { api } from '../../lib/api';
@@ -11,6 +11,7 @@ import { toast } from '../../lib/toast';
 import { BottomSheet } from '../ui/BottomSheet';
 import { Store } from './Store';
 import { Data } from './Data';
+import { AgentAnalytics } from '../AgentAnalytics';
 import { toPng } from 'html-to-image';
 import { SharedReceipt } from '../SharedReceipt';
 import { playSound } from '../../lib/sounds';
@@ -289,71 +290,104 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                 {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
                     
-                    {/* Wallet Card - Premium Glass */}
-                    <div className="relative overflow-hidden bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl shadow-slate-300">
+                    {/* Premium Wallet Card - Enhanced */}
+                    <MotionDiv
+                      whileHover={{ y: -4 }}
+                      className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-[2.5rem] p-8 shadow-2xl shadow-slate-300 border border-slate-700"
+                    >
                         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[80px] opacity-20 translate-x-20 -translate-y-20"></div>
                         <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-600 rounded-full blur-[60px] opacity-20 -translate-x-10 translate-y-10"></div>
                         
-                        <div className="relative z-10 text-center">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.25em] mb-2">Total Liquidity</p>
-                            <h2 className="text-5xl font-black text-white tracking-tighter mb-6">{formatCurrency(agent.balance)}</h2>
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-8">
+                              <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.25em] mb-2">Wallet Balance</p>
+                                <h2 className="text-5xl font-black text-white tracking-tighter">{formatCurrency(agent.balance)}</h2>
+                              </div>
+                              <div className="bg-white/10 backdrop-blur-md rounded-xl px-3 py-2 border border-white/20">
+                                <p className="text-[8px] font-black text-white/60 uppercase tracking-widest">Ready to Use</p>
+                              </div>
+                            </div>
                             
-                            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/5 mx-auto max-w-xs">
+                            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/5 mb-6">
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Virtual Account</span>
-                                    <span className="text-[9px] font-black bg-blue-600 text-white px-2 py-0.5 rounded uppercase">{agent.flwBankName || 'WEMA'}</span>
+                                    <span className="text-[9px] font-black bg-blue-600 text-white px-2.5 py-1 rounded-lg uppercase">{agent.flwBankName || 'WEMA'}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="font-mono text-xl font-bold text-white tracking-widest">{agent.flwAccountNumber || 'Unavailable'}</span>
-                                    <button onClick={() => { navigator.clipboard.writeText(agent.flwAccountNumber!); toast.success("Copied"); }} className="text-white/60 hover:text-white"><Copy className="w-4 h-4" /></button>
+                                    <span className="font-mono text-lg font-bold text-white tracking-widest">{agent.flwAccountNumber || 'Unavailable'}</span>
+                                    <button onClick={() => { navigator.clipboard.writeText(agent.flwAccountNumber!); toast.success("Copied"); }} className="text-white/60 hover:text-white transition-colors active:scale-95"><Copy className="w-4 h-4" /></button>
                                 </div>
                             </div>
                             
-                            <button onClick={() => refreshBalance()} className="mt-6 flex items-center justify-center gap-2 text-[10px] font-bold text-white/50 uppercase tracking-widest hover:text-white transition-colors mx-auto">
+                            <button onClick={() => refreshBalance()} className="mt-4 flex items-center justify-center gap-2 text-[10px] font-bold text-white/50 uppercase tracking-widest hover:text-white transition-colors w-full py-2 rounded-lg hover:bg-white/5">
                                 <RefreshCw className={cn("w-3 h-3", isRefreshing && "animate-spin")} /> Sync Balance
                             </button>
                         </div>
-                    </div>
+                    </MotionDiv>
 
-                    {/* Quick Actions Grid */}
+                    {/* Analytics Section */}
+                    <AgentAnalytics agent={agent} transactions={history} />
+
+                    {/* Quick Actions Grid - Enhanced */}
                     <div>
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-3 ml-2">Control Center</h3>
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-3 ml-2">Quick Actions</h3>
                         <div className="grid grid-cols-2 gap-4">
                             <ControlBtn icon={Wifi} label="Data Bundle" color="bg-blue-600" onClick={() => setShowPurchase('data')} />
                             <ControlBtn icon={ShoppingBag} label="Device Store" color="bg-purple-600" onClick={() => setShowPurchase('store')} />
+                            <ControlBtn icon={Target} label="Daily Goals" color="bg-amber-600" onClick={() => toast.info("Track your targets here")} />
+                            <ControlBtn icon={Award} label="Achievements" color="bg-green-600" onClick={() => toast.info("Earn badges & rewards")} />
                         </div>
                     </div>
 
-                    {/* Transaction History */}
+                    {/* Recent Transactions - Enhanced */}
                     <div>
                         <div className="flex justify-between items-center mb-3 px-2">
-                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">Recent Activity</h3>
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">Latest Transactions</h3>
+                            <button className="text-[9px] font-black text-blue-600 uppercase hover:text-blue-700">View All →</button>
                         </div>
-                        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden min-h-[200px]">
+                        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden min-h-[200px]">
                             {history.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-48 opacity-40">
                                     <History className="w-10 h-10 mb-2 text-slate-300" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">No Records</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">No Records Yet</span>
+                                    <p className="text-[8px] text-slate-400 mt-2 max-w-xs text-center">Complete your first transaction to see activity here</p>
                                 </div>
                             ) : (
-                                <div className="divide-y divide-slate-50">
-                                    {history.map(tx => (
-                                        <div key={tx.id} onClick={() => generateReceipt(tx)} className="p-5 flex justify-between items-center hover:bg-slate-50 cursor-pointer active:scale-[0.99] transition-transform">
-                                            <div className="flex items-center gap-4">
-                                                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", 
-                                                    tx.type === 'wallet_funding' ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-600"
+                                <div className="divide-y divide-slate-100">
+                                    {history.slice(0, 5).map((tx, idx) => (
+                                        <MotionDiv 
+                                          key={tx.id}
+                                          whileHover={{ backgroundColor: '#f8fafc' }}
+                                          onClick={() => generateReceipt(tx)}
+                                          className="p-5 flex justify-between items-center hover:bg-slate-50 cursor-pointer active:scale-[0.99] transition-all group"
+                                        >
+                                            <div className="flex items-center gap-4 flex-1">
+                                                <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center font-bold text-white shrink-0", 
+                                                    tx.type === 'wallet_funding' ? "bg-gradient-to-br from-green-500 to-green-600" : 
+                                                    tx.type === 'data' ? "bg-gradient-to-br from-blue-500 to-blue-600" :
+                                                    "bg-gradient-to-br from-purple-500 to-purple-600"
                                                 )}>
-                                                    {tx.type === 'wallet_funding' ? <ArrowUpRight className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
+                                                    {tx.type === 'wallet_funding' ? <ArrowUpRight className="w-5 h-5" /> : 
+                                                     tx.type === 'data' ? <Wifi className="w-5 h-5" /> :
+                                                     <ShoppingBag className="w-5 h-5" />}
                                                 </div>
-                                                <div>
-                                                    <p className="text-xs font-bold text-slate-900 uppercase">{tx.type === 'wallet_funding' ? 'Deposit' : (tx.dataPlan ? 'Data Sale' : 'Store Sale')}</p>
-                                                    <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{new Date(tx.createdAt).toLocaleDateString()}</p>
+                                                <div className="flex-1">
+                                                    <p className="text-xs font-bold text-slate-900 uppercase tracking-tight">
+                                                      {tx.type === 'wallet_funding' ? '💰 Deposit' : 
+                                                       tx.type === 'data' ? '📱 Data Sale' : 
+                                                       '🛍️ Store Sale'}
+                                                    </p>
+                                                    <p className="text-[9px] text-slate-500 font-bold uppercase mt-0.5">{new Date(tx.createdAt).toLocaleDateString()}</p>
                                                 </div>
                                             </div>
-                                            <span className={cn("text-sm font-black", tx.type === 'wallet_funding' ? "text-green-600" : "text-slate-900")}>
-                                                {tx.type === 'wallet_funding' ? '+' : '-'}{formatCurrency(tx.amount)}
-                                            </span>
-                                        </div>
+                                            <div className="text-right">
+                                              <span className={cn("text-sm font-black block", tx.type === 'wallet_funding' ? "text-green-600" : "text-slate-900")}>
+                                                  {tx.type === 'wallet_funding' ? '+' : '-'}{formatCurrency(tx.amount)}
+                                              </span>
+                                              <div className="text-[8px] font-bold text-slate-400 mt-1 uppercase">Click for receipt</div>
+                                            </div>
+                                        </MotionDiv>
                                     ))}
                                 </div>
                             )}

@@ -7,6 +7,7 @@ import { formatCurrency, cn, saveToLocalHistory, generateReceiptData } from '../
 import { BottomSheet } from '../ui/BottomSheet';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { PINKeyboard } from '../ui/PINKeyboard';
 import { Loader2, CheckCircle2, Copy, Download, RefreshCw, ShoppingBag, Plus, Smartphone, ShieldCheck, Truck, Zap, Wallet } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { SharedReceipt } from '../SharedReceipt';
@@ -239,76 +240,123 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
   const MotionDiv = motion.div as any;
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex flex-col overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-amber-50 via-amber-50/80 to-white flex flex-col overflow-hidden">
       {receiptTx && (
           <SharedReceipt ref={receiptRef} transaction={generateReceiptData(finalTx || {})} />
       )}
 
-      {/* Header */}
-      <div className="px-6 pt-safe pb-4 bg-white/80 backdrop-blur-xl border-b border-slate-100 shrink-0 flex items-center gap-4">
-        {onBack && <button onClick={onBack} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 font-bold text-xs uppercase transition-colors">← Back</button>}
+      {/* Premium Header */}
+      <div className="px-6 pt-safe pb-4 bg-gradient-to-r from-amber-50 to-white/50 backdrop-blur-xl border-b-2 border-amber-200/60 shrink-0 flex items-center gap-4 shadow-sm">
+        {onBack && (
+          <button 
+            onClick={onBack} 
+            className="p-3 bg-white hover:bg-amber-50 rounded-2xl text-amber-900 font-bold text-xs uppercase transition-all border border-amber-200/60 shadow-sm hover:shadow-md"
+          >
+            ← Back
+          </button>
+        )}
         <div className="flex-1">
-          <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3 uppercase">
-              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shadow-lg", agent ? "bg-purple-600 text-white" : "bg-gradient-to-br from-slate-900 to-slate-800 text-white")}>
-                  <ShoppingBag className="w-5 h-5" />
+          <h1 className="text-4xl font-black text-amber-950 flex items-center gap-3 uppercase tracking-tight">
+              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg border-2", agent ? "bg-gradient-to-br from-purple-600 to-purple-700 border-purple-700 text-white" : "bg-gradient-to-br from-amber-700 to-amber-800 border-amber-700 text-white")}>
+                  <ShoppingBag className="w-6 h-6" />
               </div>
-              {agent ? 'Agent Store' : 'Premium Store'}
+              {agent ? 'Agent Store' : 'Luxury Mart'}
           </h1>
+          <p className="text-xs text-amber-700 font-bold mt-1 uppercase tracking-widest">Premium Catalogue Selection</p>
         </div>
       </div>
 
       {!selectedProduct ? (
         <>
-          {/* Category Tabs */}
-          <div className="px-6 pt-6 shrink-0 pb-2">
-            <div className="flex p-2 bg-slate-100 rounded-[1.5rem] overflow-x-auto no-scrollbar gap-1">
-                <button 
-                  onClick={() => setActiveTab('device')}
-                  className={cn("flex-1 min-w-[120px] whitespace-nowrap px-4 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all", activeTab === 'device' ? "bg-white text-slate-900 shadow-lg" : "text-slate-500 hover:text-slate-700")}
-                >
-                  Devices
-                </button>
-                <button 
-                  onClick={() => setActiveTab('sim')}
-                  className={cn("flex-1 min-w-[120px] whitespace-nowrap px-4 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all", activeTab === 'sim' ? "bg-white text-slate-900 shadow-lg" : "text-slate-500 hover:text-slate-700")}
-                >
-                  Data SIMs
-                </button>
-                <button 
-                  onClick={() => setActiveTab('package')}
-                  className={cn("flex-1 min-w-[140px] whitespace-nowrap px-4 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all", activeTab === 'package' ? "bg-white text-slate-900 shadow-lg" : "text-slate-500 hover:text-slate-700")}
-                >
-                  Full Package
-                </button>
+          {/* Premium Category Navigation */}
+          <div className="px-6 pt-6 shrink-0 pb-4">
+            <div className="space-y-3">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Browse Catalogue</p>
+              <div className="flex gap-3 overflow-x-auto no-scrollbar">
+                {[
+                  { key: 'device', label: 'Premium Devices', icon: '📱' },
+                  { key: 'sim', label: 'Data Solutions', icon: '🔌' },
+                  { key: 'package', label: 'Complete Bundles', icon: '🎁' }
+                ].map(tab => (
+                  <button 
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key as any)}
+                    className={cn(
+                      "px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300 border-2 flex items-center gap-2",
+                      activeTab === tab.key 
+                        ? "bg-gradient-to-r from-amber-700 to-amber-800 border-amber-700 text-white shadow-2xl shadow-amber-900/30" 
+                        : "bg-white/60 border-amber-200/40 text-amber-900 hover:border-amber-300 hover:bg-white"
+                    )}
+                  >
+                    <span>{tab.icon}</span> {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Products Grid - SCROLLABLE */}
-          <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-4 pb-32">
+          {/* Premium Mahogany Catalog Grid */}
+          <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-6 pb-32 space-y-4">
             {isLoading && products.length === 0 ? (
-                <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin w-8 h-8 text-slate-300" /></div>
+                <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin w-8 h-8 text-amber-400" /></div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                   {displayedProducts.length === 0 ? (
                       <div className="col-span-2 text-center text-slate-400 py-12 font-black uppercase tracking-widest text-xs">No Inventory Available</div>
-                  ) : displayedProducts.map((product) => (
+                  ) : displayedProducts.map((product, idx) => (
                   <MotionDiv
                       key={product.id}
-                      whileTap={{ scale: 0.94 }}
-                      whileHover={{ y: -8 }}
-                      className="bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100 flex flex-col cursor-pointer hover:shadow-xl hover:shadow-slate-200/50 transition-all group overflow-hidden"
+                      whileTap={{ scale: 0.98 }}
+                      whileHover={{ y: -4 }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="group relative bg-gradient-to-br from-amber-50 via-amber-50/80 to-white rounded-[2.5rem] overflow-hidden border-2 border-amber-200/60 shadow-xl shadow-amber-900/10 cursor-pointer hover:shadow-2xl hover:shadow-amber-900/20 transition-all duration-300"
                       onClick={() => setSelectedProduct(product)}
                   >
-                      <div className="aspect-square bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl mb-4 relative overflow-hidden flex items-center justify-center p-4 border border-slate-100 group-hover:border-slate-200">
-                          <img src={product.image} alt={product.name} className="object-contain w-full h-full mix-blend-multiply group-hover:scale-110 transition-transform duration-700" />
+                    {/* Luxury Gradient Background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-900/5 via-transparent to-amber-700/5 pointer-events-none" />
+                    
+                    <div className="relative p-5 flex gap-4">
+                      {/* Premium Product Image Section */}
+                      <div className="w-28 h-28 bg-gradient-to-br from-amber-100 to-amber-50 rounded-[1.75rem] flex items-center justify-center p-4 border-2 border-amber-200/80 shadow-inner group-hover:shadow-lg group-hover:border-amber-300 transition-all flex-shrink-0 overflow-hidden">
+                          <img src={product.image} alt={product.name} className="object-contain w-full h-full mix-blend-multiply group-hover:scale-110 transition-transform duration-500" />
                       </div>
-                      <div className="flex-1 flex flex-col">
-                        <h3 className="font-black text-slate-900 text-xs line-clamp-2 min-h-[32px] leading-tight mb-3 uppercase tracking-tight">{product.name}</h3>
-                        <div className="mt-auto">
-                           <div className="font-black text-blue-600 text-lg tracking-tighter">{formatCurrency(product.price)}</div>
-                           <p className="text-[10px] text-slate-400 font-semibold mt-1">Instant Delivery</p>
+                      
+                      {/* Product Info Section */}
+                      <div className="flex-1 flex flex-col justify-between py-1">
+                        {/* Top Section */}
+                        <div>
+                          {/* Elegant Product Name */}
+                          <h3 className="font-black text-sm text-amber-950 line-clamp-2 leading-tight mb-2 uppercase tracking-tight">
+                            {product.name}
+                          </h3>
+                          
+                          {/* Product Description */}
+                          <p className="text-[11px] text-amber-700 font-semibold mb-3 line-clamp-2 leading-relaxed">
+                            {product.description || "Premium quality with instant delivery"}
+                          </p>
+                        </div>
+                        
+                        {/* Bottom Section - Price & Status */}
+                        <div className="flex items-end justify-between pt-2 border-t border-amber-200/50">
+                          <div>
+                            <p className="text-[9px] text-amber-700 font-black uppercase tracking-widest mb-1">Price</p>
+                            <p className="text-2xl font-black text-amber-900 tracking-tighter">
+                              {formatCurrency(product.price)}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <div className="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border border-green-200 flex items-center gap-1 shadow-sm">
+                              <Zap className="w-3 h-3 fill-green-700" /> In Stock
+                            </div>
+                            <div className="bg-amber-700 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border border-amber-800 group-hover:bg-amber-800 transition-colors">
+                              View →
+                            </div>
+                          </div>
                         </div>
                       </div>
+                    </div>
                   </MotionDiv>
                   ))}
               </div>
@@ -317,79 +365,88 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
         </>
       ) : (
         /* PRODUCT DETAIL VIEW */
-        <BottomSheet isOpen={!!selectedProduct} onClose={() => { setSelectedProduct(null); setStep('details'); }} title={step === 'payment' ? 'Order Fulfillment' : step === 'success' ? 'Order Confirmed!' : 'Product Showcase'}>
+        <BottomSheet isOpen={!!selectedProduct} onClose={() => { setSelectedProduct(null); setStep('details'); }} title={step === 'payment' ? 'Order Fulfillment' : step === 'success' ? 'Order Confirmed!' : 'Premium Showcase'}>
            {step === 'details' && selectedProduct && (
                <div className="space-y-6">
-                   {/* Product Image */}
-                   <div className="aspect-[4/3] bg-gradient-to-br from-slate-50 to-slate-100 rounded-[2.5rem] overflow-hidden flex items-center justify-center p-8 border border-slate-100 shadow-inner">
-                       <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply drop-shadow-2xl" />
+                   {/* Premium Product Image Section */}
+                   <div className="aspect-[4/3] bg-gradient-to-br from-amber-100 via-amber-50 to-white rounded-[2.5rem] overflow-hidden flex items-center justify-center p-8 border-2 border-amber-200/80 shadow-inner relative">
+                       <div className="absolute inset-0 bg-gradient-to-br from-amber-900/5 to-amber-700/5 pointer-events-none" />
+                       <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply drop-shadow-2xl relative z-10" />
                    </div>
                    
-                   <div className="space-y-4">
-                       <div className="flex justify-between items-start">
-                          <div>
-                              <h2 className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(selectedProduct.price)}</h2>
-                              <p className="text-lg font-black text-slate-900 mt-2 uppercase leading-none tracking-tight max-w-xs">{selectedProduct.name}</p>
-                          </div>
-                          <div className="bg-green-50 text-green-600 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase border border-green-100 flex items-center gap-1 shadow-sm shrink-0">
-                              <Zap className="w-3 h-3 fill-green-600" /> In Stock
-                          </div>
-                       </div>
-
-                       {/* Features Grid */}
-                       <div className="grid grid-cols-3 gap-3">
-                          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-50/50 rounded-2xl border border-blue-100 flex flex-col items-center text-center">
-                              <ShieldCheck className="w-5 h-5 text-blue-600 mb-2" />
-                              <span className="text-[10px] font-black uppercase text-blue-700 tracking-widest">Premium<br/>Quality</span>
-                          </div>
-                          <div className="p-4 bg-gradient-to-br from-green-50 to-green-50/50 rounded-2xl border border-green-100 flex flex-col items-center text-center">
-                              <Truck className="w-5 h-5 text-green-600 mb-2" />
-                              <span className="text-[10px] font-black uppercase text-green-700 tracking-widest">NATIONWIDE<br/>SHIPPING</span>
-                          </div>
-                          <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-50/50 rounded-2xl border border-purple-100 flex flex-col items-center text-center">
-                              <Zap className="w-5 h-5 text-purple-600 mb-2" />
-                              <span className="text-[10px] font-black uppercase text-purple-700 tracking-widest">INSTANT<br/>DISPATCH</span>
+                   <div className="space-y-5 px-2">
+                       {/* Premium Pricing Section */}
+                       <div className="bg-gradient-to-r from-amber-700 to-amber-800 rounded-[2rem] p-6 text-white shadow-xl shadow-amber-900/30 border border-amber-600">
+                          <p className="text-[9px] font-black text-amber-100 uppercase tracking-widest mb-2">Premium Pricing</p>
+                          <h2 className="text-5xl font-black tracking-tighter mb-4">{formatCurrency(selectedProduct.price)}</h2>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>
+                            <span className="text-xs font-bold uppercase tracking-widest">In Stock & Ready</span>
                           </div>
                        </div>
 
-                       {/* Description */}
-                       <div className="bg-gradient-to-br from-slate-50 to-slate-50/50 p-5 rounded-[2rem] border border-slate-100">
-                          <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] mb-3">Product Description</h4>
-                          <p className="text-slate-700 text-sm font-medium leading-relaxed">
-                              {selectedProduct.description || "Premium quality product from Sauki Mart. Fully inspected, instantly dispatched nationwide. Get authentic products with guaranteed delivery within your preferred timeframe."}
-                          </p>
+                       {/* Elegant Product Name & Description */}
+                       <div className="bg-white border-2 border-amber-200/60 rounded-[2rem] p-6 shadow-sm">
+                           <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-2">Product Name</p>
+                           <h3 className="text-2xl font-black text-amber-950 uppercase leading-tight mb-4 tracking-tight">
+                             {selectedProduct.name}
+                           </h3>
+                           
+                           <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-2">Detailed Description</p>
+                           <p className="text-sm text-amber-900 font-semibold leading-relaxed">
+                               {selectedProduct.description || "This premium product has been carefully curated from our exclusive collection. Every item is inspected for quality, ensuring you receive only the finest merchandise. Nationwide delivery with full tracking and authenticity guarantees."}
+                           </p>
                        </div>
 
-                       {/* SIM Upsell */}
+                       {/* Premium Features */}
+                       <div>
+                         <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-3">Premium Benefits</p>
+                         <div className="grid grid-cols-3 gap-3">
+                          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-50/50 rounded-2xl border-2 border-blue-200 flex flex-col items-center text-center hover:border-blue-300 transition-all">
+                              <ShieldCheck className="w-6 h-6 text-blue-700 mb-2" />
+                              <span className="text-[10px] font-black uppercase text-blue-800 tracking-widest leading-tight">Authenticity<br/>Verified</span>
+                          </div>
+                          <div className="p-4 bg-gradient-to-br from-green-50 to-green-50/50 rounded-2xl border-2 border-green-200 flex flex-col items-center text-center hover:border-green-300 transition-all">
+                              <Truck className="w-6 h-6 text-green-700 mb-2" />
+                              <span className="text-[10px] font-black uppercase text-green-800 tracking-widest leading-tight">Nationwide<br/>Shipping</span>
+                          </div>
+                          <div className="p-4 bg-gradient-to-br from-amber-50 to-amber-50/50 rounded-2xl border-2 border-amber-300 flex flex-col items-center text-center hover:border-amber-400 transition-all">
+                              <Zap className="w-6 h-6 text-amber-700 mb-2" />
+                              <span className="text-[10px] font-black uppercase text-amber-800 tracking-widest leading-tight">Instant<br/>Dispatch</span>
+                          </div>
+                         </div>
+                       </div>
+
+                       {/* SIM Upsell - Premium Style */}
                        {(selectedProduct.category === 'device' || selectedProduct.category === 'package') && availableSims.length > 0 && (
-                           <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-[2rem] shadow-2xl shadow-slate-300 border border-slate-700">
-                               <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4 block flex items-center gap-2">
-                                   <Plus className="w-4 h-4 text-blue-400" /> Bundle with SIM?
+                           <div className="bg-gradient-to-br from-amber-50 to-white border-2 border-amber-200 p-6 rounded-[2rem] shadow-md">
+                               <label className="text-[9px] font-black text-amber-900 uppercase tracking-widest mb-4 block flex items-center gap-2">
+                                   <Plus className="w-4 h-4 text-amber-700" /> OPTIONAL: ENHANCE YOUR BUNDLE
                                </label>
                                <select 
-                                  className="w-full p-4 rounded-2xl border-none bg-white/10 text-white font-black text-sm backdrop-blur-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none placeholder-white/50"
+                                  className="w-full p-4 rounded-2xl border-2 border-amber-200 bg-white text-amber-900 font-black text-sm outline-none focus:ring-2 focus:ring-amber-700/50 transition-all appearance-none placeholder-amber-700/50"
                                   value={selectedSimId}
                                   onChange={(e) => setSelectedSimId(e.target.value)}
-                                  style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.5em', paddingRight: '3rem' }}
+                                  style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23B45309'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.5em', paddingRight: '3rem' }}
                                >
-                                   <option value="" className="text-slate-900">None - Just the Device</option>
+                                   <option value="" className="text-amber-950">Just the Premium Device</option>
                                    {availableSims.map(sim => (
-                                       <option key={sim.id} value={sim.id} className="text-slate-900">
+                                       <option key={sim.id} value={sim.id} className="text-amber-950">
                                            {sim.name} — +{formatCurrency(sim.price)}
                                        </option>
                                    ))}
                                </select>
                                {upsellSim && (
-                                 <p className="text-xs text-blue-300 font-semibold mt-3 flex items-center gap-2">
-                                   <CheckCircle2 className="w-4 h-4" /> Bundle total: {formatCurrency(currentTotal)}
+                                 <p className="text-xs text-amber-700 font-semibold mt-3 flex items-center gap-2">
+                                   <CheckCircle2 className="w-4 h-4" /> Bundle Total: <strong className="text-amber-900">{formatCurrency(currentTotal)}</strong>
                                  </p>
                                )}
                            </div>
                        )}
                    </div>
 
-                   <Button onClick={handleBuyNow} className={cn("h-16 text-lg font-black text-white shadow-2xl shadow-slate-300 rounded-[2rem] uppercase tracking-tighter w-full", agent ? "bg-gradient-to-r from-purple-600 to-purple-700 hover:shadow-purple-200" : "bg-gradient-to-r from-blue-600 to-blue-700 hover:shadow-blue-200")}>
-                       {agent ? "Proceed to Wallet Pay" : "Confirm & Purchase"} {upsellSim && `(${formatCurrency(currentTotal)})`}
+                   <Button onClick={handleBuyNow} className={cn("h-16 text-lg font-black text-white shadow-2xl rounded-[2rem] uppercase tracking-tighter w-full", agent ? "bg-gradient-to-r from-purple-600 to-purple-700 hover:shadow-purple-200" : "bg-gradient-to-r from-amber-700 to-amber-800 hover:shadow-amber-900/30")}>
+                       {agent ? "💳 Wallet Payment" : "🛒 Proceed to Checkout"} {upsellSim && `(${formatCurrency(currentTotal)})`}
                    </Button>
                </div>
            )}
@@ -432,23 +489,22 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
 
          {step === 'agent_pin' && agent && (
              <div className="space-y-6 text-center">
-                 <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto text-purple-600 mb-4">
-                     <Wallet className="w-10 h-10" />
+                 <div className="w-24 h-24 bg-gradient-to-br from-amber-100 to-amber-50 rounded-full flex items-center justify-center mx-auto text-amber-700 mb-4 shadow-lg border-2 border-amber-200">
+                     <Wallet className="w-12 h-12" />
                  </div>
-                 <h3 className="text-xl font-black text-slate-900 uppercase">Authorize Transaction</h3>
-                 <p className="text-slate-500 text-xs">Enter your 4-digit PIN to debit <strong>{formatCurrency(currentTotal)}</strong> from your wallet.</p>
                  
-                 <Input 
-                    type="password" 
-                    maxLength={4} 
-                    className="text-center text-3xl tracking-[1em] font-black h-20 rounded-3xl" 
+                 <div className="bg-gradient-to-r from-amber-700 to-amber-800 rounded-2xl p-6 text-white shadow-lg border border-amber-600">
+                   <p className="text-[9px] font-black text-amber-100 uppercase tracking-widest mb-2">Wallet Debit</p>
+                   <p className="text-4xl font-black tracking-tighter">{formatCurrency(currentTotal)}</p>
+                   <p className="text-xs font-semibold text-amber-100 mt-2">Will be deducted from your available balance</p>
+                 </div>
+                 
+                 <PINKeyboard 
                     value={agentPin}
-                    onChange={e => setAgentPin(e.target.value)}
+                    onChange={setAgentPin}
+                    onComplete={handleAgentPurchase}
+                    isLoading={isLoading}
                  />
-                 
-                 <Button onClick={handleAgentPurchase} isLoading={isLoading} className="h-16 bg-slate-900 text-white rounded-[2rem] uppercase font-black tracking-widest shadow-xl">
-                     Confirm Purchase
-                 </Button>
              </div>
          )}
 
