@@ -8,15 +8,69 @@ import { BottomSheet } from '../ui/BottomSheet';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { PINKeyboard } from '../ui/PINKeyboard';
-import { Loader2, CheckCircle2, Copy, Download, RefreshCw, ShoppingBag, Plus, Smartphone, ShieldCheck, Truck, Zap, Wallet } from 'lucide-react';
+import { Loader2, CheckCircle2, Copy, Download, RefreshCw, ShoppingBag, Plus, Smartphone, ShieldCheck, Truck, Zap, Wallet, ArrowLeft } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import { SharedReceipt } from '../SharedReceipt';
+import { BrandedReceipt } from '../BrandedReceipt';
 import { toast } from '../../lib/toast';
 
 interface StoreProps {
     agent?: Agent;
     onBack?: () => void;
 }
+
+const CategorySection: React.FC<{
+  title: string;
+  products: Product[];
+  icon: string;
+  onSelect: (p: Product) => void;
+}> = ({ title, products, icon, onSelect }) => {
+  const MotionDiv = motion.div as any;
+  
+  if (products.length === 0) return null;
+  
+  return (
+    <div>
+      <div className="px-2 mb-3 flex items-center gap-2">
+        <span className="text-xl">{icon}</span>
+        <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">{title}</h2>
+        <span className="text-xs font-semibold text-slate-500 ml-auto">{products.length} item{products.length !== 1 ? 's' : ''}</span>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-3">
+        {products.map((product) => (
+          <MotionDiv
+            key={product.id}
+            whileTap={{ scale: 0.95 }}
+            whileHover={{ y: -2 }}
+            onClick={() => onSelect(product)}
+            className="group bg-white border border-slate-200 rounded-2xl overflow-hidden cursor-pointer hover:shadow-lg transition-all active:scale-95"
+          >
+            {/* Product Image */}
+            <div className="w-full aspect-square bg-slate-50 flex items-center justify-center p-3 border-b border-slate-100 group-hover:bg-slate-100 transition-colors">
+              <img src={product.image} alt={product.name} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300" />
+            </div>
+            
+            {/* Product Info */}
+            <div className="p-3">
+              <h3 className="font-semibold text-sm text-slate-900 line-clamp-2 leading-tight mb-2">
+                {product.name}
+              </h3>
+              
+              <div className="flex items-center justify-between">
+                <span className="font-black text-slate-900 text-lg">
+                  {formatCurrency(product.price)}
+                </span>
+                <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-md border border-green-200">
+                  In Stock
+                </span>
+              </div>
+            </div>
+          </MotionDiv>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -240,263 +294,169 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
   const MotionDiv = motion.div as any;
 
   return (
-    <div className="h-screen bg-gradient-to-br from-amber-50 via-amber-50/80 to-white flex flex-col overflow-hidden">
+    <div className="h-screen bg-white flex flex-col overflow-hidden">
       {receiptTx && (
-          <SharedReceipt ref={receiptRef} transaction={generateReceiptData(finalTx || {})} />
+          <BrandedReceipt ref={receiptRef} transaction={generateReceiptData(finalTx || {})} />
       )}
 
-      {/* Premium Header */}
-      <div className="px-6 pt-safe pb-4 bg-gradient-to-r from-amber-50 to-white/50 backdrop-blur-xl border-b-2 border-amber-200/60 shrink-0 flex items-center gap-4 shadow-sm">
+      {/* Clean Apple-style Header */}
+      <div className="px-6 pt-safe pb-3 bg-white shrink-0 flex items-center gap-4 border-b border-slate-100">
         {onBack && (
           <button 
             onClick={onBack} 
-            className="p-3 bg-white hover:bg-amber-50 rounded-2xl text-amber-900 font-bold text-xs uppercase transition-all border border-amber-200/60 shadow-sm hover:shadow-md"
+            className="p-2 text-slate-600 active:scale-90 transition-transform"
           >
-            ← Back
+            <ArrowLeft className="w-6 h-6" />
           </button>
         )}
         <div className="flex-1">
-          <h1 className="text-4xl font-black text-amber-950 flex items-center gap-3 uppercase tracking-tight">
-              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg border-2", agent ? "bg-gradient-to-br from-purple-600 to-purple-700 border-purple-700 text-white" : "bg-gradient-to-br from-amber-700 to-amber-800 border-amber-700 text-white")}>
-                  <ShoppingBag className="w-6 h-6" />
-              </div>
-              {agent ? 'Agent Store' : 'Luxury Mart'}
-          </h1>
-          <p className="text-xs text-amber-700 font-bold mt-1 uppercase tracking-widest">Premium Catalogue Selection</p>
+          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Store</h1>
         </div>
       </div>
 
       {!selectedProduct ? (
         <>
-          {/* Premium Category Navigation */}
-          <div className="px-6 pt-6 shrink-0 pb-4">
-            <div className="space-y-3">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Browse Catalogue</p>
-              <div className="flex gap-3 overflow-x-auto no-scrollbar">
-                {[
-                  { key: 'device', label: 'Premium Devices', icon: '📱' },
-                  { key: 'sim', label: 'Data Solutions', icon: '🔌' },
-                  { key: 'package', label: 'Complete Bundles', icon: '🎁' }
-                ].map(tab => (
-                  <button 
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key as any)}
-                    className={cn(
-                      "px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300 border-2 flex items-center gap-2",
-                      activeTab === tab.key 
-                        ? "bg-gradient-to-r from-amber-700 to-amber-800 border-amber-700 text-white shadow-2xl shadow-amber-900/30" 
-                        : "bg-white/60 border-amber-200/40 text-amber-900 hover:border-amber-300 hover:bg-white"
-                    )}
-                  >
-                    <span>{tab.icon}</span> {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Premium Mahogany Catalog Grid */}
-          <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-6 pb-32 space-y-4">
+          {/* Three-Column Category Grid - All visible */}
+          <div className="flex-1 overflow-y-auto no-scrollbar px-4 pt-4 pb-4 space-y-4">
             {isLoading && products.length === 0 ? (
-                <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin w-8 h-8 text-amber-400" /></div>
+                <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin w-8 h-8 text-slate-400" /></div>
             ) : (
               <div className="space-y-4">
-                  {displayedProducts.length === 0 ? (
-                      <div className="col-span-2 text-center text-slate-400 py-12 font-black uppercase tracking-widest text-xs">No Inventory Available</div>
-                  ) : displayedProducts.map((product, idx) => (
-                  <MotionDiv
-                      key={product.id}
-                      whileTap={{ scale: 0.98 }}
-                      whileHover={{ y: -4 }}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      className="group relative bg-gradient-to-br from-amber-50 via-amber-50/80 to-white rounded-[2.5rem] overflow-hidden border-2 border-amber-200/60 shadow-xl shadow-amber-900/10 cursor-pointer hover:shadow-2xl hover:shadow-amber-900/20 transition-all duration-300"
-                      onClick={() => setSelectedProduct(product)}
-                  >
-                    {/* Luxury Gradient Background */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-900/5 via-transparent to-amber-700/5 pointer-events-none" />
-                    
-                    <div className="relative p-5 flex gap-4">
-                      {/* Premium Product Image Section */}
-                      <div className="w-28 h-28 bg-gradient-to-br from-amber-100 to-amber-50 rounded-[1.75rem] flex items-center justify-center p-4 border-2 border-amber-200/80 shadow-inner group-hover:shadow-lg group-hover:border-amber-300 transition-all flex-shrink-0 overflow-hidden">
-                          <img src={product.image} alt={product.name} className="object-contain w-full h-full mix-blend-multiply group-hover:scale-110 transition-transform duration-500" />
-                      </div>
-                      
-                      {/* Product Info Section */}
-                      <div className="flex-1 flex flex-col justify-between py-1">
-                        {/* Top Section */}
-                        <div>
-                          {/* Elegant Product Name */}
-                          <h3 className="font-black text-sm text-amber-950 line-clamp-2 leading-tight mb-2 uppercase tracking-tight">
-                            {product.name}
-                          </h3>
-                          
-                          {/* Product Description */}
-                          <p className="text-[11px] text-amber-700 font-semibold mb-3 line-clamp-2 leading-relaxed">
-                            {product.description || "Premium quality with instant delivery"}
-                          </p>
-                        </div>
-                        
-                        {/* Bottom Section - Price & Status */}
-                        <div className="flex items-end justify-between pt-2 border-t border-amber-200/50">
-                          <div>
-                            <p className="text-[9px] text-amber-700 font-black uppercase tracking-widest mb-1">Price</p>
-                            <p className="text-2xl font-black text-amber-900 tracking-tighter">
-                              {formatCurrency(product.price)}
-                            </p>
-                          </div>
-                          <div className="flex gap-2">
-                            <div className="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border border-green-200 flex items-center gap-1 shadow-sm">
-                              <Zap className="w-3 h-3 fill-green-700" /> In Stock
-                            </div>
-                            <div className="bg-amber-700 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border border-amber-800 group-hover:bg-amber-800 transition-colors">
-                              View →
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </MotionDiv>
-                  ))}
+                {/* DEVICES CATEGORY */}
+                <CategorySection 
+                  title="Devices" 
+                  products={products.filter(p => (p.category || 'device') === 'device')}
+                  icon="📱"
+                  onSelect={setSelectedProduct}
+                />
+
+                {/* SIMS CATEGORY */}
+                <CategorySection 
+                  title="Data SIMs" 
+                  products={products.filter(p => p.category === 'sim')}
+                  icon="🔌"
+                  onSelect={setSelectedProduct}
+                />
+
+                {/* PACKAGES CATEGORY */}
+                <CategorySection 
+                  title="Full Packages" 
+                  products={products.filter(p => p.category === 'package')}
+                  icon="🎁"
+                  onSelect={setSelectedProduct}
+                />
               </div>
             )}
           </div>
         </>
       ) : (
         /* PRODUCT DETAIL VIEW */
-        <BottomSheet isOpen={!!selectedProduct} onClose={() => { setSelectedProduct(null); setStep('details'); }} title={step === 'payment' ? 'Order Fulfillment' : step === 'success' ? 'Order Confirmed!' : 'Premium Showcase'}>
+        <BottomSheet isOpen={!!selectedProduct} onClose={() => { setSelectedProduct(null); setStep('details'); }} title="">
            {step === 'details' && selectedProduct && (
-               <div className="space-y-6">
-                   {/* Premium Product Image Section */}
-                   <div className="aspect-[4/3] bg-gradient-to-br from-amber-100 via-amber-50 to-white rounded-[2.5rem] overflow-hidden flex items-center justify-center p-8 border-2 border-amber-200/80 shadow-inner relative">
-                       <div className="absolute inset-0 bg-gradient-to-br from-amber-900/5 to-amber-700/5 pointer-events-none" />
-                       <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply drop-shadow-2xl relative z-10" />
+               <div className="space-y-4">
+                   {/* Product Image */}
+                   <div className="aspect-[4/3] bg-slate-50 rounded-2xl overflow-hidden flex items-center justify-center p-6 border border-slate-200">
+                       <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply" />
                    </div>
                    
-                   <div className="space-y-5 px-2">
-                       {/* Premium Pricing Section */}
-                       <div className="bg-gradient-to-r from-amber-700 to-amber-800 rounded-[2rem] p-6 text-white shadow-xl shadow-amber-900/30 border border-amber-600">
-                          <p className="text-[9px] font-black text-amber-100 uppercase tracking-widest mb-2">Premium Pricing</p>
-                          <h2 className="text-5xl font-black tracking-tighter mb-4">{formatCurrency(selectedProduct.price)}</h2>
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>
-                            <span className="text-xs font-bold uppercase tracking-widest">In Stock & Ready</span>
-                          </div>
-                       </div>
-
-                       {/* Elegant Product Name & Description */}
-                       <div className="bg-white border-2 border-amber-200/60 rounded-[2rem] p-6 shadow-sm">
-                           <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-2">Product Name</p>
-                           <h3 className="text-2xl font-black text-amber-950 uppercase leading-tight mb-4 tracking-tight">
+                   <div className="space-y-4 px-2">
+                       {/* Product Name & Price */}
+                       <div>
+                           <h2 className="text-2xl font-black text-slate-900 uppercase leading-tight mb-1">
                              {selectedProduct.name}
-                           </h3>
-                           
-                           <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-2">Detailed Description</p>
-                           <p className="text-sm text-amber-900 font-semibold leading-relaxed">
-                               {selectedProduct.description || "This premium product has been carefully curated from our exclusive collection. Every item is inspected for quality, ensuring you receive only the finest merchandise. Nationwide delivery with full tracking and authenticity guarantees."}
+                           </h2>
+                           <p className="text-3xl font-black text-slate-900 tracking-tight">
+                             {formatCurrency(selectedProduct.price)}
                            </p>
                        </div>
 
-                       {/* Premium Features */}
-                       <div>
-                         <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-3">Premium Benefits</p>
-                         <div className="grid grid-cols-3 gap-3">
-                          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-50/50 rounded-2xl border-2 border-blue-200 flex flex-col items-center text-center hover:border-blue-300 transition-all">
-                              <ShieldCheck className="w-6 h-6 text-blue-700 mb-2" />
-                              <span className="text-[10px] font-black uppercase text-blue-800 tracking-widest leading-tight">Authenticity<br/>Verified</span>
-                          </div>
-                          <div className="p-4 bg-gradient-to-br from-green-50 to-green-50/50 rounded-2xl border-2 border-green-200 flex flex-col items-center text-center hover:border-green-300 transition-all">
-                              <Truck className="w-6 h-6 text-green-700 mb-2" />
-                              <span className="text-[10px] font-black uppercase text-green-800 tracking-widest leading-tight">Nationwide<br/>Shipping</span>
-                          </div>
-                          <div className="p-4 bg-gradient-to-br from-amber-50 to-amber-50/50 rounded-2xl border-2 border-amber-300 flex flex-col items-center text-center hover:border-amber-400 transition-all">
-                              <Zap className="w-6 h-6 text-amber-700 mb-2" />
-                              <span className="text-[10px] font-black uppercase text-amber-800 tracking-widest leading-tight">Instant<br/>Dispatch</span>
-                          </div>
-                         </div>
-                       </div>
+                       {/* Description */}
+                       {selectedProduct.description && (
+                           <div>
+                               <p className="text-sm text-slate-600 leading-relaxed">
+                                   {selectedProduct.description}
+                               </p>
+                           </div>
+                       )}
 
-                       {/* SIM Upsell - Premium Style */}
+                       {/* SIM Upsell - Clean Style */}
                        {(selectedProduct.category === 'device' || selectedProduct.category === 'package') && availableSims.length > 0 && (
-                           <div className="bg-gradient-to-br from-amber-50 to-white border-2 border-amber-200 p-6 rounded-[2rem] shadow-md">
-                               <label className="text-[9px] font-black text-amber-900 uppercase tracking-widest mb-4 block flex items-center gap-2">
-                                   <Plus className="w-4 h-4 text-amber-700" /> OPTIONAL: ENHANCE YOUR BUNDLE
+                           <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
+                               <label className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-2 block">
+                                   Add Data SIM
                                </label>
                                <select 
-                                  className="w-full p-4 rounded-2xl border-2 border-amber-200 bg-white text-amber-900 font-black text-sm outline-none focus:ring-2 focus:ring-amber-700/50 transition-all appearance-none placeholder-amber-700/50"
+                                  className="w-full p-3 rounded-lg border border-slate-200 bg-white text-slate-900 font-semibold text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                   value={selectedSimId}
                                   onChange={(e) => setSelectedSimId(e.target.value)}
-                                  style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23B45309'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.5em', paddingRight: '3rem' }}
                                >
-                                   <option value="" className="text-amber-950">Just the Premium Device</option>
+                                   <option value="">None</option>
                                    {availableSims.map(sim => (
-                                       <option key={sim.id} value={sim.id} className="text-amber-950">
+                                       <option key={sim.id} value={sim.id}>
                                            {sim.name} — +{formatCurrency(sim.price)}
                                        </option>
                                    ))}
                                </select>
-                               {upsellSim && (
-                                 <p className="text-xs text-amber-700 font-semibold mt-3 flex items-center gap-2">
-                                   <CheckCircle2 className="w-4 h-4" /> Bundle Total: <strong className="text-amber-900">{formatCurrency(currentTotal)}</strong>
-                                 </p>
-                               )}
                            </div>
+                       )}
+
+                       {/* Total Price */}
+                       {currentTotal > selectedProduct.price && (
+                         <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center justify-between">
+                           <span className="text-sm font-semibold text-blue-900">Bundle Total</span>
+                           <span className="font-black text-blue-900 text-xl">{formatCurrency(currentTotal)}</span>
+                         </div>
                        )}
                    </div>
 
-                   <Button onClick={handleBuyNow} className={cn("h-16 text-lg font-black text-white shadow-2xl rounded-[2rem] uppercase tracking-tighter w-full", agent ? "bg-gradient-to-r from-purple-600 to-purple-700 hover:shadow-purple-200" : "bg-gradient-to-r from-amber-700 to-amber-800 hover:shadow-amber-900/30")}>
-                       {agent ? "💳 Wallet Payment" : "🛒 Proceed to Checkout"} {upsellSim && `(${formatCurrency(currentTotal)})`}
+                   <Button onClick={handleBuyNow} className="bg-slate-900 text-white h-12 font-bold rounded-xl uppercase tracking-wide w-full mt-4">
+                       {agent ? "Pay with Wallet" : "Continue"} →
                    </Button>
                </div>
            )}
 
          {step === 'form' && selectedProduct && (
-             <div className="space-y-6">
+             <div className="space-y-4">
                  {/* Order Summary */}
-                 <div className="bg-gradient-to-br from-slate-50 to-slate-50/50 p-5 rounded-2xl border border-slate-100 flex items-center gap-4 shadow-inner">
-                    <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center p-3 border border-slate-100">
+                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center gap-3">
+                    <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center p-2 border border-slate-100">
                       <img src={selectedProduct.image} className="w-full h-full object-contain mix-blend-multiply" />
                     </div>
                     <div className="flex-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Order Summary</p>
-                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight mt-1">{selectedProduct.name} {upsellSim && `+ ${upsellSim.name}`}</p>
-                        <p className="text-lg font-black text-blue-600 mt-2">{formatCurrency(currentTotal)}</p>
+                        <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Order Total</p>
+                        <p className="text-lg font-black text-slate-900 uppercase mt-0.5">{selectedProduct.name}</p>
+                        <p className="text-base font-black text-blue-600 mt-1">{formatCurrency(currentTotal)}</p>
                     </div>
                  </div>
 
                  {/* Form Fields */}
-                 <div className="space-y-4">
+                 <div className="space-y-3">
                    <div>
-                     <label className="text-xs font-black text-slate-600 uppercase tracking-widest mb-2 block">Full Name</label>
-                     <Input placeholder="John Doe" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="rounded-2xl h-14 font-semibold text-sm bg-white border border-slate-200" />
+                     <label className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5 block">Full Name</label>
+                     <Input placeholder="John Doe" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="rounded-lg h-11 font-semibold text-sm bg-white border border-slate-200" />
                    </div>
                    <div>
-                     <label className="text-xs font-black text-slate-600 uppercase tracking-widest mb-2 block">Contact Phone</label>
-                     <Input type="tel" placeholder="0801234567" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="rounded-2xl h-14 font-semibold text-sm bg-white border border-slate-200" />
+                     <label className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5 block">Phone Number</label>
+                     <Input type="tel" placeholder="08012345678" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="rounded-lg h-11 font-semibold text-sm bg-white border border-slate-200" />
                    </div>
                    <div>
-                     <label className="text-xs font-black text-slate-600 uppercase tracking-widest mb-2 block">Delivery Address</label>
-                     <Input placeholder="Apartment, Street, City, State" value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} className="rounded-2xl h-14 font-semibold text-sm bg-white border border-slate-200" />
+                     <label className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5 block">Delivery Address</label>
+                     <Input placeholder="Apartment, Street, City, State" value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} className="rounded-lg h-11 font-semibold text-sm bg-white border border-slate-200" />
                    </div>
                  </div>
                  
-                 <Button onClick={handleBuyNow} isLoading={isLoading} className={cn("h-16 text-lg font-black rounded-[2rem] uppercase tracking-tighter shadow-xl w-full text-white", agent ? "bg-gradient-to-r from-purple-600 to-purple-700" : "bg-gradient-to-r from-blue-600 to-blue-700")}>
-                     {agent ? "Authorize Charge" : "Initialize Payment"} ({formatCurrency(currentTotal)})
+                 <Button onClick={handleBuyNow} isLoading={isLoading} className="bg-slate-900 text-white h-12 font-bold rounded-lg uppercase tracking-wide shadow-lg w-full mt-2">
+                     {agent ? "Authorize Charge" : "Continue to Payment"}
                  </Button>
              </div>
          )}
 
          {step === 'agent_pin' && agent && (
-             <div className="space-y-6 text-center">
-                 <div className="w-24 h-24 bg-gradient-to-br from-amber-100 to-amber-50 rounded-full flex items-center justify-center mx-auto text-amber-700 mb-4 shadow-lg border-2 border-amber-200">
-                     <Wallet className="w-12 h-12" />
-                 </div>
-                 
-                 <div className="bg-gradient-to-r from-amber-700 to-amber-800 rounded-2xl p-6 text-white shadow-lg border border-amber-600">
-                   <p className="text-[9px] font-black text-amber-100 uppercase tracking-widest mb-2">Wallet Debit</p>
-                   <p className="text-4xl font-black tracking-tighter">{formatCurrency(currentTotal)}</p>
-                   <p className="text-xs font-semibold text-amber-100 mt-2">Will be deducted from your available balance</p>
+             <div className="space-y-4">
+                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                   <p className="text-xs font-bold text-blue-900 uppercase tracking-wide mb-1">Wallet Debit</p>
+                   <p className="text-3xl font-black text-blue-900">{formatCurrency(currentTotal)}</p>
+                   <p className="text-xs text-blue-700 mt-2 font-semibold">from your available balance</p>
                  </div>
                  
                  <PINKeyboard 
@@ -509,56 +469,50 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
          )}
 
          {step === 'payment' && paymentDetails && !agent && (
-             <div className="space-y-6">
-                 {/* ... Payment UI same as previous ... */}
-                 <div className="bg-orange-50 border-2 border-orange-100 p-8 rounded-[2.5rem] text-center relative overflow-hidden shadow-inner">
-                     {isPolling && <MotionDiv animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} className="absolute top-4 right-4 text-[9px] text-orange-600 font-black uppercase tracking-widest flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Verifying</MotionDiv>}
-                     <p className="text-[10px] text-orange-800 mb-2 font-black uppercase tracking-widest">Transfer EXACTLY</p>
-                     <p className="text-5xl font-black text-orange-900 tracking-tighter">{formatCurrency(paymentDetails.amount)}</p>
-                     <p className="text-[10px] text-orange-600 mt-3 font-bold uppercase tracking-wider">Gateway Secure Provisioning</p>
+             <div className="space-y-4">
+                 <div className="bg-orange-50 border border-orange-200 p-5 rounded-xl text-center">
+                     <p className="text-xs text-orange-900 mb-2 font-bold uppercase tracking-wide">Transfer Exactly</p>
+                     <p className="text-4xl font-black text-orange-900">{formatCurrency(paymentDetails.amount)}</p>
+                     <p className="text-xs text-orange-700 mt-2 font-semibold">{isPolling && <span className="inline-flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Verifying...</span>}</p>
                  </div>
                  
-                 <div className="space-y-3">
-                     <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
-                         <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-1">Bank Name</p>
-                         <p className="font-black text-slate-900 text-xl tracking-tight uppercase">{paymentDetails.bank}</p>
+                 <div className="space-y-2">
+                     <div className="bg-white border border-slate-200 p-4 rounded-lg">
+                         <p className="text-xs text-slate-500 uppercase tracking-wide font-bold mb-1">Bank Name</p>
+                         <p className="font-black text-slate-900 text-base uppercase">{paymentDetails.bank}</p>
                      </div>
-                     <div className="bg-white border-2 border-slate-200 p-5 rounded-3xl shadow-sm flex items-center justify-between group hover:border-blue-300 transition-all">
+                     <div className="bg-white border-2 border-slate-200 p-4 rounded-lg flex items-center justify-between group hover:border-blue-300 transition-all">
                          <div>
-                             <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-1">Account Number</p>
-                             <p className="font-black text-3xl tracking-tight text-slate-900 font-mono">{paymentDetails.account_number}</p>
+                             <p className="text-xs text-slate-500 uppercase tracking-wide font-bold mb-1">Account Number</p>
+                             <p className="font-black text-2xl text-slate-900 font-mono">{paymentDetails.account_number}</p>
                          </div>
-                         <Button variant="ghost" className="w-14 h-14 p-0 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-full shadow-inner" onClick={() => {
+                         <Button variant="ghost" className="w-10 h-10 p-0 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg" onClick={() => {
                              navigator.clipboard.writeText(paymentDetails.account_number);
-                             toast.success("Account number copied");
+                             toast.success("Copied!");
                          }}>
-                             <Copy className="w-6 h-6" />
+                             <Copy className="w-5 h-5" />
                          </Button>
                      </div>
-                     <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
-                         <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-1">Beneficiary Name</p>
-                         <p className="font-black text-slate-900 text-base uppercase">{paymentDetails.account_name}</p>
+                     <div className="bg-white border border-slate-200 p-4 rounded-lg">
+                         <p className="text-xs text-slate-500 uppercase tracking-wide font-bold mb-1">Beneficiary Name</p>
+                         <p className="font-black text-slate-900 text-sm uppercase">{paymentDetails.account_name}</p>
                      </div>
                  </div>
 
-                 <div className="space-y-2">
-                    <Button onClick={handleManualCheck} isLoading={isLoading} className="bg-green-600 hover:bg-green-700 h-16 text-white text-xl font-black shadow-2xl shadow-green-100 rounded-[2rem] uppercase tracking-tighter">
-                        Confirm Transfer Made
+                 <div className="space-y-2 mt-4">
+                    <Button onClick={handleManualCheck} isLoading={isLoading} className="bg-green-600 hover:bg-green-700 h-11 text-white font-bold shadow-lg rounded-lg uppercase tracking-wide w-full">
+                        Confirm Payment Made
                     </Button>
-                    <div className="bg-slate-50 p-5 rounded-3xl text-center border border-slate-100">
-                        <div className="flex items-center justify-center gap-3 text-slate-600 mb-1">
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Awaiting Gateway Signal</span>
-                        </div>
-                        <p className="text-[8px] text-slate-400 font-black uppercase tracking-[0.2em]">Transaction is monitored 24/7</p>
+                    <div className="bg-slate-50 p-3 rounded-lg text-center border border-slate-100">
+                        <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Payment is being monitored</p>
                     </div>
                  </div>
              </div>
          )}
 
          {step === 'success' && selectedProduct && paymentDetails && (
-             <div className="text-center space-y-6 py-4">
-                 <SharedReceipt 
+             <div className="text-center space-y-4 py-2">
+                 <BrandedReceipt 
                     ref={receiptRef}
                     transaction={generateReceiptData(finalTx || {
                         tx_ref: paymentDetails.tx_ref,
@@ -573,30 +527,31 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
                     }, agent)}
                  />
 
-                 <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-green-200 animate-in zoom-in duration-500 scale-110">
-                     <CheckCircle2 className="w-12 h-12 text-white" />
-                 </div>
-                 <div>
-                     <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">ORDER CONFIRMED!</h2>
-                     <p className="text-slate-500 mt-2 text-xs font-bold uppercase tracking-widest">Verification Successful • Dispatching Shortly</p>
-                     <div className="bg-blue-600 p-6 rounded-[2.5rem] mt-8 border-none text-left relative overflow-hidden shadow-2xl shadow-blue-100">
-                         <Zap className="absolute -right-6 -top-6 w-24 h-24 text-white/10" />
-                         <p className="font-black text-white text-sm flex items-center gap-2 uppercase tracking-tight">
-                             <span className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></span>
-                             Logistics Priority
-                         </p>
-                         <p className="text-[10px] text-blue-100 mt-2 font-bold uppercase tracking-wide">Our logistics hub will contact <strong>{formData.phone}</strong> to coordinate final delivery.</p>
-                     </div>
+                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto shadow-lg border border-green-200">
+                     <CheckCircle2 className="w-9 h-9 text-green-600" />
                  </div>
                  
-                 <div className="flex flex-col gap-3 pt-6">
+                 <div>
+                     <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Order Confirmed!</h2>
+                     <p className="text-xs text-slate-600 mt-1 font-semibold uppercase">Dispatch in progress</p>
+                 </div>
+                 
+                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                     <p className="font-bold text-blue-900 text-sm flex items-center gap-2 justify-center">
+                         <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                         We'll contact {formData.phone}
+                     </p>
+                     <p className="text-xs text-blue-700 mt-1">for final delivery coordination</p>
+                 </div>
+                 
+                 <div className="flex flex-col gap-2 pt-2">
                      <Button 
                         onClick={downloadReceipt}
-                        className="bg-slate-900 text-white shadow-2xl shadow-slate-200 h-16 text-xl font-black rounded-[2rem] uppercase tracking-tighter"
+                        className="bg-slate-900 text-white h-11 font-bold rounded-lg uppercase tracking-wide"
                     >
-                        <Download className="w-5 h-5 mr-3" /> Get Digital Receipt
+                        <Download className="w-4 h-4 mr-2" /> Save Receipt
                      </Button>
-                     <Button variant="ghost" onClick={handleClose} className="font-black text-slate-400 uppercase tracking-widest text-[10px]">Close Dashboard</Button>
+                     <Button variant="ghost" onClick={handleClose} className="font-bold text-slate-400 text-xs uppercase tracking-wide">Close</Button>
                  </div>
              </div>
          )}

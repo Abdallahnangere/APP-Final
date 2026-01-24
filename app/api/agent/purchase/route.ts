@@ -3,17 +3,34 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
 import { callAmigoAPI, AMIGO_NETWORKS } from '../../../../lib/amigo';
+import { verifyPin } from '../../../../lib/security';
+import { AgentPurchaseSchema, validateRequestBody } from '../../../../lib/validation';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { agentId, pin, type, payload } = body;
+
+    // Validate request body against schema
+    const validation = await validateRequestBody(body, AgentPurchaseSchema);
+    if (!validation.valid) {
+      const errors = validation.errors.errors.map(e => `${e.path.join('.')}: ${e.message}`);
+      return NextResponse.json({ error: 'Validation failed', details: errors }, { status: 400 });
+    }
+
+    const { agentId, agentPin, type, payload } = validation.data;
 
     // 1. Verify Agent & PIN
     const agent = await prisma.agent.findUnique({ where: { id: agentId } });
-    if (!agent || agent.pin !== pin) {
+    if (!agent) {
+        return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+    }
+
+    // Verify PIN against hash
+    const isPinValid = await verifyPin(agentPin, agent.pin);
+    if (!isPinValid) {
         return NextResponse.json({ error: 'Invalid PIN Authorization' }, { status: 401 });
     }
+
     if (!agent.isActive) return NextResponse.json({ error: 'Agent Account Suspended' }, { status: 403 });
 
     let amount = 0;
@@ -21,13 +38,13 @@ export async function POST(req: Request) {
     let productDetails: any = {};
 
     // 2. Calculate Amount
-    if (type === 'data') {
+    if (type === 'data' && payload?.planId) {
         const plan = await prisma.dataPlan.findUnique({ where: { id: payload.planId } });
         if (!plan) return NextResponse.json({ error: 'Invalid Plan' }, { status: 400 });
         amount = plan.price;
         description = `Data: ${plan.network} ${plan.data}`;
         productDetails = { planId: plan.id };
-    } else if (type === 'ecommerce') {
+    } else if (type === 'ecommerce' && payload?.productId) {
         const product = await prisma.product.findUnique({ where: { id: payload.productId } });
         if (!product) return NextResponse.json({ error: 'Invalid Product' }, { status: 400 });
         amount = product.price;
@@ -48,7 +65,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Insufficient Wallet Balance' }, { status: 402 });
     }
 
-    const tx_ref = `AGENT-${type.toUpperCase()}-${Date.now()}`;
+    const tx_ref = `AGENT-${type?.toUpperCase() || 'TX'}-${Date.now()}`;
 
     // 4. Debit Wallet & Create Record
     const result = await prisma.$transaction(async (prisma) => {

@@ -3,20 +3,42 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
+import { InitiatePaymentSchema, validateRequestBody } from '../../../../lib/validation';
+import { logger } from '../../../../lib/logger';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  let phone = '';
+  const endLog = logger.logApiRequest('ECOMMERCE', 'INITIATE_PAYMENT');
+
   try {
     const body = await req.json();
-    const { productId, phone, name, state, simId } = body;
+
+    // Validate request body
+    const validation = await validateRequestBody(body, InitiatePaymentSchema);
+    if (!validation.valid) {
+      const errors = validation.errors.errors.map(e => `${e.path.join('.')}: ${e.message}`);
+      logger.logSecurityEvent('INVALID_REQUEST', { service: 'ECOMMERCE_PAYMENT', errors });
+      endLog(400, null, new Error('Validation failed'));
+      return NextResponse.json({ error: 'Validation failed', details: errors }, { status: 400 });
+    }
+
+    const { productId, phone: validPhone, name, state, simId } = validation.data;
+    phone = validPhone;
 
     if (!process.env.FLUTTERWAVE_SECRET_KEY) {
+        logger.logCritical('ECOMMERCE', new Error('Missing Flutterwave key'), {});
+        endLog(500, null, new Error('Server configuration error'));
         return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
     const product = await prisma.product.findUnique({ where: { id: productId } });
-    if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    if (!product) {
+      logger.logSecurityEvent('INVALID_REQUEST', { phone, reason: 'Product not found', productId });
+      endLog(404, null, new Error('Product not found'));
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
 
     let totalAmount = product.price;
     let items = [{ name: product.name, price: product.price }];
@@ -100,6 +122,13 @@ export async function POST(req: Request) {
           }
         });
 
+        logger.logTransaction(phone, 'ECOMMERCE_INITIATED', totalAmount, 'PENDING', {
+          tx_ref,
+          items: items.length,
+          manifest: fullManifest
+        });
+
+        endLog(200, { tx_ref, amount: totalAmount });
         return NextResponse.json({
           tx_ref,
           bank: bankInfo.transfer_bank,
@@ -110,13 +139,15 @@ export async function POST(req: Request) {
         });
 
     } catch (flwError: any) {
-        console.error("Axios/Gateway Error:", flwError.response?.data || flwError.message);
+        logger.logError('PAYMENT', 'FLW_GATEWAY', flwError as Error, { phone, amount: totalAmount });
         const msg = flwError.response?.data?.message || flwError.message;
+        endLog(502, null, flwError as Error);
         return NextResponse.json({ error: 'Gateway Error', details: msg }, { status: 502 });
     }
 
   } catch (error: any) {
-    console.error("Internal Error:", error);
+    logger.logError('ECOMMERCE', 'INITIATE_PAYMENT', error as Error, { phone });
+    endLog(500, null, error as Error);
     return NextResponse.json({ error: error.message || 'Initiation failed' }, { status: 500 });
   }
 }

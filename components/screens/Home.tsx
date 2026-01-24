@@ -56,26 +56,22 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         <SharedReceipt ref={receiptRef} transaction={generateReceiptData(receiptTx)} />
       )}
 
-      {/* PREMIUM HEADER - Apple Large Title Style */}
-      <header className="px-6 pt-safe pb-4 flex justify-between items-center z-10 shrink-0 mb-0 relative">
-        {/* Animated Top Border */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-accent-blue to-transparent opacity-60 shadow-lg shadow-accent-blue/50"></div>
-        <div className="absolute top-1 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-accent-purple to-transparent opacity-40 blur-sm"></div>
-        
+      {/* HEADER - Apple Clean Style with Top Padding */}
+      <header className="px-6 pt-12 pb-4 flex justify-between items-center z-10 shrink-0 relative">
         <div>
-            <h1 className="text-3xl font-bold text-primary-900 tracking-tight leading-none">SAUKI MART</h1>
+            <h1 className="text-2xl font-bold text-primary-900 tracking-tight">SAUKI MART</h1>
         </div>
         <MotionDiv
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsMenuOpen(true)}
-          className="w-11 h-11 bg-white rounded-xl shadow-elevation-4 flex items-center justify-center active:shadow-elevation-2 transition-shadow cursor-pointer"
+          className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform cursor-pointer"
         >
-          <Menu className="w-5 h-5 text-primary-900 stroke-[2]" />
+          <Menu className="w-5 h-5 text-primary-900" />
         </MotionDiv>
       </header>
 
       {/* SCROLLABLE CONTENT */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-4 pt-4 space-y-4 pb-20">
+      <div className="flex-1 overflow-y-auto no-scrollbar px-4 pt-2 space-y-4 pb-20">
         
         {/* TICKER (Marquee) */}
         {ticker && (
