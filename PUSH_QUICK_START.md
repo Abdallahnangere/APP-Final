@@ -17,17 +17,28 @@ Admin Dashboard → Send Notification → Service Worker
 
 ## Setup (3 Steps)
 
-### 1️⃣ Add Environment Variables to `.env.local`
+### 1️⃣ Add Environment Variables to `.env.local` (and Vercel)
+
+**IMPORTANT:** You must add these to BOTH:
+1. Local: `.env.local` file
+2. Production: **Vercel Environment Variables** (Settings → Environment Variables)
 
 ```env
 # Generated VAPID Keys (for Web Push authentication)
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=BOdoPRbgsp1Vr9qSzaAZ9YHDujQX3M0XA6YseL_zGVcJnUx01nyi976SgeBIrN7uXSf__qXJbSXiHZWcO8dA_Ws
 VAPID_PRIVATE_KEY=oGhQ41BD1NaNdaP1KVf7ug38rBZjhBSVnNGPjNayk7k
-VAPID_EMAIL=admin@saukimart.com
+VAPID_EMAIL=saukidatalinks@gmail.com
 
 # Your admin password
 ADMIN_PASSWORD=your_password_here
 ```
+
+**🔴 CRITICAL: Add all 3 variables to Vercel!**
+- Go to: https://vercel.com/projects
+- Click: APP-Final
+- Settings → Environment Variables
+- Add: NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_EMAIL
+- Without these, production notifications won't work!
 
 ### 2️⃣ Database Migration
 

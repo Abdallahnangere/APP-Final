@@ -6,15 +6,23 @@ The backend now supports sending real push notifications directly to users' devi
 ## Setup Steps
 
 ### 1. Generate VAPID Keys
-VAPID keys were generated. Add these to your `.env.local`:
+VAPID keys were generated. Add these to your `.env.local` **AND Vercel Environment Variables**:
 
 ```env
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=BOdoPRbgsp1Vr9qSzaAZ9YHDujQX3M0XA6YseL_zGVcJnUx01nyi976SgeBIrN7uXSf__qXJbSXiHZWcO8dA_Ws
 VAPID_PRIVATE_KEY=oGhQ41BD1NaNdaP1KVf7ug38rBZjhBSVnNGPjNayk7k
-VAPID_EMAIL=admin@saukimart.com
+VAPID_EMAIL=saukidatalinks@gmail.com
 ADMIN_PASSWORD=your_admin_password
 DATABASE_URL=your_database_url
 ```
+
+**⚠️ CRITICAL FOR PRODUCTION:**
+1. Add to `.env.local` for local development
+2. Add to Vercel: Settings → Environment Variables
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
+   - `VAPID_PRIVATE_KEY`
+   - `VAPID_EMAIL`
+   - Without these, production won't work!
 
 ### 2. Database Migration
 

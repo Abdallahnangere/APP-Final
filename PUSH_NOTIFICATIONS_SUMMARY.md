@@ -95,13 +95,25 @@ Users **WILL** receive notifications **even when the app is completely closed**,
 
 ## ⚡ Quick Setup (3 Steps)
 
-### Step 1: Add Keys to `.env.local`
+### Step 1: Add Keys to `.env.local` AND Vercel
+
+**Local Development (.env.local):**
 ```env
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=BOdoPRbgsp1Vr9qSzaAZ9YHDujQX3M0XA6YseL_zGVcJnUx01nyi976SgeBIrN7uXSf__qXJbSXiHZWcO8dA_Ws
 VAPID_PRIVATE_KEY=oGhQ41BD1NaNdaP1KVf7ug38rBZjhBSVnNGPjNayk7k
-VAPID_EMAIL=admin@saukimart.com
+VAPID_EMAIL=saukidatalinks@gmail.com
 ADMIN_PASSWORD=your_password
 ```
+
+**Production (Vercel) - CRITICAL!** ⚠️
+1. Go to https://vercel.com/projects → APP-Final
+2. Settings → Environment Variables
+3. Add these 3 variables:
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` = BOdoPRbgsp1Vr9qSzaAZ9YHDujQX3M0XA6YseL_zGVcJnUx01nyi976SgeBIrN7uXSf__qXJbSXiHZWcO8dA_Ws
+   - `VAPID_PRIVATE_KEY` = oGhQ41BD1NaNdaP1KVf7ug38rBZjhBSVnNGPjNayk7k
+   - `VAPID_EMAIL` = saukidatalinks@gmail.com
+4. Click Save for each
+5. Redeploy your project
 
 ### Step 2: Database Migration
 ```bash

@@ -69,10 +69,12 @@ User clicks → Opens app to specific URL
 ```env
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=BOdoPRbgsp1Vr9qSzaAZ9YHDujQX3M0XA6YseL_zGVcJnUx01nyi976SgeBIrN7uXSf__qXJbSXiHZWcO8dA_Ws
 VAPID_PRIVATE_KEY=oGhQ41BD1NaNdaP1KVf7ug38rBZjhBSVnNGPjNayk7k
-VAPID_EMAIL=admin@saukimart.com
+VAPID_EMAIL=saukidatalinks@gmail.com
 ```
 
-**→ Copy these to your `.env.local` file**
+**Add to BOTH:**
+1. **Local Development:** `.env.local` file
+2. **Production:** Vercel Settings → Environment Variables → Add all 3 variables → Redeploy
 
 ---
 
@@ -89,17 +91,17 @@ npx prisma db push
 ```sql
 CREATE TABLE "PushSubscription" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "endpoint" TEXT NOT NULL UNIQUE,
-    "p256dh" TEXT NOT NULL,
-    "auth" TEXT NOT NULL,
-    "phone" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL
-);
-
-CREATE UNIQUE INDEX "PushSubscription_endpoint_key" on "PushSubscription"("endpoint");
-```
-
+        "endpoint" TEXT NOT NULL UNIQUE,
+            "p256dh" TEXT NOT NULL,
+                "auth" TEXT NOT NULL,
+                    "phone" TEXT,
+                        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            "updatedAt" TIMESTAMP(3) NOT NULL
+                            );
+                            
+                            CREATE UNIQUE INDEX "PushSubscription_endpoint_key" on "PushSubscription"("endpoint");
+                            ```
+                            ```
 ---
 
 ## 🚀 How It Works (Step by Step)
