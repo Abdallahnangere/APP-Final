@@ -12,5 +12,5 @@ console.log('PRIVATE KEY (for .env.local):');
 console.log('VAPID_PRIVATE_KEY=' + vapidKeys.privateKey);
 console.log('');
 console.log('Also add these to your .env.local:');
-console.log('VAPID_EMAIL=admin@saukimart.com (or your email)');
+console.log('VAPID_EMAIL=mailto:saukidatalinks@gmail.com');
 console.log('ADMIN_PASSWORD=your_admin_password');
