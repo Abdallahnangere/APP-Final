@@ -1,4 +1,3 @@
-
 {
   "name": "SAUKI MART Premium",
   "short_name": "SAUKI MART",
@@ -9,15 +8,34 @@
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#f8fafc",
-  "theme_color": "#ffffff",
+  "theme_color": "#1e293b",
   "orientation": "portrait-primary",
   "launch_handler": {
     "client_mode": "auto"
   },
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {"image/*": [".png", ".jpg", ".jpeg"]}
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+saukimart",
+      "url": "/protocol?url=%s"
+    }
+  ],
+  "handle_links": "preferred",
   "categories": ["shopping", "finance", "productivity", "utilities", "business"],
   "dir": "ltr",
   "lang": "en-US",
-  "prefer_related_applications": false,
+  "prefer_related_applications": true,
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.saukimart.pwa"
+    }
+  ],
   "share_target": {
     "action": "/share",
     "method": "POST",
@@ -28,7 +46,97 @@
       "url": "url"
     }
   },
-  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
     {
       "src": "/icons/icon-maskable-512x512.png",
       "sizes": "512x512",
@@ -58,7 +166,7 @@
       "form_factor": "narrow",
       "label": "Fast Recharges"
     },
-      {
+    {
       "src": "/screenshots/mobile-agent.png",
       "sizes": "1080x2033",
       "type": "image/png",
@@ -79,17 +187,54 @@
       "short_name": "Data",
       "description": "Instant MTN/Airtel/Glo Data",
       "url": "/?tab=data",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Agent Hub",
       "short_name": "Agent",
       "description": "Login to Agent Dashboard",
       "url": "/?tab=agent",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Buy Airtime",
+      "short_name": "Airtime",
+      "description": "Instant Airtime Top-up",
+      "url": "/?tab=data",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Support Center",
+      "short_name": "Support",
+      "description": "24/7 Help & Support",
+      "url": "/?tab=support",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ],
-  "related_applications": [],
   "scope_extensions": [
     {
       "origin": "https://www.saukimart.online"

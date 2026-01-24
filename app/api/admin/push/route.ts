@@ -17,7 +17,7 @@ if (vapidPrivateKey) {
 
 export async function POST(req: Request) {
     try {
-        const { title, body, url, password, phone } = await req.json();
+        const { title, body, url, password, phone, targetType = 'all' } = await req.json();
 
         if (password !== process.env.ADMIN_PASSWORD) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -26,18 +26,47 @@ export async function POST(req: Request) {
         // Create a system message for fallback
         await prisma.systemMessage.create({
             data: {
-                content: JSON.stringify({ title, body, url }),
+                content: JSON.stringify({ title, body, url, targetType }),
                 type: 'PUSH',
                 isActive: true
             }
         });
 
-        // Get all push subscriptions (optionally filtered by phone)
-        const subscriptions = phone
-            ? await prisma.pushSubscription.findMany({
-                where: { phone: phone }
-            })
-            : await prisma.pushSubscription.findMany();
+        // Get push subscriptions based on target type
+        let subscriptions: any[] = [];
+        
+        if (targetType === 'agents') {
+            // Get subscriptions from agents only
+            subscriptions = await prisma.pushSubscription.findMany({
+                where: {
+                    phone: {
+                        in: await prisma.agent.findMany({
+                            select: { phone: true }
+                        }).then(agents => agents.map(a => a.phone))
+                    }
+                }
+            });
+        } else if (targetType === 'users') {
+            // Get subscriptions from customers only (not agents)
+            const agentPhones = await prisma.agent.findMany({
+                select: { phone: true }
+            }).then(agents => agents.map(a => a.phone));
+            
+            subscriptions = await prisma.pushSubscription.findMany({
+                where: {
+                    phone: {
+                        notIn: agentPhones
+                    }
+                }
+            });
+        } else {
+            // Get all subscriptions (all users)
+            subscriptions = phone
+                ? await prisma.pushSubscription.findMany({
+                    where: { phone: phone }
+                })
+                : await prisma.pushSubscription.findMany();
+        }
 
         // Send push notifications using Web Push API
         const sendResults = await Promise.allSettled(
@@ -87,10 +116,11 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
             success: true,
-            message: `Notifications sent to ${successCount} device${successCount !== 1 ? 's' : ''}`,
+            message: `Notifications sent to ${successCount} device${successCount !== 1 ? 's' : ''} (${targetType})`,
             sent: successCount,
             failed: failureCount,
-            total: subscriptions.length
+            total: subscriptions.length,
+            targetType
         });
     } catch (e: any) {
         console.error('Push notification error:', e);

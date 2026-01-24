@@ -41,7 +41,7 @@ export default function AdminPage() {
   const [productForm, setProductForm] = useState<Partial<Product>>({ name: '', description: '', price: 0, image: '', category: 'device' });
   const [planForm, setPlanForm] = useState<Partial<DataPlan>>({ network: 'MTN', data: '', validity: '30 Days', price: 0, planId: 0 });
   const [broadcastForm, setBroadcastForm] = useState({ content: '', type: 'info', isActive: true });
-  const [pushForm, setPushForm] = useState({ title: '', body: '' });
+  const [pushForm, setPushForm] = useState({ title: '', body: '', targetType: 'all' }); // 'all', 'agents', 'users'
   const [editMode, setEditMode] = useState(false);
 
   // Console State
@@ -220,8 +220,8 @@ export default function AdminPage() {
               method: 'POST',
               body: JSON.stringify({ ...pushForm, password })
           });
-          toast.success(`Push Sent`);
-          setPushForm({ title: '', body: '' });
+          toast.success(`Push Sent to ${pushForm.targetType === 'all' ? 'All Users' : pushForm.targetType === 'agents' ? 'Agents' : 'General Users'}`);
+          setPushForm({ title: '', body: '', targetType: 'all' });
       } catch(e) {
           toast.error("Push failed");
       }
@@ -655,15 +655,44 @@ export default function AdminPage() {
                     </div>
                     
                     {/* PUSH NOTIFICATION SECTION */}
-                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 text-center relative overflow-hidden">
+                    <div className="bg-gradient-to-br from-white to-blue-50 p-8 rounded-[2.5rem] border border-blue-200 shadow-elevation-4 relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-2 bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-bl-xl">Urgent Alerts</div>
                         <Bell className="w-10 h-10 text-blue-600 mx-auto mb-4" />
-                        <h3 className="text-xl font-black uppercase mb-2">Mobile Push</h3>
-                        <p className="text-xs text-slate-400 mb-4">Pop-up alert on user devices</p>
+                        <h3 className="text-xl font-black uppercase mb-1 text-primary-900">Mobile Push</h3>
+                        <p className="text-xs text-primary-500 mb-6">Targeted pop-up alerts on user devices</p>
 
-                        <input className="w-full p-3 bg-slate-50 rounded-xl mb-3 text-sm font-bold" placeholder="Notification Title" value={pushForm.title} onChange={e => setPushForm({...pushForm, title: e.target.value})} />
-                        <textarea className="w-full p-4 bg-slate-50 rounded-2xl mb-4 text-sm" rows={2} placeholder="Message Body" value={pushForm.body} onChange={e => setPushForm({...pushForm, body: e.target.value})} />
-                        <button onClick={sendPushNotification} className="w-full bg-blue-600 text-white p-3 rounded-xl font-black uppercase text-xs">Send Blast</button>
+                        {/* TARGET SELECTION */}
+                        <div className="mb-6 p-4 bg-white rounded-2xl border border-blue-100">
+                            <p className="text-xs font-black uppercase text-primary-600 mb-3 tracking-wide">Send To:</p>
+                            <div className="grid grid-cols-3 gap-2">
+                                {[
+                                    { value: 'all', label: 'All Users', icon: '👥' },
+                                    { value: 'agents', label: 'Agents Only', icon: '🤝' },
+                                    { value: 'users', label: 'Customers Only', icon: '🛍️' }
+                                ].map(opt => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => setPushForm({...pushForm, targetType: opt.value as any})}
+                                        className={cn(
+                                            "p-3 rounded-xl border-2 transition-all font-black uppercase text-[10px] text-center",
+                                            pushForm.targetType === opt.value 
+                                                ? "bg-blue-600 border-blue-600 text-white shadow-lg" 
+                                                : "bg-white border-primary-200 text-primary-600 hover:bg-primary-50"
+                                        )}
+                                    >
+                                        <div className="text-lg mb-1">{opt.icon}</div>
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <input className="w-full p-3 bg-slate-50 rounded-xl mb-3 text-sm font-bold border border-primary-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition-all" placeholder="Notification Title" value={pushForm.title} onChange={e => setPushForm({...pushForm, title: e.target.value})} />
+                        <textarea className="w-full p-4 bg-slate-50 rounded-2xl mb-4 text-sm border border-primary-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition-all" rows={2} placeholder="Message Body" value={pushForm.body} onChange={e => setPushForm({...pushForm, body: e.target.value})} />
+                        <button onClick={sendPushNotification} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl font-black uppercase text-xs transition-all active:scale-95 shadow-elevation-4">
+                            <Bell className="w-4 h-4 inline mr-2" />
+                            Send Blast
+                        </button>
                     </div>
                 </div>
             )}

@@ -57,7 +57,11 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       )}
 
       {/* PREMIUM HEADER - Apple Large Title Style */}
-      <header className="px-6 pt-safe pb-4 flex justify-between items-center z-10 shrink-0 mb-0">
+      <header className="px-6 pt-safe pb-4 flex justify-between items-center z-10 shrink-0 mb-0 relative">
+        {/* Animated Top Border */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-accent-blue to-transparent opacity-60 shadow-lg shadow-accent-blue/50"></div>
+        <div className="absolute top-1 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-accent-purple to-transparent opacity-40 blur-sm"></div>
+        
         <div>
             <h1 className="text-3xl font-bold text-primary-900 tracking-tight leading-none">SAUKI MART</h1>
         </div>
@@ -183,6 +187,33 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             <div className="w-9 h-9 bg-primary-100 rounded-lg flex items-center justify-center group-hover:bg-primary-200 transition-colors">
                 <ArrowRight className="w-4 h-4 text-primary-600" />
             </div>
+        </MotionDiv>
+
+        {/* PREMIUM FEATURES SHOWCASE */}
+        <MotionDiv 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="w-full bg-gradient-to-br from-primary-900/5 to-accent-blue/5 rounded-3xl p-6 border border-primary-200/50 backdrop-blur-sm"
+        >
+          <p className="text-xs font-black uppercase text-primary-600 mb-4 tracking-widest">Why Choose Us</p>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { icon: '⚡', label: 'Instant', desc: 'Data in seconds' },
+              { icon: '🔐', label: 'Secure', desc: 'Encrypted payments' },
+              { icon: '💎', label: 'Best Rate', desc: 'Unbeatable prices' }
+            ].map((item, idx) => (
+              <MotionDiv 
+                key={idx}
+                whileTap={{ scale: 0.95 }}
+                className="text-center p-3 rounded-xl bg-white/60 backdrop-blur border border-white/80 hover:bg-white hover:shadow-elevation-2 transition-all group"
+              >
+                <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">{item.icon}</div>
+                <p className="text-xs font-black text-primary-900 uppercase tracking-tight leading-tight">{item.label}</p>
+                <p className="text-[10px] text-primary-500 font-medium mt-1">{item.desc}</p>
+              </MotionDiv>
+            ))}
+          </div>
         </MotionDiv>
 
         {/* BOTTOM FOOTER */}
