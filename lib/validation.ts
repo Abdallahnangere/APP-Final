@@ -24,11 +24,11 @@ export const TransactionVerifySchema = z.object({
 });
 
 export const InitiatePaymentSchema = z.object({
-  productId: z.string().uuid('Invalid product ID'),
+  productId: z.string().min(1, 'Product ID required'),
   phone: z.string().regex(/^[0-9]{10,11}$/, 'Invalid phone number'),
   name: z.string().min(2, 'Name required').max(100),
   state: z.string().min(2, 'State required').max(100),
-  simId: z.string().uuid('Invalid SIM ID').optional(),
+  simId: z.string().optional(),
 });
 
 export const DataPurchaseSchema = z.object({
@@ -51,9 +51,9 @@ export const AgentPurchaseSchema = z.object({
   agentPin: z.string().regex(/^[0-9]{4}$/, 'PIN must be exactly 4 digits'),
   type: z.enum(['data', 'ecommerce']),
   payload: z.object({
-    planId: z.string().uuid().optional(),
-    productId: z.string().uuid().optional(),
-    simId: z.string().uuid().optional(),
+    planId: z.string().optional(),
+    productId: z.string().optional(),
+    simId: z.string().optional(),
     phone: z.string().regex(/^[0-9]{10,11}$/, 'Invalid phone number').optional(),
     name: z.string().min(2).max(100).optional(),
     state: z.string().min(2).max(100).optional(),
