@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     const { productId, phone: validPhone, name, state, simId } = validation.data;
     
     if (!validPhone || validPhone.length < 10) {
-        logger.logSecurityEvent('INVALID_PHONE', { phone: validPhone });
+        logger.logSecurityEvent('INVALID_REQUEST', { phone: validPhone, reason: 'Invalid phone format' });
         endLog(400, null, new Error('Invalid phone number'));
         return NextResponse.json({ error: 'Invalid phone number' }, { status: 400 });
     }
