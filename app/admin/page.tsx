@@ -6,7 +6,7 @@ import { cn, formatCurrency, generateReceiptData } from '../../lib/utils';
 import { Loader2, Lock, Trash2, Edit2, Send, Search, Package, Wifi, LayoutDashboard, Users, Activity, Terminal, Megaphone, Server, Save, Plus, Ban, ArrowUpCircle, RefreshCw, FileText, CheckCircle2, AlertCircle, ShoppingBag, Truck, MessageSquare, Download, UploadCloud, Bell, X, ChevronRight, Smartphone, ArrowDownCircle, Banknote, Landmark } from 'lucide-react';
 import { DataPlan, Product, Transaction, Agent } from '../../types';
 import { toast } from '../../lib/toast';
-import { SharedReceipt } from '../../components/SharedReceipt';
+import { BrandedReceipt } from '../../components/BrandedReceipt';
 import { toPng } from 'html-to-image';
 
 // Force Desktop View Wrapper - Premium Styling
@@ -344,7 +344,7 @@ export default function AdminPage() {
   return (
     <DesktopWrapper>
         {receiptTx && (
-            <SharedReceipt 
+            <BrandedReceipt 
                 ref={receiptRef} 
                 transaction={receiptTx}
             />

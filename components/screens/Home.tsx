@@ -3,14 +3,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Menu, Bell, ArrowRight, Smartphone, Wifi, 
-  ShieldCheck, Users, Zap, Star
+  ShieldCheck, Users, Zap, Star, ExternalLink
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
 import { SideMenu } from '../SideMenu';
 import { BottomSheet } from '../ui/BottomSheet';
 import { Support } from './Support';
-import { SharedReceipt } from '../SharedReceipt';
+import { BrandedReceipt } from '../BrandedReceipt';
 import { cn, formatCurrency, generateReceiptData } from '../../lib/utils';
 import { toast } from '../../lib/toast';
 import { History } from './History';
@@ -53,13 +53,32 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       
       {/* Hidden Receipt Generator */}
       {receiptTx && (
-        <SharedReceipt ref={receiptRef} transaction={generateReceiptData(receiptTx)} />
+        <BrandedReceipt ref={receiptRef} transaction={generateReceiptData(receiptTx)} />
       )}
 
       {/* HEADER - Apple Clean Style with Top Padding */}
-      <header className="px-6 pt-12 pb-4 flex justify-between items-center z-10 shrink-0 relative">
-        <div>
+      <header className="px-6 pt-6 pb-4 flex justify-between items-center z-10 shrink-0 relative bg-gradient-to-b from-primary-50 via-primary-50 to-transparent">
+        {/* Top decorative gradient bar */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-900 via-accent-blue to-accent-purple/70"></div>
+        
+        <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-primary-900 tracking-tight">SAUKI MART</h1>
+            {/* Google Play Badge */}
+            <MotionDiv
+              whileTap={{ scale: 0.95 }}
+              onClick={() => window.open('https://play.google.com/store/apps/details?id=online.saukimart.twa', '_blank')}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white rounded-lg shadow-md border border-primary-200 hover:shadow-lg transition-all cursor-pointer group"
+              title="Get on Google Play"
+            >
+              <div className="flex flex-col items-center justify-center">
+                <span className="text-[8px] font-black text-primary-900 leading-none">GET IT ON</span>
+              </div>
+              <div className="h-6 w-0.5 bg-primary-200"></div>
+              <div className="flex items-center gap-0.5">
+                <span className="text-[10px] font-black text-primary-900">Google Play</span>
+                <ExternalLink className="w-3 h-3 text-primary-600 group-hover:translate-x-0.5 transition-transform" />
+              </div>
+            </MotionDiv>
         </div>
         <MotionDiv
           whileTap={{ scale: 0.95 }}

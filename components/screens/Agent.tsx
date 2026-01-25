@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Lock, Wallet, RefreshCw, ArrowRight, ShieldCheck, ShoppingBag, Wifi, Copy, History, Download, ChevronRight, Settings, BarChart2, ArrowUpRight, LogOut, LayoutDashboard, TrendingDown, Phone, MessageCircle, CheckCircle2, ArrowLeft, Plus, Target, Calendar, Award } from 'lucide-react';
+import { Users, Lock, Wallet, RefreshCw, ArrowRight, ShieldCheck, ShoppingBag, Wifi, Copy, History, Download, ChevronRight, Settings, BarChart2, ArrowUpRight, LogOut, LayoutDashboard, TrendingDown, Phone, MessageCircle, CheckCircle2, ArrowLeft, Plus, Target, Calendar, Award, Eye, EyeOff, Smartphone, TrendingUp, CreditCard } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { api } from '../../lib/api';
@@ -13,7 +13,7 @@ import { Store } from './Store';
 import { Data } from './Data';
 import { AgentAnalytics } from '../AgentAnalytics';
 import { toPng } from 'html-to-image';
-import { SharedReceipt } from '../SharedReceipt';
+import { BrandedReceipt } from '../BrandedReceipt';
 import { playSound } from '../../lib/sounds';
 
 interface AgentHubProps {
@@ -42,6 +42,8 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
   const [loginForm, setLoginForm] = useState({ phone: '', pin: '' });
   const [regForm, setRegForm] = useState({ firstName: '', lastName: '', phone: '', pin: '', confirmPin: '' });
   const [newPin, setNewPin] = useState('');
+  const [showCashbackRedemption, setShowCashbackRedemption] = useState(false);
+  const [redemptionForm, setRedemptionForm] = useState({ amount: '', bankAccountNumber: '', bankCode: '', bankName: '', accountName: '' });
 
   const receiptRef = useRef<HTMLDivElement>(null);
 
@@ -154,7 +156,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
   return (
     <div className="h-screen bg-[#F2F2F7] font-sans text-slate-900 overflow-hidden flex flex-col">
       {receiptTx && (
-        <SharedReceipt 
+        <BrandedReceipt 
             ref={receiptRef}
             transaction={generateReceiptData(receiptTx, agent)}
         />
@@ -182,17 +184,21 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                  <div className="space-y-4">
                      <Input 
                         label="Phone Number" 
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={loginForm.phone} 
-                        onChange={e => setLoginForm({...loginForm, phone: e.target.value})} 
+                        onChange={e => setLoginForm({...loginForm, phone: e.target.value.replace(/\D/g, '')})} 
                         className="h-13 text-base font-semibold bg-white border border-slate-200 rounded-lg" 
                         placeholder="08012345678" 
                     />
                      <Input 
                         label="4-Digit PIN" 
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         type="password" 
                         maxLength={4} 
                         value={loginForm.pin} 
-                        onChange={e => setLoginForm({...loginForm, pin: e.target.value})} 
+                        onChange={e => setLoginForm({...loginForm, pin: e.target.value.replace(/\D/g, '').slice(0, 4)})} 
                         className="h-13 text-center text-2xl font-black tracking-[0.5em] bg-white border border-slate-200 rounded-lg" 
                         placeholder="••••" 
                     />
@@ -259,7 +265,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                         <Input label="Last Name" value={regForm.lastName} onChange={e => setRegForm({...regForm, lastName: e.target.value})} className="h-12 bg-white rounded-lg text-sm" placeholder="Doe" />
                     </div>
                     
-                    <Input label="Phone Number" value={regForm.phone} onChange={e => setRegForm({...regForm, phone: e.target.value})} className="h-12 bg-white rounded-lg text-sm font-bold" placeholder="08012345678" />
+                    <Input label="Phone Number" value={regForm.phone} onChange={e => setRegForm({...regForm, phone: e.target.value.replace(/\D/g, '')})} inputMode="numeric" pattern="[0-9]*" className="h-12 bg-white rounded-lg text-sm font-bold" placeholder="08012345678" />
 
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                         <p className="text-xs font-bold text-blue-900 uppercase mb-3 text-center">Set Your 4-Digit PIN</p>
@@ -325,6 +331,26 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                         </div>
                     </div>
 
+                    {/* Cashback Card */}
+                    <MotionDiv
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => setShowCashbackRedemption(true)}
+                        className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-5 shadow-lg border border-green-400 relative overflow-hidden cursor-pointer group"
+                    >
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full blur-[60px] opacity-10 pointer-events-none"></div>
+                        
+                        <div className="relative z-10 flex justify-between items-start">
+                            <div className="flex-1">
+                                <p className="text-xs text-green-100 font-bold uppercase tracking-wide mb-1">💰 Cashback Rewards</p>
+                                <h2 className="text-3xl font-black text-white mb-2 tracking-tight">{formatCurrency(agent.cashbackBalance || 0)}</h2>
+                                <p className="text-[11px] text-green-100 font-semibold">2% on every purchase</p>
+                            </div>
+                            <div className="w-11 h-11 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-white group-hover:bg-white/30 transition-colors">
+                                <TrendingUp className="w-5 h-5" />
+                            </div>
+                        </div>
+                    </MotionDiv>
+
                     {/* Buy Data & Products Section */}
                     <div>
                         <h3 className="text-xs font-black text-slate-600 uppercase tracking-wide mb-3">Top Sales</h3>
@@ -349,50 +375,56 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                     <div>
                         <h3 className="text-xs font-black text-slate-600 uppercase tracking-wide mb-3">Quick Access</h3>
                         <div className="grid grid-cols-2 gap-3">
-                            <ControlBtn icon={Target} label="Goals" color="bg-amber-600" onClick={() => toast.info("Daily targets")} />
-                            <ControlBtn icon={Award} label="Rewards" color="bg-green-600" onClick={() => toast.info("Badges & rewards")} />
-                            <ControlBtn icon={Calendar} label="Calendar" color="bg-blue-600" onClick={() => toast.info("Schedule view")} />
-                            <ControlBtn icon={MessageCircle} label="Support" color="bg-purple-600" onClick={() => toast.info("Contact support")} />
+                            <ControlBtn icon={Eye} label="Track" color="bg-cyan-600" onClick={() => toast.info("Transaction tracking - Check pending status")} />
+                            <ControlBtn icon={TrendingUp} label="Earnings" color="bg-green-600" onClick={() => toast.info(formatCurrency(history.filter(h => h.agentId === agent.id).reduce((sum, tx) => sum + (tx.type !== 'wallet_funding' ? tx.amount : 0), 0)))} />
+                            <ControlBtn icon={CreditCard} label="Redeem" color="bg-purple-600" onClick={() => setShowCashbackRedemption(true)} />
+                            <ControlBtn icon={MessageCircle} label="Support" color="bg-orange-600" onClick={() => toast.info("Contact support team")} />
                         </div>
                     </div>
 
-                    {/* Recent Transactions */}
+                    {/* Recent Transactions - Scrollable */}
                     <div>
                         <div className="flex justify-between items-center mb-3">
-                            <h3 className="text-xs font-black text-slate-600 uppercase tracking-wide">Transactions</h3>
-                            <button className="text-[10px] font-bold text-blue-600 hover:text-blue-700">View All →</button>
+                            <h3 className="text-xs font-black text-slate-600 uppercase tracking-wide">Transaction History</h3>
+                            <button className="text-[10px] font-bold text-blue-600 hover:text-blue-700">All Txns →</button>
                         </div>
-                        <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                        <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden max-h-80 flex flex-col">
                             {history.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-12 opacity-50">
                                     <History className="w-8 h-8 mb-2 text-slate-400" />
                                     <span className="text-[10px] font-bold uppercase text-slate-400">No Activity</span>
                                 </div>
                             ) : (
-                                <div className="divide-y divide-slate-200">
-                                    {history.slice(0, 5).map((tx) => (
+                                <div className="divide-y divide-slate-200 overflow-y-auto no-scrollbar flex-1">
+                                    {history.map((tx) => (
                                         <div 
                                           key={tx.id}
-                                          onClick={() => generateReceipt(tx)}
-                                          className="p-4 flex justify-between items-center hover:bg-slate-100 cursor-pointer active:bg-slate-200 transition-colors"
+                                          className="p-4 flex justify-between items-center hover:bg-slate-100 cursor-pointer active:bg-slate-200 transition-colors group"
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold", 
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0", 
                                                     tx.type === 'wallet_funding' ? "bg-green-600" : 
                                                     tx.type === 'data' ? "bg-blue-600" :
                                                     "bg-purple-600"
                                                 )}>
                                                     {tx.type === 'wallet_funding' ? '↓' : tx.type === 'data' ? '📱' : '🛍️'}
                                                 </div>
-                                                <div>
-                                                    <p className="text-xs font-bold text-slate-900 uppercase">
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-bold text-slate-900 uppercase truncate">
                                                       {tx.type === 'wallet_funding' ? 'Deposit' : tx.type === 'data' ? 'Data Sale' : 'Store Sale'}
                                                     </p>
                                                     <p className="text-[8px] text-slate-500 uppercase">{new Date(tx.createdAt).toLocaleDateString()}</p>
+                                                    <p className={cn("text-[8px] font-bold uppercase mt-1 px-1.5 py-0.5 rounded", 
+                                                        tx.status === 'delivered' ? "bg-green-100 text-green-700" :
+                                                        tx.status === 'paid' ? "bg-blue-100 text-blue-700" :
+                                                        "bg-amber-100 text-amber-700"
+                                                    )}>
+                                                        {tx.status === 'delivered' ? '✓ Completed' : tx.status === 'paid' ? 'Processing' : 'Pending'}
+                                                    </p>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                              <span className={cn("text-sm font-black", tx.type === 'wallet_funding' ? "text-green-600" : "text-slate-900")}>
+                                            <div className="text-right flex-shrink-0">
+                                              <span className={cn("text-sm font-black whitespace-nowrap", tx.type === 'wallet_funding' ? "text-green-600" : "text-slate-900")}>
                                                   {tx.type === 'wallet_funding' ? '+' : '-'}{formatCurrency(tx.amount)}
                                               </span>
                                             </div>
@@ -406,29 +438,70 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
 
                 {/* Settings Bottom Sheet */}
                 <BottomSheet isOpen={showSettings} onClose={() => setShowSettings(false)} title="Settings">
-                    <div className="space-y-4">
-                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-center">
-                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm text-slate-400">
+                    <div className="space-y-5 pb-6">
+                        <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-2xl border border-slate-700">
+                            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm text-white/60">
                                 <Users className="w-8 h-8" />
                             </div>
-                            <h3 className="text-base font-black text-slate-900 uppercase">{agent.firstName} {agent.lastName}</h3>
-                            <p className="text-xs text-slate-500">{agent.phone}</p>
-                            <div className="mt-2 inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded text-[9px] font-bold uppercase">
-                                <CheckCircle2 className="w-3 h-3" /> Active
+                            <h3 className="text-lg font-black text-center uppercase">{agent.firstName} {agent.lastName}</h3>
+                            <p className="text-xs text-slate-400 text-center mt-1">{agent.phone}</p>
+                            <div className="mt-3 flex justify-center">
+                                <div className="inline-flex items-center gap-1 bg-green-500/20 text-green-300 px-3 py-1.5 rounded-full text-[9px] font-bold uppercase border border-green-500/30">
+                                    <CheckCircle2 className="w-3 h-3" /> Verified Agent
+                                </div>
                             </div>
                         </div>
 
-                        <div>
-                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2 block">New PIN (4 digits)</label>
-                            <Input 
-                                type="password" 
-                                maxLength={4} 
-                                placeholder="••••" 
-                                className="h-11 rounded-lg text-center font-black text-lg bg-white border border-slate-200 mb-3"
-                                value={newPin}
-                                onChange={e => setNewPin(e.target.value)}
-                            />
-                            <Button onClick={updatePin} isLoading={isLoading} className="h-11 bg-slate-900 text-white rounded-lg font-bold uppercase tracking-wide w-full">Change PIN</Button>
+                        {/* Account Settings */}
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wide">Account</h4>
+                            
+                            <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+                                <label className="text-xs font-bold text-slate-600 uppercase">New PIN (4 digits)</label>
+                                <Input 
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    type="password" 
+                                    maxLength={4} 
+                                    placeholder="••••" 
+                                    className="h-11 rounded-lg text-center font-black text-lg bg-slate-50 border border-slate-200"
+                                    value={newPin}
+                                    onChange={e => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                />
+                                <Button 
+                                    onClick={updatePin} 
+                                    isLoading={isLoading} 
+                                    className="h-11 bg-slate-900 text-white rounded-lg font-bold uppercase tracking-wide w-full"
+                                >
+                                    Update PIN
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Statistics */}
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wide">Performance</h4>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-center">
+                                    <p className="text-[10px] text-blue-600 font-bold uppercase">Total Sales</p>
+                                    <p className="text-lg font-black text-blue-700 mt-1">{history.filter(h => h.agentId === agent.id && h.type !== 'wallet_funding').length}</p>
+                                </div>
+                                <div className="bg-green-50 border border-green-200 p-4 rounded-xl text-center">
+                                    <p className="text-[10px] text-green-600 font-bold uppercase">Earnings</p>
+                                    <p className="text-lg font-black text-green-700 mt-1">{formatCurrency(history.filter(h => h.agentId === agent.id && h.type !== 'wallet_funding').reduce((sum, tx) => sum + tx.amount, 0))}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Dangerous Zone */}
+                        <div className="space-y-3 pt-4 border-t border-slate-200">
+                            <h4 className="text-xs font-bold text-red-600 uppercase tracking-wide">Danger Zone</h4>
+                            <Button 
+                                onClick={() => { setAgent(null); setView('login'); setShowSettings(false); }} 
+                                className="h-11 bg-red-600 text-white rounded-lg font-bold uppercase tracking-wide w-full hover:bg-red-700 flex items-center justify-center gap-2"
+                            >
+                                <LogOut className="w-4 h-4" /> Logout
+                            </Button>
                         </div>
                     </div>
                 </BottomSheet>
@@ -446,6 +519,78 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                     </div>
                     {showPurchase === 'data' && <Data agent={agent} onBack={() => setShowPurchase(null)} />}
                     {showPurchase === 'store' && <Store agent={agent} onBack={() => setShowPurchase(null)} />}
+                </BottomSheet>
+
+                {/* Cashback Redemption Bottom Sheet */}
+                <BottomSheet isOpen={showCashbackRedemption} onClose={() => setShowCashbackRedemption(false)} title="Redeem Cashback">
+                    <div className="space-y-4 pb-6">
+                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-200">
+                            <p className="text-xs text-green-600 font-bold uppercase mb-1">Available Cashback</p>
+                            <h2 className="text-3xl font-black text-green-700">{formatCurrency(agent.cashbackBalance || 0)}</h2>
+                            <p className="text-xs text-green-600 mt-2">Earned 2% on all your purchases</p>
+                        </div>
+
+                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 text-xs leading-relaxed">
+                            <h4 className="font-bold text-blue-900 mb-2">💡 How Cashback Works</h4>
+                            <ul className="space-y-1 text-blue-800">
+                                <li>✓ Get 2% cashback on every product sale you make</li>
+                                <li>✓ Cashback credited instantly to your account</li>
+                                <li>✓ Withdraw anytime via bank transfer</li>
+                                <li>✓ No minimum redemption amount</li>
+                            </ul>
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-xs font-bold text-slate-600 uppercase">Redemption Amount (₦)</label>
+                            <Input 
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                placeholder="Enter amount to withdraw" 
+                                value={redemptionForm.amount}
+                                onChange={e => setRedemptionForm({...redemptionForm, amount: e.target.value.replace(/\D/g, '')})}
+                                className="h-12 bg-white rounded-lg"
+                            />
+                            
+                            <label className="text-xs font-bold text-slate-600 uppercase">Account Number</label>
+                            <Input 
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                placeholder="XXXXXXXXXX" 
+                                value={redemptionForm.bankAccountNumber}
+                                onChange={e => setRedemptionForm({...redemptionForm, bankAccountNumber: e.target.value.replace(/\D/g, '')})}
+                                className="h-12 bg-white rounded-lg"
+                            />
+
+                            <label className="text-xs font-bold text-slate-600 uppercase">Bank Name</label>
+                            <Input 
+                                placeholder="e.g., GTBank, Access Bank" 
+                                value={redemptionForm.bankName}
+                                onChange={e => setRedemptionForm({...redemptionForm, bankName: e.target.value})}
+                                className="h-12 bg-white rounded-lg"
+                            />
+
+                            <label className="text-xs font-bold text-slate-600 uppercase">Account Name</label>
+                            <Input 
+                                placeholder="Your full name" 
+                                value={redemptionForm.accountName}
+                                onChange={e => setRedemptionForm({...redemptionForm, accountName: e.target.value})}
+                                className="h-12 bg-white rounded-lg"
+                            />
+
+                            <Button 
+                                onClick={() => {
+                                    if (!redemptionForm.amount || !redemptionForm.bankAccountNumber || !redemptionForm.bankName || !redemptionForm.accountName) {
+                                        return toast.error("Please fill all fields");
+                                    }
+                                    toast.success("Redemption request submitted! Processing within 24 hours");
+                                    setShowCashbackRedemption(false);
+                                }}
+                                className="h-12 bg-green-600 text-white rounded-lg font-bold uppercase tracking-wide w-full shadow-lg"
+                            >
+                                Submit Redemption Request
+                            </Button>
+                        </div>
+                    </div>
                 </BottomSheet>
             </MotionDiv>
         )}

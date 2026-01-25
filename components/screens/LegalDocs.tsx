@@ -2,7 +2,7 @@
 import React from 'react';
 import { jsPDF } from 'jspdf';
 import { Button } from '../ui/Button';
-import { Download } from 'lucide-react';
+import { Download, ShieldCheck, FileText } from 'lucide-react';
 
 export const LegalDocs: React.FC = () => {
 
@@ -103,73 +103,125 @@ Phone: +2348061934056 and +2347044647081
   };
 
   return (
-    <div className="space-y-6">
-       {/* Header / Download Action */}
-       <div className="bg-slate-900 p-6 rounded-2xl flex items-center justify-between shadow-lg shadow-slate-200">
-           <div>
-               <h3 className="font-bold text-white text-lg">Legal Bundle</h3>
-               <p className="text-xs text-slate-400">PDF Version (Signed)</p>
+    <div className="min-h-screen bg-white">
+       {/* Sticky Header with Gradient */}
+       <div className="sticky top-0 z-20 bg-gradient-to-b from-white via-white to-transparent pb-4">
+           <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
+               <div className="flex-1">
+                   <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Legal & Privacy</h2>
+                   <p className="text-xs text-slate-500 font-semibold mt-1">Official Documentation</p>
+               </div>
+               <button onClick={downloadPDF} className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold text-xs shadow-lg hover:bg-slate-800 transition-colors active:scale-95">
+                   <Download className="w-4 h-4" /> Download
+               </button>
            </div>
-           <Button onClick={downloadPDF} className="w-auto px-6 h-12 bg-white text-slate-900 hover:bg-slate-100 font-bold">
-               <Download className="w-4 h-4 mr-2" /> Download PDF
-           </Button>
        </div>
 
-       {/* Scrollable View */}
-       <div className="h-[450px] overflow-y-auto bg-white rounded-xl border border-slate-100 p-6 shadow-inner no-scrollbar">
+       {/* Scrollable Content with Enhanced Layout */}
+       <div className="px-6 py-6 space-y-8 pb-20 max-w-3xl mx-auto">
            
-           <div className="flex items-center gap-3 mb-8 border-b border-slate-100 pb-4">
-               <img src="/logo.png" alt="Sauki" className="w-10 h-10 object-contain" />
-               <div>
-                   <h2 className="font-black text-slate-900">SAUKI MART</h2>
-                   <p className="text-[10px] text-slate-500 uppercase tracking-widest">Official Legal Documents</p>
+           {/* Privacy Policy */}
+           <section className="space-y-4">
+               <div className="flex items-center gap-3 pb-4 border-b-2 border-slate-200">
+                   <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                       <ShieldCheck className="w-6 h-6" />
+                   </div>
+                   <div>
+                       <h3 className="text-xl font-black text-slate-900">Privacy Policy</h3>
+                       <p className="text-xs text-slate-500 font-mono">Effective: December 29, 2025</p>
+                   </div>
                </div>
-           </div>
-
-           <div className="prose prose-sm prose-slate max-w-none">
                
-               {/* Privacy Policy */}
-               <h3 className="text-xl font-bold text-slate-900 mb-2">Privacy Policy</h3>
-               <p className="text-xs text-slate-500 font-mono mb-4">Effective Date: December 29, 2025</p>
+               <div className="space-y-3 text-sm leading-relaxed">
+                   <p><strong className="text-slate-900">Sauki Data Links</strong> respects your privacy. We collect personal data only to provide and improve our services, in full compliance with the <strong>Nigeria Data Protection Act 2023</strong>.</p>
+                   
+                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
+                       <h4 className="font-bold text-slate-900 text-sm">📋 What We Collect</h4>
+                       <ul className="space-y-1 text-xs text-slate-600">
+                           <li>✓ Contact Info: Name, phone, email</li>
+                           <li>✓ Transaction Data: Purchase history, delivery addresses</li>
+                           <li>✓ Device Info: IP address, device type, OS</li>
+                           <li>✓ Payment Data: Via Flutterwave (PCI-DSS compliant)</li>
+                       </ul>
+                   </div>
+
+                   <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2">
+                       <h4 className="font-bold text-slate-900 text-sm">🔐 How We Protect You</h4>
+                       <ul className="space-y-1 text-xs text-slate-600">
+                           <li>✓ End-to-end encryption for all transactions</li>
+                           <li>✓ Regular security audits and penetration testing</li>
+                           <li>✓ Strict access controls and data isolation</li>
+                           <li>✓ Compliant with international security standards</li>
+                       </ul>
+                   </div>
+
+                   <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-2">
+                       <h4 className="font-bold text-slate-900 text-sm">👤 Your Rights</h4>
+                       <ul className="space-y-1 text-xs text-slate-600">
+                           <li>✓ Right to Access: Request a copy of your data</li>
+                           <li>✓ Right to Rectify: Correct inaccurate information</li>
+                           <li>✓ Right to Erase: Request data deletion</li>
+                           <li>✓ Right to Withdraw: Opt-out of communications</li>
+                       </ul>
+                   </div>
+
+                   <p className="text-xs text-slate-500 italic">For privacy inquiries, contact: <strong>dpo@saukimart.online</strong></p>
+               </div>
+           </section>
+
+           {/* Terms of Service */}
+           <section className="space-y-4">
+               <div className="flex items-center gap-3 pb-4 border-b-2 border-slate-200">
+                   <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600">
+                       <FileText className="w-6 h-6" />
+                   </div>
+                   <div>
+                       <h3 className="text-xl font-black text-slate-900">Terms of Service</h3>
+                       <p className="text-xs text-slate-500 font-mono">Effective: December 29, 2025</p>
+                   </div>
+               </div>
                
-               <p><strong>Sauki Data Links</strong> ("we," "us," "our," or "the Company") is committed to protecting the privacy and security of your personal data. We process personal data in strict compliance with the <strong>Nigeria Data Protection Act 2023</strong> ("NDPA").</p>
-               
-               <h4 className="font-bold text-slate-800 mt-4">1. Information We Collect</h4>
-               <ul className="list-disc pl-4 space-y-1">
-                   <li><strong>Direct:</strong> Name, phone number, email address.</li>
-                   <li><strong>Automatic:</strong> Device information, IP address.</li>
-                   <li><strong>Third Party:</strong> Payment verification from Flutterwave.</li>
-               </ul>
+               <div className="space-y-3 text-sm leading-relaxed">
+                   <p>By using Sauki Mart, you agree to these terms. We provide a platform for purchasing digital and physical products through verified payment channels.</p>
+                   
+                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+                       <h4 className="font-bold text-slate-900 text-sm">💳 Payments & Refunds</h4>
+                       <ul className="space-y-1 text-xs text-slate-600">
+                           <li>✓ <strong>Digital Products</strong> (Data, Airtime): Final sale once delivered</li>
+                           <li>✓ <strong>Failed Delivery</strong>: Automatic refund to wallet within 2 hours</li>
+                           <li>✓ <strong>Physical Products</strong>: 7-day quality guarantee</li>
+                           <li>✓ <strong>Wallet Transfers</strong>: All final - cannot be reversed</li>
+                       </ul>
+                   </div>
 
-               <h4 className="font-bold text-slate-800 mt-4">2. How We Use Data</h4>
-               <p>We use data to process transactions, verify payments, and communicate service updates. We do not sell your personal data.</p>
+                   <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
+                       <h4 className="font-bold text-slate-900 text-sm">⚠️ Important Notice</h4>
+                       <p className="text-xs text-slate-600">We are <strong>not</strong> responsible for incorrect phone numbers provided by you. Please verify all details before confirming purchases.</p>
+                   </div>
 
-               <h4 className="font-bold text-slate-800 mt-4">3. Your Rights</h4>
-               <p>You have the right to access, rectify, or erase your data. Contact our Data Protection Officer at <strong>saukidatalinks@gmail.com</strong>.</p>
+                   <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2">
+                       <h4 className="font-bold text-slate-900 text-sm">📞 Liability Limitation</h4>
+                       <p className="text-xs text-slate-600">Network providers (MTN, Airtel, Glo, 9mobile) are responsible for service delivery. Sauki Mart is an intermediary and not liable for network failures.</p>
+                   </div>
 
-               <hr className="my-8 border-slate-200" />
+                   <p className="text-xs text-slate-500 italic">For terms inquiries: <strong>legal@saukimart.online</strong></p>
+               </div>
+           </section>
 
-               {/* Terms of Service */}
-               <h3 className="text-xl font-bold text-slate-900 mb-2">Terms of Service</h3>
-               <p className="text-xs text-slate-500 font-mono mb-4">Effective Date: December 29, 2025</p>
-               
-               <p>These Terms constitute a legally binding agreement between you ("User") and Sauki Data Links.</p>
-
-               <h4 className="font-bold text-slate-800 mt-4">1. Services</h4>
-               <p>We provide Virtual Top-Up (VTU) and E-commerce services. We are an intermediary and do not own the telecommunication networks.</p>
-
-               <h4 className="font-bold text-slate-800 mt-4">2. Payments & Refunds</h4>
-               <ul className="list-disc pl-4 space-y-1">
-                   <li><strong>Digital Products:</strong> Sales are final once delivered. Failed deliveries are refunded.</li>
-                   <li><strong>Physical Products:</strong> 7-day return policy for defects.</li>
-               </ul>
-
-               <h4 className="font-bold text-slate-800 mt-4">3. User Obligations</h4>
-               <p>You are responsible for providing accurate information, including correct phone numbers. We are not liable for funding wrong numbers provided by you.</p>
-
-               <h4 className="font-bold text-slate-800 mt-4">4. Contact Us</h4>
-               <p>Email: saukidatalinks@gmail.com <br/> Phone: +2348061934056 / +2347044647081</p>
-           </div>
+           {/* Contact Section */}
+           <section className="sticky bottom-0 bg-gradient-to-t from-white via-white pt-6 pb-20">
+               <div className="bg-slate-900 text-white rounded-2xl p-6 space-y-4">
+                   <h4 className="font-black text-lg">Questions?</h4>
+                   <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
+                       <button onClick={() => window.open('mailto:legal@saukimart.online')} className="bg-white/20 hover:bg-white/30 p-3 rounded-lg transition-colors">
+                           📧 Email Legal Team
+                       </button>
+                       <button onClick={() => window.open('https://wa.me/2348061934056', '_blank')} className="bg-green-600 hover:bg-green-700 p-3 rounded-lg transition-colors">
+                           💬 WhatsApp Support
+                       </button>
+                   </div>
+               </div>
+           </section>
        </div>
     </div>
   );

@@ -60,22 +60,25 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", stiffness: 350, damping: 35 }}
-            className="fixed top-0 left-0 bottom-0 w-[85%] max-w-sm bg-slate-50 dark:bg-slate-900 z-[70] shadow-2xl flex flex-col rounded-r-[3rem] overflow-hidden"
+            className="fixed top-0 left-0 bottom-0 w-[85%] max-w-sm bg-slate-50 dark:bg-slate-900 z-[70] shadow-2xl flex flex-col rounded-r-3xl overflow-hidden"
             style={{ position: 'absolute' }} // Use absolute to stay inside the #root container
           >
-            <div className="p-8 bg-slate-900 text-white relative">
+            <div className="p-8 bg-gradient-to-br from-slate-900 to-slate-950 text-white relative overflow-hidden">
+              {/* Decorative background blur */}
+              <div className="absolute top-0 right-0 w-40 h-40 bg-blue-600 rounded-full blur-[80px] opacity-10 pointer-events-none"></div>
+              
               <button onClick={onClose} className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors">
                 <X className="w-6 h-6" />
               </button>
-              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center p-2.5 mb-6 shadow-xl shadow-black/20">
+              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center p-2.5 mb-6 shadow-xl shadow-black/20 relative z-10">
                   <img src="/logo.png" className="w-full h-full object-contain" />
               </div>
-              <h2 className="text-2xl font-black tracking-tight uppercase">SAUKI MART</h2>
-              <div className="flex items-center gap-2 mt-1">
-                 <p className="text-white/40 text-[9px] font-black uppercase tracking-widest">v2.5.0 Premium Edition</p>
-                 <span className="w-1 h-1 rounded-full bg-white/20"></span>
+              <h2 className="text-3xl font-black tracking-tight uppercase relative z-10">SAUKI MART</h2>
+              <div className="flex items-center gap-2 mt-2 relative z-10">
+                 <p className="text-white/50 text-[9px] font-black uppercase tracking-widest">v2.5.0 Premium</p>
+                 <span className="w-1 h-1 rounded-full bg-white/30"></span>
                  <p className="text-green-400 text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-                    Certified <CheckCircle className="w-2.5 h-2.5" />
+                    Verified <CheckCircle className="w-2.5 h-2.5" />
                  </p>
               </div>
             </div>

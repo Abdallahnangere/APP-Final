@@ -30,6 +30,10 @@ export interface Agent {
   flwBankName: string;
   joinedAt: string;
   createdAt: string;
+  cashbackBalance?: number;
+  totalCashbackEarned?: number;
+  cashbackRedeemed?: number;
+  lastCashbackUpdate?: string;
 }
 
 export interface Transaction {
@@ -48,6 +52,8 @@ export interface Transaction {
   deliveryData?: any;
   product?: Product;
   dataPlan?: DataPlan;
+  agentCashbackAmount?: number;
+  cashbackProcessed?: boolean;
 }
 
 export interface SupportTicket {

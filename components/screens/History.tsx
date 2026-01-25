@@ -5,6 +5,7 @@ import { formatCurrency, generateReceiptData, cn } from '../../lib/utils';
 import { Trash2, Download, Smartphone, Wifi, ArrowUpRight, Search, RefreshCw, Clock, CheckCircle2, AlertCircle, TrendingUp } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { SharedReceipt } from '../SharedReceipt';
+import { BrandedReceipt } from '../BrandedReceipt';
 import { toast } from '../../lib/toast';
 import { api } from '../../lib/api';
 
@@ -125,7 +126,7 @@ export const History: React.FC<HistoryProps> = ({ onBack }) => {
   return (
     <div className="h-screen bg-primary-50 flex flex-col overflow-hidden">
         {receiptTx && (
-            <SharedReceipt ref={receiptRef} transaction={generateReceiptData(receiptTx)} />
+            <BrandedReceipt ref={receiptRef} transaction={generateReceiptData(receiptTx)} />
         )}
 
         {/* Header */}

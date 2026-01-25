@@ -7,7 +7,7 @@ import { Transaction } from '../../types';
 import { cn, formatCurrency, generateReceiptData } from '../../lib/utils';
 import { Search, Download, RefreshCw, CheckCircle2, ArrowLeft, Loader2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import { SharedReceipt } from '../SharedReceipt';
+import { BrandedReceipt } from '../BrandedReceipt';
 import { toast } from '../../lib/toast';
 
 interface TrackProps {
@@ -127,7 +127,7 @@ export const Track: React.FC<TrackProps> = ({ onBack }) => {
       </div>
 
       {receiptTx && (
-        <SharedReceipt 
+        <BrandedReceipt 
             ref={receiptRef}
             transaction={generateReceiptData(receiptTx)} 
         />
