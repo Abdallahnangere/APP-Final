@@ -290,6 +290,10 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
   const availableSims = products.filter(p => (p.category === 'sim'));
   const upsellSim = availableSims.find(s => s.id === selectedSimId);
   const currentTotal = selectedProduct ? (selectedProduct.price + (upsellSim ? upsellSim.price : 0)) : 0;
+  
+  const deviceCount = products.filter(p => (p.category || 'device') === 'device').length;
+  const simCount = products.filter(p => p.category === 'sim').length;
+  const packageCount = products.filter(p => p.category === 'package').length;
 
   const MotionDiv = motion.div as any;
 
@@ -322,29 +326,57 @@ export const Store: React.FC<StoreProps> = ({ agent, onBack }) => {
                 <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin w-8 h-8 text-slate-400" /></div>
             ) : (
               <div className="space-y-4">
-                {/* DEVICES CATEGORY */}
-                <CategorySection 
-                  title="Devices" 
-                  products={products.filter(p => (p.category || 'device') === 'device')}
-                  icon="📱"
-                  onSelect={setSelectedProduct}
-                />
+                {/* CATEGORY NAVIGATION CARDS */}
+                <div className="grid grid-cols-3 gap-2">
+                  <MotionDiv 
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setActiveTab('device')}
+                    className={cn("p-3 rounded-xl text-center cursor-pointer transition-all border", 
+                      activeTab === 'device' 
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-lg' 
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300')}
+                  >
+                    <div className="text-2xl mb-1">📱</div>
+                    <p className="text-xs font-bold uppercase tracking-tight">Devices</p>
+                    <p className="text-[10px] opacity-70">{deviceCount}</p>
+                  </MotionDiv>
+                  
+                  <MotionDiv 
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setActiveTab('sim')}
+                    className={cn("p-3 rounded-xl text-center cursor-pointer transition-all border", 
+                      activeTab === 'sim' 
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-lg' 
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300')}
+                  >
+                    <div className="text-2xl mb-1">🔌</div>
+                    <p className="text-xs font-bold uppercase tracking-tight">SIMs</p>
+                    <p className="text-[10px] opacity-70">{simCount}</p>
+                  </MotionDiv>
+                  
+                  <MotionDiv 
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setActiveTab('package')}
+                    className={cn("p-3 rounded-xl text-center cursor-pointer transition-all border", 
+                      activeTab === 'package' 
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-lg' 
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300')}
+                  >
+                    <div className="text-2xl mb-1">🎁</div>
+                    <p className="text-xs font-bold uppercase tracking-tight">Packages</p>
+                    <p className="text-[10px] opacity-70">{packageCount}</p>
+                  </MotionDiv>
+                </div>
 
-                {/* SIMS CATEGORY */}
-                <CategorySection 
-                  title="Data SIMs" 
-                  products={products.filter(p => p.category === 'sim')}
-                  icon="🔌"
-                  onSelect={setSelectedProduct}
-                />
-
-                {/* PACKAGES CATEGORY */}
-                <CategorySection 
-                  title="Full Packages" 
-                  products={products.filter(p => p.category === 'package')}
-                  icon="🎁"
-                  onSelect={setSelectedProduct}
-                />
+                {/* PRODUCTS FOR SELECTED TAB */}
+                <div>
+                  <CategorySection 
+                    title={activeTab === 'device' ? 'Devices' : activeTab === 'sim' ? 'Data SIMs' : 'Full Packages'} 
+                    products={displayedProducts}
+                    icon={activeTab === 'device' ? '📱' : activeTab === 'sim' ? '🔌' : '🎁'}
+                    onSelect={setSelectedProduct}
+                  />
+                </div>
               </div>
             )}
           </div>

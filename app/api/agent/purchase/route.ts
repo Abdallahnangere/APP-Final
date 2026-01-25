@@ -28,7 +28,8 @@ export async function POST(req: Request) {
     // Verify PIN against hash
     const isPinValid = await verifyPin(agentPin, agent.pin);
     if (!isPinValid) {
-        return NextResponse.json({ error: 'Invalid PIN Authorization' }, { status: 401 });
+        console.error(`[PIN VERIFICATION FAILED] Agent: ${agentId}, Input PIN length: ${agentPin.length}, Stored hash length: ${agent.pin.length}`);
+        return NextResponse.json({ error: 'Invalid PIN. Please check and try again.' }, { status: 401 });
     }
 
     if (!agent.isActive) return NextResponse.json({ error: 'Agent Account Suspended' }, { status: 403 });

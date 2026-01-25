@@ -51,13 +51,13 @@ export const AgentPurchaseSchema = z.object({
   agentPin: z.string().regex(/^[0-9]{4}$/, 'PIN must be exactly 4 digits'),
   type: z.enum(['data', 'ecommerce']),
   payload: z.object({
-    planId: z.string().optional(),
-    productId: z.string().optional(),
-    simId: z.string().optional(),
-    phone: z.string().optional(),
-    name: z.string().optional(),
-    state: z.string().optional(),
-  }),
+    planId: z.string().uuid().optional(),
+    productId: z.string().uuid().optional(),
+    simId: z.string().uuid().optional(),
+    phone: z.string().regex(/^[0-9]{10,11}$/, 'Invalid phone number').optional(),
+    name: z.string().min(2).max(100).optional(),
+    state: z.string().min(2).max(100).optional(),
+  }).strict(),
 });
 
 // Support Schemas

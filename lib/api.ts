@@ -67,6 +67,6 @@ export const api = {
     fetcher<{ success: boolean; transaction: Transaction }>('/agent/purchase', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, agentPin: data.pin }),
     }),
 };

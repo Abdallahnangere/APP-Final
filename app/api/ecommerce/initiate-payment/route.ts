@@ -25,6 +25,13 @@ export async function POST(req: Request) {
     }
 
     const { productId, phone: validPhone, name, state, simId } = validation.data;
+    
+    if (!validPhone || validPhone.length < 10) {
+        logger.logSecurityEvent('INVALID_PHONE', { phone: validPhone });
+        endLog(400, null, new Error('Invalid phone number'));
+        return NextResponse.json({ error: 'Invalid phone number' }, { status: 400 });
+    }
+    
     phone = validPhone;
 
     if (!process.env.FLUTTERWAVE_SECRET_KEY) {

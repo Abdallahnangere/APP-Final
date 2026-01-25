@@ -52,7 +52,7 @@ DATABASE_URL="postgresql://user:password@ep-xxx.neon.tech/dbname"
 ```bash
 npx ts-node scripts/migrate-pin-hashes.ts
 ```
-
+```
 **Expected Output**:
 ```
 🔐 Starting PIN migration to bcrypt hashes...

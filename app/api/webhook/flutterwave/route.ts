@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     console.log(`[Webhook] ID: ${flwId} | Ref: ${incomingRef} | Phone: ${customerPhone} | Status: ${status}`);
 
     // 3. SUCCESS CHECK
-    const isSuccessful = status === 'successful' || status === 'completed' || status === 'success' || (payload.charge_type === 'bank_transfer' && amount > 0);
+    const isSuccessful = status === 'successful' || status === 'completed' || status === 'success' || amount > 0;
 
     if (!isSuccessful) {
         return NextResponse.json({ received: true });
@@ -85,13 +85,17 @@ export async function POST(req: Request) {
         const transaction = await prisma.transaction.findUnique({ where: { tx_ref: incomingRef } });
         
         if (transaction) {
-            // Mark as Paid if not already
-            if (transaction.status !== 'delivered' && transaction.status !== 'paid') {
-                await prisma.transaction.update({
-                    where: { id: transaction.id },
-                    data: { status: 'paid', paymentData: payload as any }
-                });
+            // Idempotency check: if already paid or delivered, skip processing
+            if (transaction.status === 'delivered' || transaction.status === 'paid') {
+                console.log(`[Webhook] Idempotent skip - transaction ${incomingRef} already ${transaction.status}`);
+                return NextResponse.json({ received: true });
             }
+            
+            // Mark as Paid if not already
+            await prisma.transaction.update({
+                where: { id: transaction.id },
+                data: { status: 'paid', paymentData: payload as any }
+            });
 
             // IDEMPOTENCY / LOCKING LOGIC FOR DATA
             if (transaction.type === 'data' && transaction.planId) {
@@ -112,7 +116,8 @@ export async function POST(req: Request) {
                 });
 
                 if (lockResult.count > 0) {
-                    // WE WON THE LOCK. CALL AMIGO.
+                    // WE WON THE LOCK. CALL AMIGO AND DELIVER AUTOMATICALLY.
+                    console.log(`[Webhook] Processing auto-delivery for ${incomingRef}`);
                     const plan = await prisma.dataPlan.findUnique({ where: { id: transaction.planId } });
                     
                     if (plan) {
@@ -141,18 +146,35 @@ export async function POST(req: Request) {
                                     deliveryData: amigoRes.data 
                                 }
                             });
+                            console.log(`[Webhook] Successfully delivered ${incomingRef}`);
                         } else {
                             await prisma.transaction.update({
                                 where: { id: transaction.id },
                                 data: {
+                                    status: 'failed',
                                     deliveryData: { error: 'Auto-delivery failed', response: amigoRes.data }
                                 }
                             });
+                            console.log(`[Webhook] Auto-delivery failed for ${incomingRef}: ${amigoRes.data}`);
                         }
                     }
                 } else {
-                    console.log(`[Webhook] Skipped delivery for ${incomingRef} - already processing/delivered.`);
+                    console.log(`[Webhook] Another process already handling ${incomingRef}, skipping lock acquisition.`);
                 }
+            } else if (transaction.type === 'ecommerce') {
+                // E-COMMERCE: Mark as delivered (customer data delivery happens via admin verification)
+                await prisma.transaction.update({
+                    where: { id: transaction.id },
+                    data: { 
+                        status: 'delivered',
+                        deliveryData: { 
+                            ...((transaction.deliveryData as object) || {}),
+                            webhook_processed: true,
+                            processed_at: new Date().toISOString()
+                        }
+                    }
+                });
+                console.log(`[Webhook] E-commerce transaction ${incomingRef} marked delivered`);
             }
         }
     }
