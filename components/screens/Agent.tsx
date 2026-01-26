@@ -99,7 +99,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
     if (!silent) setIsRefreshing(true);
     try {
       const res = await api.agentGetBalance(agent.id);
-      const updatedAgent = { ...agent, balance: res.balance, cashbackBalance: res.cashbackBalance || agent.cashbackBalance };
+      const updatedAgent = { ...agent, balance: res.balance };
       setAgent(updatedAgent);
       localStorage.setItem('agentSession', JSON.stringify(updatedAgent));
       if (!silent) {
@@ -388,11 +388,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setIsRefreshing(true);
-                                fetch(`/api/agent/${agent.id}`)
-                                  .then(res => res.json())
-                                  .then(data => { setAgent(data); setIsRefreshing(false); })
-                                  .catch(() => setIsRefreshing(false));
+                                refreshBalance();
                               }}
                               className="w-11 h-11 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-white group-hover:bg-white/30 transition-colors hover:bg-white/40"
                               title="Refresh cashback balance"
