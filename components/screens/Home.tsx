@@ -183,6 +183,40 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             </MotionDiv>
         </div>
 
+        {/* DOWNLOAD APP CARD - Premium CTA */}
+        <MotionDiv
+            whileTap={{ scale: 0.97 }}
+            whileHover={{ y: -4 }}
+            onClick={() => window.open('https://play.google.com/store/apps/details?id=online.saukimart.twa', '_blank')}
+            className="w-full bg-gradient-to-r from-accent-blue to-accent-purple rounded-3xl shadow-elevation-8 overflow-hidden cursor-pointer group relative"
+        >
+            {/* Animated Background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            
+            <div className="relative z-10 p-6 flex items-center justify-between">
+                <div className="flex-1">
+                    <p className="text-xs font-black text-white/80 uppercase tracking-widest mb-1.5">Premium Experience</p>
+                    <h3 className="text-2xl font-black text-white mb-1 leading-tight">Get Sauki Mart<br/>App Now</h3>
+                    <p className="text-white/90 text-xs font-semibold mb-3">Native app + offline access + push notifications</p>
+                    
+                    {/* Google Play Badge Style Button */}
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-lg font-semibold text-sm text-slate-900 group-hover:shadow-2xl transition-all">
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M3 3h18v18H3z" fill="white"/>
+                            <path d="M3 3l18 18M21 3L3 21" stroke="currentColor" strokeWidth="2"/>
+                        </svg>
+                        <span className="font-bold">Download Now</span>
+                        <ArrowRight className="w-4 h-4" />
+                    </div>
+                </div>
+                
+                {/* Phone Icon */}
+                <div className="text-6xl ml-4 group-hover:scale-110 transition-transform duration-300 opacity-90">
+                    📱
+                </div>
+            </div>
+        </MotionDiv>
+
         {/* SUPPORT CARD */}
         <MotionDiv
             whileTap={{ scale: 0.97 }}

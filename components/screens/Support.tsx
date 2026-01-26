@@ -102,9 +102,14 @@ export const Support: React.FC<SupportProps> = ({ onBack }) => {
                                     <p className="text-[9px] text-slate-500 mt-1">Call Mon-Fri, 8am-6pm WAT</p>
                                 </div>
                             </div>
-                            <button onClick={() => window.open('tel:08061934056')} className="p-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-600 transition-colors flex-shrink-0">
-                                <Phone className="w-5 h-5" />
-                            </button>
+                            <div className="flex gap-2">
+                                <button onClick={() => window.open('tel:08061934056')} className="p-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-600 transition-colors flex-shrink-0">
+                                    <Phone className="w-5 h-5" />
+                                </button>
+                                <button onClick={() => window.open('https://wa.me/2348061934056?text=Hi, I need support with Sauki Mart', '_blank')} className="p-2 bg-green-50 hover:bg-green-100 rounded-lg text-green-600 transition-colors flex-shrink-0">
+                                    <MessageCircle className="w-5 h-5" />
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -121,9 +126,14 @@ export const Support: React.FC<SupportProps> = ({ onBack }) => {
                                     <p className="text-[9px] text-slate-500 mt-1">App issues & technical help</p>
                                 </div>
                             </div>
-                            <button onClick={() => window.open('tel:07044647081')} className="p-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-purple-600 transition-colors flex-shrink-0">
-                                <Phone className="w-5 h-5" />
-                            </button>
+                            <div className="flex gap-2">
+                                <button onClick={() => window.open('tel:07044647081')} className="p-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-purple-600 transition-colors flex-shrink-0">
+                                    <Phone className="w-5 h-5" />
+                                </button>
+                                <button onClick={() => window.open('https://wa.me/2347044647081?text=Hi, I need technical support with Sauki Mart', '_blank')} className="p-2 bg-green-50 hover:bg-green-100 rounded-lg text-green-600 transition-colors flex-shrink-0">
+                                    <MessageCircle className="w-5 h-5" />
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -136,11 +146,11 @@ export const Support: React.FC<SupportProps> = ({ onBack }) => {
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-slate-600 uppercase mb-1">Email Support</p>
-                                    <p className="text-sm font-bold text-slate-900 break-all">support@saukimart.online</p>
+                                    <p className="text-sm font-bold text-slate-900 break-all">saukidatalinks@gmail.com</p>
                                     <p className="text-[9px] text-slate-500 mt-1">Response within 24 hours</p>
                                 </div>
                             </div>
-                            <button onClick={() => window.open('mailto:support@saukimart.online')} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors flex-shrink-0">
+                            <button onClick={() => window.open('mailto:saukidatalinks@gmail.com')} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors flex-shrink-0">
                                 <Mail className="w-5 h-5" />
                             </button>
                         </div>

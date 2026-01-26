@@ -20,7 +20,6 @@ This is the official Sauki Mart application repository. Sauki Mart is Nigeria's 
 2. Set up environment variables in `.env.local`:
    ```bash
    DATABASE_URL=your_postgresql_connection_string
-   GEMINI_API_KEY=your_gemini_api_key
    FLUTTERWAVE_PUBLIC_KEY=your_flutterwave_public_key
    NEXT_PUBLIC_DOMAIN=www.saukimart.online
    ```
@@ -46,7 +45,7 @@ npm start
 - **Styling:** Tailwind CSS with Framer Motion
 - **Payment:** Flutterwave Integration
 - **PWA:** Service Worker enabled for offline support
-- **Deployment:** Vercel
+- **Deployment:** Cloud Hosted (www.saukimart.online)
 
 ## Features
 

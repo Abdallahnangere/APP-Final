@@ -1,37 +1,38 @@
 {
   "pages": {
     "/_not-found": [
-      "static/chunks/webpack-af153fba09365c35.js",
+      "static/chunks/webpack-88289f84b15b616e.js",
       "static/chunks/fd9d1056-b34e90ae3fbd908b.js",
       "static/chunks/69-a88dc7a4b3f8858b.js",
       "static/chunks/main-app-2d7b7a81d7ab4b0a.js",
       "static/chunks/app/_not-found-c47cc8a42fc37d26.js"
     ],
     "/layout": [
-      "static/chunks/webpack-af153fba09365c35.js",
+      "static/chunks/webpack-88289f84b15b616e.js",
       "static/chunks/fd9d1056-b34e90ae3fbd908b.js",
       "static/chunks/69-a88dc7a4b3f8858b.js",
       "static/chunks/main-app-2d7b7a81d7ab4b0a.js",
-      "static/css/36d7b199d0659c97.css",
-      "static/chunks/app/layout-c2bf8e4422a5c049.js"
+      "static/css/1c90d94ea53fa454.css",
+      "static/chunks/app/layout-935ad09b96497e19.js"
     ],
     "/admin/page": [
-      "static/chunks/webpack-af153fba09365c35.js",
+      "static/chunks/webpack-88289f84b15b616e.js",
       "static/chunks/fd9d1056-b34e90ae3fbd908b.js",
       "static/chunks/69-a88dc7a4b3f8858b.js",
       "static/chunks/main-app-2d7b7a81d7ab4b0a.js",
-      "static/chunks/449-82cb823b5c256768.js",
-      "static/chunks/app/admin/page-52a38fe30b299ded.js"
+      "static/chunks/499-9d26726e8378b74c.js",
+      "static/chunks/193-12fab2bd5e39fff1.js",
+      "static/chunks/app/admin/page-04ecc646a8db0b57.js"
     ],
     "/page": [
-      "static/chunks/webpack-af153fba09365c35.js",
+      "static/chunks/webpack-88289f84b15b616e.js",
       "static/chunks/fd9d1056-b34e90ae3fbd908b.js",
       "static/chunks/69-a88dc7a4b3f8858b.js",
       "static/chunks/main-app-2d7b7a81d7ab4b0a.js",
-      "static/chunks/app/page-380bcdb73f532d62.js"
+      "static/chunks/app/page-9057c43dabfa4003.js"
     ],
     "/privacy/page": [
-      "static/chunks/webpack-af153fba09365c35.js",
+      "static/chunks/webpack-88289f84b15b616e.js",
       "static/chunks/fd9d1056-b34e90ae3fbd908b.js",
       "static/chunks/69-a88dc7a4b3f8858b.js",
       "static/chunks/main-app-2d7b7a81d7ab4b0a.js",

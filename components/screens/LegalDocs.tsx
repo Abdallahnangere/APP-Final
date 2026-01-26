@@ -204,7 +204,7 @@ Phone: +2348061934056 and +2347044647081
                        <p className="text-xs text-slate-600">Network providers (MTN, Airtel, Glo, 9mobile) are responsible for service delivery. Sauki Mart is an intermediary and not liable for network failures.</p>
                    </div>
 
-                   <p className="text-xs text-slate-500 italic">For terms inquiries: <strong>legal@saukimart.online</strong></p>
+                   <p className="text-xs text-slate-500 italic">For terms inquiries: <strong>saukidatalinks@gmail.com</strong></p>
                </div>
            </section>
 
@@ -213,8 +213,8 @@ Phone: +2348061934056 and +2347044647081
                <div className="bg-slate-900 text-white rounded-2xl p-6 space-y-4">
                    <h4 className="font-black text-lg">Questions?</h4>
                    <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
-                       <button onClick={() => window.open('mailto:legal@saukimart.online')} className="bg-white/20 hover:bg-white/30 p-3 rounded-lg transition-colors">
-                           📧 Email Legal Team
+                       <button onClick={() => window.open('mailto:saukidatalinks@gmail.com')} className="bg-white/20 hover:bg-white/30 p-3 rounded-lg transition-colors">
+                           📧 Email Support
                        </button>
                        <button onClick={() => window.open('https://wa.me/2348061934056', '_blank')} className="bg-green-600 hover:bg-green-700 p-3 rounded-lg transition-colors">
                            💬 WhatsApp Support

@@ -12,6 +12,7 @@ import { BottomSheet } from '../ui/BottomSheet';
 import { Store } from './Store';
 import { Data } from './Data';
 import { AgentAnalytics } from '../AgentAnalytics';
+import { AgentTransactionHistory } from './AgentTransactionHistory';
 import { toPng } from 'html-to-image';
 import { BrandedReceipt } from '../BrandedReceipt';
 import { playSound } from '../../lib/sounds';
@@ -30,7 +31,7 @@ const ControlBtn = ({ icon: Icon, label, onClick, color = "bg-slate-900" }: any)
 );
 
 export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
-  const [view, setView] = useState<'login' | 'register' | 'reg_terms' | 'dashboard'>('login');
+  const [view, setView] = useState<'login' | 'register' | 'reg_terms' | 'dashboard' | 'transactions'>('login');
   const [agent, setAgent] = useState<Agent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -386,7 +387,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                     <div>
                         <div className="flex justify-between items-center mb-3">
                             <h3 className="text-xs font-black text-slate-600 uppercase tracking-wide">Transaction History</h3>
-                            <button className="text-[10px] font-bold text-blue-600 hover:text-blue-700">All Txns →</button>
+                            <button onClick={() => setView('transactions')} className="text-[10px] font-bold text-blue-600 hover:text-blue-700">View All →</button>
                         </div>
                         <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden max-h-80 flex flex-col">
                             {history.length === 0 ? (
@@ -593,6 +594,15 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                     </div>
                 </BottomSheet>
             </MotionDiv>
+        )}
+
+        {/* TRANSACTION HISTORY VIEW */}
+        {view === 'transactions' && agent && (
+          <AgentTransactionHistory
+            transactions={history}
+            agentId={agent.id}
+            onBack={() => setView('dashboard')}
+          />
         )}
       </AnimatePresence>
     </div>
