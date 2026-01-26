@@ -80,11 +80,11 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed bottom-0 fixed-mobile bg-white rounded-t-3xl z-[70] max-h-[90vh] overflow-y-auto shadow-[0_-8px_30px_rgba(0,0,0,0.12)]"
+            className="fixed bottom-0 fixed-mobile bg-white dark:bg-slate-900 rounded-t-3xl z-[70] max-h-[90vh] overflow-y-auto shadow-[0_-8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.3)]"
           >
-            <div className="sticky top-0 bg-white/90 backdrop-blur-md z-10 px-6 py-4 flex items-center justify-between border-b border-slate-100">
-              <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-              <button onClick={handleManualClose} className="p-2 -mr-2 text-slate-500 hover:bg-slate-100 rounded-full">
+            <div className="sticky top-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl z-10 px-6 py-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
+              <button onClick={handleManualClose} className="p-2 -mr-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>

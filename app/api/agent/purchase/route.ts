@@ -66,19 +66,24 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Insufficient Wallet Balance' }, { status: 402 });
     }
 
+    // Calculate 2% cashback
+    const cashbackAmount = amount * 0.02;
+
     const tx_ref = `AGENT-${type?.toUpperCase() || 'TX'}-${Date.now()}`;
 
-    // 4. Debit Wallet & Create Record
+    // 4. Debit Wallet, Credit Cashback & Create Record
     const result = await prisma.$transaction(async (prisma) => {
-        // Debit Main Balance Only (Cashback feature removed)
+        // Debit Main Balance and Credit Cashback
         await prisma.agent.update({
             where: { id: agent.id },
             data: { 
-                balance: { decrement: amount }
+                balance: { decrement: amount },
+                cashbackBalance: { increment: cashbackAmount },
+                totalCashbackEarned: { increment: cashbackAmount }
             }
         });
 
-        // Create Record
+        // Create Record with Cashback Info
         const transaction = await prisma.transaction.create({
             data: {
                 tx_ref,
@@ -86,6 +91,8 @@ export async function POST(req: Request) {
                 status: 'paid',
                 phone: payload.phone,
                 amount,
+                agentCashbackAmount: cashbackAmount,
+                cashbackProcessed: true,
                 agentId: agent.id,
                 customerName: payload.name || agent.firstName,
                 deliveryState: payload.state || 'Agent Direct',
@@ -93,8 +100,20 @@ export async function POST(req: Request) {
                 ...productDetails,
                 deliveryData: {
                     method: 'Agent Wallet',
-                    manifest: description
+                    manifest: description,
+                    cashbackEarned: cashbackAmount
                 }
+            }
+        });
+
+        // Log Cashback Entry
+        await prisma.cashbackEntry.create({
+            data: {
+                agentId: agent.id,
+                type: 'earned',
+                amount: cashbackAmount,
+                transactionId: transaction.id,
+                description: `2% cashback on ${description}`
             }
         });
 

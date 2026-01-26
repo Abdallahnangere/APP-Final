@@ -33,43 +33,48 @@ model DataPlan {
 }
 
 model Agent {
-  id               String        @id @default(uuid())
-  firstName        String
-  lastName         String
-  phone            String        @unique
-  pin              String        
-  balance          Float         @default(0.0)
-  isActive         Boolean       @default(true)
-  flwAccountNumber String?
-  flwAccountName   String?
-  flwBankName      String?
+  id                      String        @id @default(uuid())
+  firstName               String
+  lastName                String
+  phone                   String        @unique
+  pin                     String        
+  balance                 Float         @default(0.0)
+  cashbackBalance         Float         @default(0.0)
+  totalCashbackEarned     Float         @default(0.0)
+  cashbackRedeemed        Float         @default(0.0)
+  isActive                Boolean       @default(true)
+  flwAccountNumber        String?
+  flwAccountName          String?
+  flwBankName             String?
   
-  // Changed from joinedAt to createdAt to match your API route
-  createdAt        DateTime      @default(now()) 
-  updatedAt        DateTime      @updatedAt
-  transactions     Transaction[]
+  createdAt               DateTime      @default(now()) 
+  updatedAt               DateTime      @updatedAt
+  transactions            Transaction[]
+  cashbackHistory         CashbackEntry[]
 }
 
 model Transaction {
-  id             String    @id @default(uuid())
-  tx_ref         String    @unique
-  type           String    
-  status         String    
-  phone          String
-  amount         Float
-  productId      String?
-  product        Product?  @relation(fields: [productId], references: [id])
-  planId         String?
-  dataPlan       DataPlan? @relation(fields: [planId], references: [id])
-  agentId        String?
-  agent          Agent?    @relation(fields: [agentId], references: [id])
-  customerName   String?
-  deliveryState  String?
-  idempotencyKey String?   @unique
-  paymentData    Json?     
-  deliveryData   Json?     
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                  String    @id @default(uuid())
+  tx_ref              String    @unique
+  type                String    
+  status              String    
+  phone               String
+  amount              Float
+  agentCashbackAmount Float?    @default(0)
+  cashbackProcessed   Boolean   @default(false)
+  productId           String?
+  product             Product?  @relation(fields: [productId], references: [id])
+  planId              String?
+  dataPlan            DataPlan? @relation(fields: [planId], references: [id])
+  agentId             String?
+  agent               Agent?    @relation(fields: [agentId], references: [id])
+  customerName        String?
+  deliveryState       String?
+  idempotencyKey      String?   @unique
+  paymentData         Json?     
+  deliveryData        Json?     
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }
 
 model SupportTicket {
@@ -105,4 +110,15 @@ model PushSubscription {
   phone     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+model CashbackEntry {
+  id              String    @id @default(uuid())
+  agentId         String
+  agent           Agent     @relation(fields: [agentId], references: [id])
+  type            String    // 'earned', 'redeemed'
+  amount          Float
+  transactionId   String?
+  description     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }

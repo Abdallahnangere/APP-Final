@@ -713,10 +713,14 @@ export default function AdminPage() {
                                     <span className="bg-slate-100 px-3 py-1 rounded-lg text-[10px] font-black uppercase">{agent._count?.transactions || 0} Txns</span>
                                 </div>
 
-                                <div className="grid grid-cols-1 gap-4 mb-6">
+                                <div className="grid grid-cols-2 gap-4 mb-6">
                                     <div className="bg-slate-50 p-4 rounded-xl">
                                         <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Main Wallet</p>
-                                        <p className="text-xl font-black text-slate-900">{formatCurrency(agent.balance)}</p>
+                                        <p className="text-lg font-black text-slate-900">{formatCurrency(agent.balance)}</p>
+                                    </div>
+                                    <div className="bg-green-50 p-4 rounded-xl border border-green-200">
+                                        <p className="text-[9px] text-green-600 font-black uppercase tracking-widest mb-1">Cashback</p>
+                                        <p className="text-lg font-black text-green-700">{formatCurrency(agent.cashbackBalance || 0)}</p>
                                     </div>
                                 </div>
 

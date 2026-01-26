@@ -24,7 +24,18 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal
 
   useEffect(() => {
     const saved = localStorage.getItem('appSettings');
-    if (saved) setSettings(JSON.parse(saved));
+    if (saved) {
+      const settings = JSON.parse(saved);
+      setSettings(settings);
+      // Apply dark mode on load
+      if (settings.darkMode) {
+        document.documentElement.classList.add('dark');
+        document.documentElement.style.colorScheme = 'dark';
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.style.colorScheme = 'light';
+      }
+    }
   }, []);
 
   const updateSetting = (key: keyof typeof settings, value: boolean) => {
@@ -36,8 +47,14 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onOpenLegal
       if (key === 'haptics' && value) triggerHaptic();
       
       if (key === 'darkMode') {
-          if (value) document.documentElement.classList.add('dark');
-          else document.documentElement.classList.remove('dark');
+          if (value) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
+          }
+          else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
+          }
       }
   };
 

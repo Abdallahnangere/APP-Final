@@ -39,14 +39,34 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
   const [receiptTx, setReceiptTx] = useState<Transaction | null>(null);
   const [showPurchase, setShowPurchase] = useState<'data' | 'store' | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [isManualLogout, setIsManualLogout] = useState(false);
   
   const [loginForm, setLoginForm] = useState({ phone: '', pin: '' });
   const [regForm, setRegForm] = useState({ firstName: '', lastName: '', phone: '', pin: '', confirmPin: '' });
   const [newPin, setNewPin] = useState('');
   const [showCashbackRedemption, setShowCashbackRedemption] = useState(false);
-  const [redemptionForm, setRedemptionForm] = useState({ amount: '', bankAccountNumber: '', bankCode: '', bankName: '', accountName: '' });
+  const [redemptionForm, setRedemptionForm] = useState({ amount: '' });
 
   const receiptRef = useRef<HTMLDivElement>(null);
+
+  // Load agent from localStorage on mount - prevents logout on navigation
+  useEffect(() => {
+    const savedAgent = localStorage.getItem('agentSession');
+    if (savedAgent && !agent) {
+      try {
+        const parsed = JSON.parse(savedAgent);
+        setAgent(parsed);
+        setView('dashboard');
+      } catch (e) {}
+    }
+  }, []);
+
+  // Save agent to localStorage whenever they login
+  useEffect(() => {
+    if (agent && view === 'dashboard') {
+      localStorage.setItem('agentSession', JSON.stringify(agent));
+    }
+  }, [agent, view]);
 
   useEffect(() => {
     let interval: any;
@@ -296,7 +316,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                     </div>
                     <div className="flex items-center gap-2">
                         <button onClick={() => setShowSettings(true)} className="p-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200"><Settings className="w-4 h-4" /></button>
-                        <button onClick={() => { setAgent(null); setView('login'); }} className="p-2 bg-slate-100 text-red-500 rounded-lg hover:bg-red-100"><LogOut className="w-4 h-4" /></button>
+                    <button onClick={() => { setIsManualLogout(true); setAgent(null); setView('login'); localStorage.removeItem('agentSession'); }} className="p-2 bg-slate-100 text-red-500 rounded-lg hover:bg-red-100"><LogOut className="w-4 h-4" /></button>
                     </div>
                 </div>
 
@@ -498,7 +518,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                         <div className="space-y-3 pt-4 border-t border-slate-200">
                             <h4 className="text-xs font-bold text-red-600 uppercase tracking-wide">Danger Zone</h4>
                             <Button 
-                                onClick={() => { setAgent(null); setView('login'); setShowSettings(false); }} 
+                                onClick={() => { setIsManualLogout(true); setAgent(null); setView('login'); setShowSettings(false); localStorage.removeItem('agentSession'); }} 
                                 className="h-11 bg-red-600 text-white rounded-lg font-bold uppercase tracking-wide w-full hover:bg-red-700 flex items-center justify-center gap-2"
                             >
                                 <LogOut className="w-4 h-4" /> Logout
@@ -528,67 +548,53 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                         <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-200">
                             <p className="text-xs text-green-600 font-bold uppercase mb-1">Available Cashback</p>
                             <h2 className="text-3xl font-black text-green-700">{formatCurrency(agent.cashbackBalance || 0)}</h2>
-                            <p className="text-xs text-green-600 mt-2">Earned 2% on all your purchases</p>
+                            <p className="text-xs text-green-600 mt-2">Ready to transfer to wallet</p>
                         </div>
 
-                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 text-xs leading-relaxed">
-                            <h4 className="font-bold text-blue-900 mb-2">💡 How Cashback Works</h4>
-                            <ul className="space-y-1 text-blue-800">
-                                <li>✓ Get 2% cashback on every product sale you make</li>
-                                <li>✓ Cashback credited instantly to your account</li>
-                                <li>✓ Withdraw anytime via bank transfer</li>
-                                <li>✓ No minimum redemption amount</li>
+                        <div className="bg-green-50 p-4 rounded-xl border border-green-200 text-xs leading-relaxed">
+                            <h4 className="font-bold text-green-900 mb-2">✅ Instant Wallet Transfer</h4>
+                            <ul className="space-y-1 text-green-800">
+                                <li>✓ Get 2% cashback on every purchase</li>
+                                <li>✓ Cashback added instantly to your balance</li>
+                                <li>✓ Redeem directly to your wallet</li>
+                                <li>✓ Use immediately for any purchase</li>
                             </ul>
                         </div>
 
                         <div className="space-y-3">
-                            <label className="text-xs font-bold text-slate-600 uppercase">Redemption Amount (₦)</label>
+                            <label className="text-xs font-bold text-slate-600 uppercase">Redeem Amount (₦)</label>
                             <Input 
                                 inputMode="numeric"
                                 pattern="[0-9]*"
-                                placeholder="Enter amount to withdraw" 
+                                placeholder={`Max: ${formatCurrency(agent.cashbackBalance || 0)}`}
                                 value={redemptionForm.amount}
                                 onChange={e => setRedemptionForm({...redemptionForm, amount: e.target.value.replace(/\D/g, '')})}
-                                className="h-12 bg-white rounded-lg"
-                            />
-                            
-                            <label className="text-xs font-bold text-slate-600 uppercase">Account Number</label>
-                            <Input 
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                placeholder="XXXXXXXXXX" 
-                                value={redemptionForm.bankAccountNumber}
-                                onChange={e => setRedemptionForm({...redemptionForm, bankAccountNumber: e.target.value.replace(/\D/g, '')})}
-                                className="h-12 bg-white rounded-lg"
-                            />
-
-                            <label className="text-xs font-bold text-slate-600 uppercase">Bank Name</label>
-                            <Input 
-                                placeholder="e.g., GTBank, Access Bank" 
-                                value={redemptionForm.bankName}
-                                onChange={e => setRedemptionForm({...redemptionForm, bankName: e.target.value})}
-                                className="h-12 bg-white rounded-lg"
-                            />
-
-                            <label className="text-xs font-bold text-slate-600 uppercase">Account Name</label>
-                            <Input 
-                                placeholder="Your full name" 
-                                value={redemptionForm.accountName}
-                                onChange={e => setRedemptionForm({...redemptionForm, accountName: e.target.value})}
                                 className="h-12 bg-white rounded-lg"
                             />
 
                             <Button 
                                 onClick={() => {
-                                    if (!redemptionForm.amount || !redemptionForm.bankAccountNumber || !redemptionForm.bankName || !redemptionForm.accountName) {
-                                        return toast.error("Please fill all fields");
+                                    const amount = parseFloat(redemptionForm.amount);
+                                    if (!redemptionForm.amount || amount <= 0) {
+                                        return toast.error("Enter valid amount");
                                     }
-                                    toast.success("Redemption request submitted! Processing within 24 hours");
+                                    if (amount > (agent.cashbackBalance || 0)) {
+                                        return toast.error("Insufficient cashback balance");
+                                    }
+                                    // Transfer to main wallet
+                                    setAgent(prev => prev ? {
+                                        ...prev,
+                                        balance: prev.balance + amount,
+                                        cashbackBalance: (prev.cashbackBalance || 0) - amount,
+                                        cashbackRedeemed: (prev.cashbackRedeemed || 0) + amount
+                                    } : null);
+                                    toast.success(`${formatCurrency(amount)} transferred to wallet!`);
+                                    setRedemptionForm({ amount: '' });
                                     setShowCashbackRedemption(false);
                                 }}
                                 className="h-12 bg-green-600 text-white rounded-lg font-bold uppercase tracking-wide w-full shadow-lg"
                             >
-                                Submit Redemption Request
+                                Transfer to Wallet
                             </Button>
                         </div>
                     </div>

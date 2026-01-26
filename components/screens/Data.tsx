@@ -200,47 +200,70 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
   return (
     <div className="p-4 pb-6">
        {!selectedNetwork ? (
-           <div className="space-y-3">
-               <p className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-3">Select Network</p>
-               {['MTN', 'AIRTEL', 'GLO'].map((net) => (
-                   <button
-                       key={net}
-                       onClick={() => handleNetworkSelect(net as NetworkType)}
-                       className={cn("w-full h-16 rounded-lg flex items-center px-4 font-bold text-base shadow-sm transition-all border border-slate-200 active:scale-95 bg-white hover:shadow-md", 
-                        net === 'MTN' ? 'hover:border-yellow-300' : net === 'AIRTEL' ? 'hover:border-red-300' : 'hover:border-green-300')}
-                   >
-                       <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center mr-3 p-2">
-                           <img src={`/${net.toLowerCase()}.png`} alt={net} className="w-full h-full object-contain" />
-                       </div>
-                       <span className="text-slate-800">{net}</span>
-                   </button>
-               ))}
+           <div className="space-y-4">
+               <div>
+                 <h2 className="text-lg font-black text-slate-900 mb-1">Select Network</h2>
+                 <p className="text-xs text-slate-500 font-medium mb-4">Choose your preferred carrier</p>
+               </div>
+               <div className="space-y-2">
+                 {['MTN', 'AIRTEL', 'GLO'].map((net) => (
+                     <button
+                         key={net}
+                         onClick={() => handleNetworkSelect(net as NetworkType)}
+                         className={cn("w-full h-20 rounded-2xl flex items-center px-4 font-bold text-lg shadow-sm transition-all border-2 active:scale-95 bg-white",
+                          net === 'MTN' ? 'border-yellow-300 hover:border-yellow-400 hover:shadow-lg hover:shadow-yellow-200' : 
+                          net === 'AIRTEL' ? 'border-red-300 hover:border-red-400 hover:shadow-lg hover:shadow-red-200' : 
+                          'border-green-300 hover:border-green-400 hover:shadow-lg hover:shadow-green-200')}
+                     >
+                         <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mr-4 p-2 border border-slate-200">
+                             <img src={`/${net.toLowerCase()}.png`} alt={net} className="w-full h-full object-contain" />
+                         </div>
+                         <div className="flex-1 text-left">
+                           <div className="text-slate-900 font-black">{net}</div>
+                           <div className="text-xs text-slate-500 font-semibold mt-0.5">Quick & Reliable</div>
+                         </div>
+                         <div className="text-xl">→</div>
+                     </button>
+                 ))}
+               </div>
            </div>
        ) : (
            <div>
-               <button onClick={() => setSelectedNetwork(null)} className="text-xs text-blue-600 mb-3 hover:text-blue-700 font-bold flex items-center gap-1">
-                 <ArrowLeft className="w-4 h-4" /> Back
+               <button onClick={() => setSelectedNetwork(null)} className="text-xs text-blue-600 mb-4 hover:text-blue-700 font-bold flex items-center gap-1 p-2 -ml-2">
+                 <ArrowLeft className="w-4 h-4" /> Back to Networks
                </button>
-               <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
-                   <img src={`/${selectedNetwork.toLowerCase()}.png`} className="w-5 h-5 object-contain" />
-                   {selectedNetwork} Bundles
-               </h2>
-               <div className="grid gap-2">
+               <div className="mb-4">
+                 <div className="flex items-center gap-3 mb-3">
+                   <div className="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl flex items-center justify-center p-2 border-2 border-slate-200">
+                     <img src={`/${selectedNetwork.toLowerCase()}.png`} className="w-full h-full object-contain" />
+                   </div>
+                   <div>
+                     <h2 className="text-2xl font-black text-slate-900">{selectedNetwork}</h2>
+                     <p className="text-xs text-slate-500 font-semibold">Select your plan below</p>
+                   </div>
+                 </div>
+               </div>
+               <div className="space-y-2">
                    {filteredPlans.map(plan => (
                        <button
                            key={plan.id}
                            onClick={() => handlePlanSelect(plan)}
-                           className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center cursor-pointer hover:border-slate-300 hover:shadow-md transition-all active:scale-95"
+                           className="bg-gradient-to-r from-slate-50 to-white p-4 rounded-xl border-2 border-slate-200 shadow-sm flex justify-between items-center cursor-pointer hover:border-slate-300 hover:shadow-md hover:from-white transition-all active:scale-95"
                        >
                            <div className="text-left">
-                               <div className="text-base font-bold text-slate-900">{plan.data}</div>
-                               <div className="text-xs text-slate-500 mt-0.5">{plan.validity}</div>
+                               <div className="text-base font-black text-slate-900">{plan.data}</div>
+                               <div className="text-xs text-slate-500 font-semibold mt-1">{plan.validity}</div>
                            </div>
-                           <div className="text-base font-bold text-slate-900 bg-slate-50 px-3 py-1.5 rounded border border-slate-100">
+                           <div className="text-lg font-black text-white bg-gradient-to-br from-slate-900 to-slate-800 px-4 py-2 rounded-lg shadow-md">
                                {formatCurrency(plan.price)}
                            </div>
                        </button>
                    ))}
+                   {filteredPlans.length === 0 && (
+                     <div className="text-center py-8 text-slate-500">
+                       <p className="text-sm font-semibold">No plans available for this network</p>
+                     </div>
+                   )}
                </div>
            </div>
        )}

@@ -23,7 +23,7 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props 
 }) => {
-  const baseStyles = "inline-flex items-center justify-center font-semibold transition-all focus-visible:outline-none disabled:opacity-50 disabled:pointer-events-none w-full duration-200 active:scale-95 rounded-xl";
+  const baseStyles = "inline-flex items-center justify-center font-semibold transition-all focus-visible:outline-none disabled:opacity-50 disabled:pointer-events-none w-full duration-200 active:scale-95 rounded-2xl";
   
   const sizes = {
     sm: 'h-10 px-4 text-sm',
@@ -32,22 +32,21 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const variants = {
-    primary: "bg-accent-blue text-white shadow-elevation-4 hover:bg-blue-600 active:shadow-elevation-2",
-    secondary: "bg-primary-100 text-primary-900 hover:bg-primary-200 shadow-elevation-2",
-    outline: "border border-primary-200 bg-white hover:bg-primary-50 text-primary-900 shadow-elevation-2",
-    ghost: "hover:bg-primary-100 text-primary-700",
-    destructive: "bg-accent-red text-white shadow-elevation-4 hover:bg-red-500 active:shadow-elevation-2",
-    success: "bg-accent-green text-white shadow-elevation-4 hover:bg-green-600 active:shadow-elevation-2",
-    warning: "bg-accent-orange text-white shadow-elevation-4 hover:bg-orange-600 active:shadow-elevation-2",
+    primary: "bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-lg shadow-slate-900/30 hover:shadow-xl hover:shadow-slate-900/40 active:shadow-md dark:from-slate-100 dark:to-white dark:text-slate-900 dark:shadow-slate-400/30",
+    secondary: "bg-gradient-to-br from-slate-100 to-slate-50 text-slate-900 hover:from-slate-200 hover:to-slate-100 shadow-md dark:from-slate-800 dark:to-slate-900 dark:text-white",
+    outline: "border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-white",
+    ghost: "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100",
+    destructive: "bg-gradient-to-br from-red-600 to-red-500 text-white shadow-lg shadow-red-600/30 hover:shadow-xl hover:shadow-red-600/40 active:shadow-md",
+    success: "bg-gradient-to-br from-green-600 to-green-500 text-white shadow-lg shadow-green-600/30 hover:shadow-xl hover:shadow-green-600/40 active:shadow-md",
+    warning: "bg-gradient-to-br from-orange-600 to-orange-500 text-white shadow-lg shadow-orange-600/30 hover:shadow-xl hover:shadow-orange-600/40 active:shadow-md",
   };
 
   const MotionButton = motion.button as any;
 
   return (
     <MotionButton
-      whileHover={!disabled && !isLoading ? { y: -1 } : {}}
-      whileTap={!disabled && !isLoading ? { scale: 0.98, y: 0 } : {}}
-      className={cn(baseStyles, sizes[size], variants[variant], className)}
+      whileHover={!disabled && !isLoading ? { y: -2 } : {}}
+      whileTap={!disabled && !isLoading ? { scale: 0.97, y: 0 } : {}}      className={cn(baseStyles, sizes[size], variants[variant], className)}
       disabled={isLoading || disabled}
       {...props}
     >

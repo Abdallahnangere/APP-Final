@@ -67,17 +67,15 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             <MotionDiv
               whileTap={{ scale: 0.95 }}
               onClick={() => window.open('https://play.google.com/store/apps/details?id=online.saukimart.twa', '_blank')}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white rounded-lg shadow-md border border-primary-200 hover:shadow-lg transition-all cursor-pointer group"
+              className="flex items-center px-2 py-1 bg-white rounded-lg shadow-md border border-primary-200 hover:shadow-lg transition-all cursor-pointer group h-10"
               title="Get on Google Play"
             >
-              <div className="flex flex-col items-center justify-center">
-                <span className="text-[8px] font-black text-primary-900 leading-none">GET IT ON</span>
-              </div>
-              <div className="h-6 w-0.5 bg-primary-200"></div>
-              <div className="flex items-center gap-0.5">
-                <span className="text-[10px] font-black text-primary-900">Google Play</span>
-                <ExternalLink className="w-3 h-3 text-primary-600 group-hover:translate-x-0.5 transition-transform" />
-              </div>
+              <img 
+                src="https://storage.googleapis.com/pe-portal-consumer-prod-wagtail-static/images/googleplay-badge-01-getit.width-1440.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=wagtail%40pe-portal-consumer-prod.iam.gserviceaccount.com%2F20250126%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20250126T022102Z&X-Goog-Expires=86400&X-Goog-SignedHeaders=host&X-Goog-Signature=9723eca2bee034021b8c54ae50f07130b993e95b89b540def4d953d71e5d8c07d2f5a684e4cc2a5f9972dc7a991b2839a309f1617acd391edbe0b6683b6ecaa3c1f77177e944fb73225fe72e80cc9cebe9f8783466e7f6f7c372b3c0b65461c51e748d6a63b014acf05279bc3045b081c61cc50a28264241509571bee3c992d4c7175521aa84c7fab0b424c548a24415ef8570ac1807a9f2934f0b75dab46800a61e77baa010772a42c796011915c120ea67e02fe61112646e2cb977ce7f0b3c2c2d9a3d9617987fa265ebcfcff960980ed76f98b442e2ff6b95d4cfb69619a092a4aab972b6b40da8b1f2a6fa361430b101411628dca14df1052d9075220ab7" 
+                alt="Get it on Google Play" 
+                className="h-full object-contain"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+              />
             </MotionDiv>
         </div>
         <MotionDiv

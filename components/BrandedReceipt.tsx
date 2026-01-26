@@ -179,11 +179,18 @@ export const BrandedReceipt = forwardRef<HTMLDivElement, ReceiptProps>(({ transa
             </div>
           </div>
 
-          {/* Transaction Reference */}
+          {/* Transaction Reference - DUAL DISPLAY */}
           <div className="space-y-2">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Reference</p>
-            <div className="bg-slate-900 rounded-xl p-3 font-mono text-center">
-              <p className="text-white font-bold text-sm tracking-wider break-all">{transaction.tx_ref}</p>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Transaction References</p>
+            <div className="space-y-2">
+              <div className="bg-slate-900 rounded-xl p-3 font-mono text-center border border-slate-700">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Reference ID</p>
+                <p className="text-white font-bold text-sm tracking-wider break-all">{transaction.tx_ref}</p>
+              </div>
+              <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl p-3 font-mono text-center border border-slate-700">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Unique ID</p>
+                <p className="text-white font-bold text-sm tracking-wider break-all">SAUKI-{new Date(transaction.date).getTime()}</p>
+              </div>
             </div>
           </div>
         </div>
