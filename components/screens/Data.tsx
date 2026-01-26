@@ -204,7 +204,6 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                <div>
                  <h2 className="text-lg font-black text-slate-900 mb-1">Select Network</h2>
                  <p className="text-xs text-slate-500 font-medium mb-4">Choose your preferred carrier</p>
-                   </div>
                </div>
                <div className="space-y-3">
                  {['MTN', 'AIRTEL', 'GLO'].map((net) => (
@@ -226,7 +225,6 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                          <div className="text-2xl">→</div>
                      </button>
                  ))}
-                   </div>
                </div>
            </div>
        ) : (
