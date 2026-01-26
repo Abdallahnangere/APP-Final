@@ -661,6 +661,35 @@ export default function AdminPage() {
                         <h3 className="text-xl font-black uppercase mb-1 text-primary-900">Mobile Push</h3>
                         <p className="text-xs text-primary-500 mb-6">Targeted pop-up alerts on user devices</p>
 
+                        {/* STOP/CANCEL ACTIVE BLAST */}
+                        <div className="mb-6 p-4 bg-red-50 rounded-2xl border border-red-200">
+                            <div className="flex items-center gap-3 mb-3">
+                                <Ban className="w-5 h-5 text-red-600" />
+                                <p className="text-xs font-black uppercase text-red-600 tracking-wide">Stop Active Blast</p>
+                            </div>
+                            <button 
+                              onClick={async () => {
+                                setLoading(true);
+                                try {
+                                  await fetch('/api/admin/broadcast', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ content: '', type: 'info', isActive: false, password })
+                                  });
+                                  setBroadcastForm({ content: '', type: 'info', isActive: false });
+                                  toast.success('All active notifications stopped');
+                                } catch (e) {
+                                  toast.error('Failed to stop notifications');
+                                }
+                                setLoading(false);
+                              }}
+                              className="w-full bg-red-600 hover:bg-red-700 text-white p-3 rounded-xl font-black uppercase text-xs transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                              <Ban className="w-4 h-4" />
+                              Stop All Blasts
+                            </button>
+                          </div>
+
                         {/* TARGET SELECTION */}
                         <div className="mb-6 p-4 bg-white rounded-2xl border border-blue-100">
                             <p className="text-xs font-black uppercase text-primary-600 mb-3 tracking-wide">Send To:</p>

@@ -67,13 +67,13 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             <MotionDiv
               whileTap={{ scale: 0.95 }}
               onClick={() => window.open('https://play.google.com/store/apps/details?id=online.saukimart.twa', '_blank')}
-              className="flex items-center px-2 py-1 bg-white rounded-lg shadow-md border border-primary-200 hover:shadow-lg transition-all cursor-pointer group h-10"
-              title="Get on Google Play"
+              className="flex items-center cursor-pointer group transition-transform hover:scale-105"
+              title="Get it on Google Play"
             >
               <img 
-                src="https://storage.googleapis.com/pe-portal-consumer-prod-wagtail-static/images/googleplay-badge-01-getit.width-1440.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=wagtail%40pe-portal-consumer-prod.iam.gserviceaccount.com%2F20250126%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20250126T022102Z&X-Goog-Expires=86400&X-Goog-SignedHeaders=host&X-Goog-Signature=9723eca2bee034021b8c54ae50f07130b993e95b89b540def4d953d71e5d8c07d2f5a684e4cc2a5f9972dc7a991b2839a309f1617acd391edbe0b6683b6ecaa3c1f77177e944fb73225fe72e80cc9cebe9f8783466e7f6f7c372b3c0b65461c51e748d6a63b014acf05279bc3045b081c61cc50a28264241509571bee3c992d4c7175521aa84c7fab0b424c548a24415ef8570ac1807a9f2934f0b75dab46800a61e77baa010772a42c796011915c120ea67e02fe61112646e2cb977ce7f0b3c2c2d9a3d9617987fa265ebcfcff960980ed76f98b442e2ff6b95d4cfb69619a092a4aab972b6b40da8b1f2a6fa361430b101411628dca14df1052d9075220ab7" 
+                src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" 
                 alt="Get it on Google Play" 
-                className="h-full object-contain"
+                className="h-10 object-contain"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               />
             </MotionDiv>

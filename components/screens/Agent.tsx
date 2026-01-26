@@ -366,9 +366,20 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                                 <h2 className="text-3xl font-black text-white mb-2 tracking-tight">{formatCurrency(agent.cashbackBalance || 0)}</h2>
                                 <p className="text-[11px] text-green-100 font-semibold">2% on every purchase</p>
                             </div>
-                            <div className="w-11 h-11 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-white group-hover:bg-white/30 transition-colors">
-                                <TrendingUp className="w-5 h-5" />
-                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsRefreshing(true);
+                                fetch(`/api/agent/${agent.id}`)
+                                  .then(res => res.json())
+                                  .then(data => { setAgent(data); setIsRefreshing(false); })
+                                  .catch(() => setIsRefreshing(false));
+                              }}
+                              className="w-11 h-11 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-white group-hover:bg-white/30 transition-colors hover:bg-white/40"
+                              title="Refresh cashback balance"
+                            >
+                                <RefreshCw className={cn("w-5 h-5", isRefreshing && "animate-spin")} />
+                            </button>
                         </div>
                     </MotionDiv>
 
