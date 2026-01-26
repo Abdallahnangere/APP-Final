@@ -181,36 +181,34 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             </MotionDiv>
         </div>
 
-        {/* DOWNLOAD APP CARD - Premium CTA */}
+        {/* GOOGLE PLAY BADGE CARD - Smart CTA */}
         <MotionDiv
             whileTap={{ scale: 0.97 }}
             whileHover={{ y: -4 }}
             onClick={() => window.open('https://play.google.com/store/apps/details?id=online.saukimart.twa', '_blank')}
-            className="w-full bg-gradient-to-r from-accent-blue to-accent-purple rounded-3xl shadow-elevation-8 overflow-hidden cursor-pointer group relative"
+            className="w-full bg-white rounded-3xl shadow-elevation-4 overflow-hidden cursor-pointer group border border-slate-100 hover:shadow-elevation-8 transition-all"
         >
-            {/* Animated Background */}
-            <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            
-            <div className="relative z-10 p-6 flex items-center justify-between">
-                <div className="flex-1">
-                    <p className="text-xs font-black text-white/80 uppercase tracking-widest mb-1.5">Premium Experience</p>
-                    <h3 className="text-2xl font-black text-white mb-1 leading-tight">Get Sauki Mart<br/>App Now</h3>
-                    <p className="text-white/90 text-xs font-semibold mb-3">Native app + offline access + push notifications</p>
-                    
-                    {/* Google Play Badge Style Button */}
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-lg font-semibold text-sm text-slate-900 group-hover:shadow-2xl transition-all">
-                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M3 3h18v18H3z" fill="white"/>
-                            <path d="M3 3l18 18M21 3L3 21" stroke="currentColor" strokeWidth="2"/>
-                        </svg>
-                        <span className="font-bold">Download Now</span>
-                        <ArrowRight className="w-4 h-4" />
-                    </div>
-                </div>
+            <div className="relative p-6 flex flex-col items-center justify-center text-center min-h-[240px] bg-gradient-to-br from-slate-50 to-white">
+                {/* Background accent */}
+                <div className="absolute top-0 right-0 w-40 h-40 bg-blue-100 rounded-full blur-3xl opacity-30 -mr-20 -mt-20"></div>
                 
-                {/* Phone Icon */}
-                <div className="text-6xl ml-4 group-hover:scale-110 transition-transform duration-300 opacity-90">
-                    📱
+                <div className="relative z-10 flex flex-col items-center gap-4">
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Download Now</p>
+                    
+                    {/* Google Play Badge Image */}
+                    <img 
+                        src="/google-play-badge.png" 
+                        alt="Get it on Google Play" 
+                        className="h-16 object-contain group-hover:scale-110 transition-transform duration-300"
+                        onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = 'https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png';
+                        }}
+                    />
+                    
+                    <p className="text-xs font-semibold text-slate-600 max-w-xs">Get SAUKI MART app on Google Play - Full features, offline access & push notifications</p>
+                    
+                    {/* Tap hint */}
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-2">Tap to download</div>
                 </div>
             </div>
         </MotionDiv>

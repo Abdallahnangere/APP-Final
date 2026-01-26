@@ -71,7 +71,47 @@ export async function POST(req: Request) {
 
     const tx_ref = `AGENT-${type?.toUpperCase() || 'TX'}-${Date.now()}`;
 
-    // 4. Debit Wallet, Credit Cashback & Create Record
+    // 4. PRE-VERIFY API (For Data) BEFORE Deducting Wallet
+    let amigoVerified = true;
+    let amigoResponse: any = null;
+
+    if (type === 'data') {
+        const plan = await prisma.dataPlan.findUnique({ where: { id: payload.planId } });
+        if (plan) {
+            try {
+                const networkId = AMIGO_NETWORKS[plan.network];
+                const amigoPayload = {
+                    network: networkId,
+                    mobile_number: payload.phone,
+                    plan: Number(plan.planId),
+                    Ported_number: true
+                };
+
+                const amigoRes = await callAmigoAPI('/data/', amigoPayload, tx_ref);
+                amigoVerified = amigoRes.success && (
+                    amigoRes.data.success === true || 
+                    amigoRes.data.Status === 'successful' || 
+                    amigoRes.data.status === 'delivered' ||
+                    amigoRes.data.status === 'successful'
+                );
+                amigoResponse = amigoRes.data;
+
+                if (!amigoVerified) {
+                    return NextResponse.json({ 
+                        error: 'Network provider failed to process request. Wallet NOT deducted.', 
+                        details: amigoResponse 
+                    }, { status: 400 });
+                }
+            } catch (apiError: any) {
+                return NextResponse.json({ 
+                    error: 'Network provider API error. Wallet NOT deducted. Please try again.', 
+                    details: apiError.message 
+                }, { status: 500 });
+            }
+        }
+    }
+
+    // 5. NOW Debit Wallet, Credit Cashback & Create Record (ONLY if API verified)
     const result = await prisma.$transaction(async (prisma) => {
         // Debit Main Balance and Credit Cashback
         await prisma.agent.update({
@@ -88,7 +128,7 @@ export async function POST(req: Request) {
             data: {
                 tx_ref,
                 type: type,
-                status: 'paid',
+                status: type === 'data' ? 'delivered' : 'paid',
                 phone: payload.phone,
                 amount,
                 agentCashbackAmount: cashbackAmount,
@@ -101,7 +141,8 @@ export async function POST(req: Request) {
                 deliveryData: {
                     method: 'Agent Wallet',
                     manifest: description,
-                    cashbackEarned: cashbackAmount
+                    cashbackEarned: cashbackAmount,
+                    ...(amigoResponse && { amigo_response: amigoResponse })
                 }
             }
         });
@@ -119,40 +160,6 @@ export async function POST(req: Request) {
 
         return transaction;
     });
-
-    // 5. Fulfillment (If Data)
-    if (type === 'data') {
-        const plan = await prisma.dataPlan.findUnique({ where: { id: payload.planId } });
-        if (plan) {
-            const networkId = AMIGO_NETWORKS[plan.network];
-            const amigoPayload = {
-                network: networkId,
-                mobile_number: payload.phone,
-                plan: Number(plan.planId),
-                Ported_number: true
-            };
-
-            const amigoRes = await callAmigoAPI('/data/', amigoPayload, tx_ref);
-            const isSuccess = amigoRes.success && (
-                amigoRes.data.success === true || 
-                amigoRes.data.Status === 'successful' || 
-                amigoRes.data.status === 'delivered' ||
-                amigoRes.data.status === 'successful'
-            );
-
-            await prisma.transaction.update({
-                where: { id: result.id },
-                data: {
-                    status: isSuccess ? 'delivered' : 'failed', 
-                    deliveryData: {
-                        ...(result.deliveryData as object),
-                        amigo_response: amigoRes.data,
-                        status: isSuccess ? 'delivered' : 'failed'
-                    }
-                }
-            });
-        }
-    }
 
     const finalTx = await prisma.transaction.findUnique({ where: { id: result.id }, include: { product: true, dataPlan: true } });
     return NextResponse.json({ success: true, transaction: finalTx });
