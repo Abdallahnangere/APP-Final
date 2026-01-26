@@ -300,7 +300,6 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                    <Button onClick={handlePayClick} isLoading={isLoading} className={cn("h-11 text-base font-bold rounded-lg uppercase tracking-wide text-white w-full", agent ? "bg-purple-600 hover:bg-purple-700" : "bg-slate-900 hover:bg-slate-800")}>
                         {agent ? "Pay with Wallet" : "Continue"}
                    </Button>
-                   </div>
                </div>
            )}
 
