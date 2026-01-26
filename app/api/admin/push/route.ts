@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import * as webpush from 'web-push';
+import admin from 'firebase-admin';
 
 // Configure VAPID keys from environment variables
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
@@ -13,6 +14,21 @@ if (vapidPrivateKey) {
         vapidPublicKey,
         vapidPrivateKey
     );
+}
+
+// Initialize firebase-admin if SERVICE_ACCOUNT JSON provided
+const firebaseServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT;
+if (firebaseServiceAccount) {
+    try {
+        const svc = typeof firebaseServiceAccount === 'string' ? JSON.parse(firebaseServiceAccount) : firebaseServiceAccount;
+        if (!admin.apps.length) {
+            admin.initializeApp({
+                credential: admin.credential.cert(svc as any)
+            });
+        }
+    } catch (e) {
+        console.warn('Failed to init firebase-admin:', e);
+    }
 }
 
 export async function POST(req: Request) {
@@ -83,6 +99,29 @@ export async function POST(req: Request) {
                     }
                 };
 
+                // If endpoint is an FCM token (we saved them as `fcm:<token>`), send via firebase-admin
+                if (sub.endpoint && typeof sub.endpoint === 'string' && sub.endpoint.startsWith('fcm:') && admin.apps.length) {
+                    const fcmToken = sub.endpoint.replace('fcm:', '');
+                    const message: any = {
+                        token: fcmToken,
+                        notification: {
+                            title: notificationPayload.title,
+                            body: notificationPayload.body
+                        },
+                        webpush: {
+                            fcmOptions: {
+                                link: notificationPayload.data?.url || '/'
+                            }
+                        },
+                        data: {
+                            url: notificationPayload.data?.url || '/',
+                            timestamp: notificationPayload.data?.timestamp || new Date().toISOString()
+                        }
+                    };
+                    return admin.messaging().send(message);
+                }
+
+                // default: web-push (VAPID)
                 return webpush.sendNotification(
                     {
                         endpoint: sub.endpoint,

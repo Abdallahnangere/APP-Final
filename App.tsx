@@ -13,6 +13,7 @@ import { History } from './components/screens/History';
 import { BottomTabs } from './components/BottomTabs';
 import { ToastContainer } from './components/ui/Toast';
 import { SmartEntry } from './components/SmartEntry';
+import FirebaseMessaging from './components/FirebaseMessaging';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
@@ -65,6 +66,7 @@ export default function App() {
   return (
     <div className="min-h-full bg-[#f8fafc] text-slate-900 selection:bg-slate-200">
       <ToastContainer />
+      <FirebaseMessaging />
 
       <AnimatePresence>
         {showEntry && <SmartEntry onComplete={() => setShowEntry(false)} />}
