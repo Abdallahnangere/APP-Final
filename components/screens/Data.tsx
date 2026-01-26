@@ -361,7 +361,6 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                     </div>
                  </div>
                    </div>
-               </div>
            )}
 
            {step === 'success' && selectedPlan && paymentDetails && (
