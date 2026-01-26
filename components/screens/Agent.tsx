@@ -584,7 +584,7 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                             />
 
                             <Button 
-                                onClick={() => {
+                                onClick={async () => {
                                     const amount = parseFloat(redemptionForm.amount);
                                     if (!redemptionForm.amount || amount <= 0) {
                                         return toast.error("Enter valid amount");
@@ -592,17 +592,41 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
                                     if (amount > (agent.cashbackBalance || 0)) {
                                         return toast.error("Insufficient cashback balance");
                                     }
-                                    // Transfer to main wallet
-                                    setAgent(prev => prev ? {
-                                        ...prev,
-                                        balance: prev.balance + amount,
-                                        cashbackBalance: (prev.cashbackBalance || 0) - amount,
-                                        cashbackRedeemed: (prev.cashbackRedeemed || 0) + amount
-                                    } : null);
-                                    toast.success(`${formatCurrency(amount)} transferred to wallet!`);
-                                    setRedemptionForm({ amount: '' });
-                                    setShowCashbackRedemption(false);
+                                    
+                                    setIsLoading(true);
+                                    try {
+                                        const res = await fetch('/api/agent/redeem-cashback', {
+                                            method: 'POST',
+                                            headers: {'Content-Type': 'application/json'},
+                                            body: JSON.stringify({ agentId: agent.id, amount })
+                                        }).then(r => r.json());
+                                        
+                                        if (!res.success) throw new Error(res.error);
+                                        
+                                        // Instant UI update
+                                        setAgent(prev => prev ? {
+                                            ...prev,
+                                            balance: res.agent.balance,
+                                            cashbackBalance: res.agent.cashbackBalance,
+                                            cashbackRedeemed: res.agent.cashbackRedeemed
+                                        } : null);
+                                        
+                                        // Update localStorage immediately
+                                        const updated = { ...agent, ...res.agent };
+                                        localStorage.setItem('agentSession', JSON.stringify(updated));
+                                        
+                                        toast.success(res.message);
+                                        playSound('success');
+                                        setRedemptionForm({ amount: '' });
+                                        setShowCashbackRedemption(false);
+                                    } catch (e: any) {
+                                        playSound('error');
+                                        toast.error(e.message);
+                                    } finally {
+                                        setIsLoading(false);
+                                    }
                                 }}
+                                isLoading={isLoading}
                                 className="h-12 bg-green-600 text-white rounded-lg font-bold uppercase tracking-wide w-full shadow-lg"
                             >
                                 Transfer to Wallet

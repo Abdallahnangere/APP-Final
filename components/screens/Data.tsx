@@ -205,24 +205,24 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                  <h2 className="text-lg font-black text-slate-900 mb-1">Select Network</h2>
                  <p className="text-xs text-slate-500 font-medium mb-4">Choose your preferred carrier</p>
                </div>
-               <div className="space-y-2">
+               <div className="space-y-3">
                  {['MTN', 'AIRTEL', 'GLO'].map((net) => (
                      <button
                          key={net}
                          onClick={() => handleNetworkSelect(net as NetworkType)}
-                         className={cn("w-full h-20 rounded-2xl flex items-center px-4 font-bold text-lg shadow-sm transition-all border-2 active:scale-95 bg-white",
-                          net === 'MTN' ? 'border-yellow-300 hover:border-yellow-400 hover:shadow-lg hover:shadow-yellow-200' : 
-                          net === 'AIRTEL' ? 'border-red-300 hover:border-red-400 hover:shadow-lg hover:shadow-red-200' : 
-                          'border-green-300 hover:border-green-400 hover:shadow-lg hover:shadow-green-200')}
+                         className={cn("w-full h-24 rounded-2xl flex items-center px-4 font-bold text-lg shadow-md transition-all border-3 active:scale-95 bg-white",
+                          net === 'MTN' ? 'border-yellow-400 hover:border-yellow-500 hover:shadow-lg hover:shadow-yellow-200' : 
+                          net === 'AIRTEL' ? 'border-red-400 hover:border-red-500 hover:shadow-lg hover:shadow-red-200' : 
+                          'border-green-400 hover:border-green-500 hover:shadow-lg hover:shadow-green-200')}
                      >
-                         <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mr-4 p-2 border border-slate-200">
+                         <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mr-4 p-2 border-2 border-slate-200">
                              <img src={`/${net.toLowerCase()}.png`} alt={net} className="w-full h-full object-contain" />
                          </div>
                          <div className="flex-1 text-left">
-                           <div className="text-slate-900 font-black">{net}</div>
-                           <div className="text-xs text-slate-500 font-semibold mt-0.5">Quick & Reliable</div>
+                           <div className="text-slate-900 font-black text-base">{net} Network</div>
+                           <div className="text-xs text-slate-500 font-semibold mt-0.5">Fast & Reliable Delivery</div>
                          </div>
-                         <div className="text-xl">→</div>
+                         <div className="text-2xl">→</div>
                      </button>
                  ))}
                </div>
@@ -243,25 +243,25 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                    </div>
                  </div>
                </div>
-               <div className="space-y-2">
+               <div className="grid grid-cols-2 gap-3">
                    {filteredPlans.map(plan => (
                        <button
                            key={plan.id}
                            onClick={() => handlePlanSelect(plan)}
-                           className="bg-gradient-to-r from-slate-50 to-white p-4 rounded-xl border-2 border-slate-200 shadow-sm flex justify-between items-center cursor-pointer hover:border-slate-300 hover:shadow-md hover:from-white transition-all active:scale-95"
+                           className="bg-gradient-to-br from-slate-50 to-white p-4 rounded-xl border-2 border-slate-200 shadow-md flex flex-col justify-between cursor-pointer hover:border-slate-300 hover:shadow-lg transition-all active:scale-95 min-h-[140px]"
                        >
-                           <div className="text-left">
-                               <div className="text-base font-black text-slate-900">{plan.data}</div>
-                               <div className="text-xs text-slate-500 font-semibold mt-1">{plan.validity}</div>
+                           <div className="text-left mb-3">
+                               <div className="text-lg font-black text-slate-900">{plan.data}</div>
+                               <div className="text-[11px] text-slate-500 font-semibold mt-1.5">{plan.validity}</div>
                            </div>
-                           <div className="text-lg font-black text-white bg-gradient-to-br from-slate-900 to-slate-800 px-4 py-2 rounded-lg shadow-md">
+                           <div className="text-base font-black text-white bg-gradient-to-br from-slate-900 to-slate-800 px-3 py-2 rounded-lg shadow-md text-center">
                                {formatCurrency(plan.price)}
                            </div>
                        </button>
                    ))}
                    {filteredPlans.length === 0 && (
-                     <div className="text-center py-8 text-slate-500">
-                       <p className="text-sm font-semibold">No plans available for this network</p>
+                     <div className="col-span-2 text-center py-12 text-slate-500">
+                       <p className="text-sm font-semibold">No plans available</p>
                      </div>
                    )}
                </div>

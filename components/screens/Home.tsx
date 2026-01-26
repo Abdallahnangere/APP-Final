@@ -61,9 +61,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         {/* Top decorative gradient bar */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-900 via-accent-blue to-accent-purple/70"></div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-primary-900 tracking-tight">SAUKI MART</h1>
-            {/* Google Play Badge */}
+            {/* Google Play Badge - Smaller */}
             <MotionDiv
               whileTap={{ scale: 0.95 }}
               onClick={() => window.open('https://play.google.com/store/apps/details?id=online.saukimart.twa', '_blank')}
@@ -73,7 +73,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
               <img 
                 src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" 
                 alt="Get it on Google Play" 
-                className="h-10 object-contain"
+                className="h-7 object-contain"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               />
             </MotionDiv>

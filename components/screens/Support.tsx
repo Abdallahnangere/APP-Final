@@ -56,20 +56,6 @@ export const Support: React.FC<SupportProps> = ({ onBack }) => {
                 <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider pl-1">Quick Actions</h3>
                 <div className="space-y-2">
                     <button 
-                        onClick={() => window.open(`https://wa.me/2348061934056?text=Hi, I need help with Sauki Mart`, '_blank')} 
-                        className="w-full bg-green-600 hover:bg-green-700 text-white p-4 rounded-xl font-bold flex items-center justify-between active:scale-95 transition-all shadow-lg shadow-green-600/20"
-                    >
-                        <div className="flex items-center gap-3">
-                            <MessageCircle className="w-6 h-6" />
-                            <div className="text-left">
-                                <p className="text-sm font-black uppercase">WhatsApp Support</p>
-                                <p className="text-xs font-semibold opacity-90">Fastest response time</p>
-                            </div>
-                        </div>
-                        <ChevronRight className="w-5 h-5" />
-                    </button>
-
-                    <button 
                         onClick={() => setActiveSheet('complaint')} 
                         className="w-full bg-red-600 hover:bg-red-700 text-white p-4 rounded-xl font-bold flex items-center justify-between active:scale-95 transition-all shadow-lg shadow-red-600/20"
                     >

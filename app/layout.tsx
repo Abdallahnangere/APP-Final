@@ -8,9 +8,9 @@ import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SAUKI MART | Premium Data & Gadgets",
-  description: "Nigeria's #1 App for Instant Data (MTN, Airtel, Glo), Airtime, and Premium Phones. SMEDAN Certified SME.",
-  keywords: "sauki mart, buy data, mtn data, airtel data, glo data, cheap data, iphone nigeria, samsung nigeria, data reseller, vtu app",
+  title: "Sauki Mart | Premium Mobile Commerce & Instant Data Delivery Nigeria",
+  description: "Nigeria's trusted digital marketplace for instant MTN, Airtel, Glo data bundles, authentic mobile devices, and secure wallet services. SMEDAN-certified commerce platform.",
+  keywords: "data plans Nigeria, buy data online, instant airtime, mobile commerce, digital marketplace, secure payment, mobile devices Nigeria, data reseller platform",
   manifest: "/manifest.json",
   icons: {
     icon: "/icons/icon-192x192.png",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "SAUKI MART",
+    title: "Sauki Mart",
   },
   formatDetection: {
     telephone: false,
@@ -39,16 +39,14 @@ export const metadata: Metadata = {
     locale: "en_NG",
     url: "https://www.saukimart.online",
     siteName: "Sauki Mart",
-    title: "SAUKI MART | Instant Data & Devices",
-    description: "Secure, Fast, and Reliable Mobile Commerce.",
-    images: [{ url: "https://www.saukimart.online/icons/icon-512x512.png", width: 512, height: 512, alt: "Sauki Mart Logo" }],
+    title: "Sauki Mart | Premium Mobile Commerce Platform",
+    description: "Secure, fast, and reliable digital marketplace for data bundles and mobile devices",
+    images: [{ url: "https://www.saukimart.online/icons/icon-512x512.png", width: 512, height: 512, alt: "Sauki Mart - Premium Digital Marketplace" }],
   },
   twitter: {
     card: "summary_large_image",
-    site: "@saukimart",
-    creator: "@saukimart",
-    title: "SAUKI MART | Premium Data & Gadgets",
-    description: "Nigeria's #1 App for Instant Data, Airtime & Premium Phones",
+    title: "Sauki Mart | Instant Data & Devices",
+    description: "Nigeria's trusted platform for data bundles, airtime, and mobile devices",
     images: ["https://www.saukimart.online/icons/icon-512x512.png"],
   },
   robots: {
@@ -59,9 +57,12 @@ export const metadata: Metadata = {
     "max-video-preview": -1,
   },
   category: "Business",
-  applicationName: "SAUKI MART",
+  applicationName: "Sauki Mart",
   creator: "Sauki Data Links",
   publisher: "Sauki Data Links",
+  verification: {
+    google: "site-verification-code",
+  },
 };
 
 export const viewport: Viewport = {
