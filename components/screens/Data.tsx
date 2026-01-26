@@ -204,6 +204,7 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                <div>
                  <h2 className="text-lg font-black text-slate-900 mb-1">Select Network</h2>
                  <p className="text-xs text-slate-500 font-medium mb-4">Choose your preferred carrier</p>
+                   </div>
                </div>
                <div className="space-y-3">
                  {['MTN', 'AIRTEL', 'GLO'].map((net) => (
@@ -225,6 +226,7 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                          <div className="text-2xl">→</div>
                      </button>
                  ))}
+                   </div>
                </div>
            </div>
        ) : (
@@ -242,8 +244,10 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                      <p className="text-xs text-slate-500 font-semibold">Select your plan below</p>
                    </div>
                  </div>
+                   </div>
                </div>
-               <div className="grid grid-cols-2 gap-3">
+               <div className="max-h-[400px] overflow-y-auto pr-2 mb-4">
+                   <div className="grid grid-cols-2 gap-3">
                    {filteredPlans.map(plan => (
                        <button
                            key={plan.id}
@@ -264,6 +268,7 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                        <p className="text-sm font-semibold">No plans available</p>
                      </div>
                    )}
+                   </div>
                </div>
            </div>
        )}
@@ -298,6 +303,7 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                    <Button onClick={handlePayClick} isLoading={isLoading} className={cn("h-11 text-base font-bold rounded-lg uppercase tracking-wide text-white w-full", agent ? "bg-purple-600 hover:bg-purple-700" : "bg-slate-900 hover:bg-slate-800")}>
                         {agent ? "Pay with Wallet" : "Continue"}
                    </Button>
+                   </div>
                </div>
            )}
 
@@ -358,6 +364,7 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                         <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Manual verification required</p>
                     </div>
                  </div>
+                   </div>
                </div>
            )}
 

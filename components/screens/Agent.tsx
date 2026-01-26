@@ -72,17 +72,36 @@ export const AgentHub: React.FC<AgentHubProps> = ({ onBack }) => {
     let interval: any;
     if (view === 'dashboard' && agent) {
       fetchHistory();
-      interval = setInterval(() => { refreshBalance(true); }, 30000);
+      interval = setInterval(() => { refreshBalance(true); }, 15000);
     }
     return () => clearInterval(interval);
   }, [view, agent]);
+
+  // Handle app exit/visibility change - logout on page hide
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && agent && isManualLogout === false) {
+        // App going to background - logout automatically
+        setIsManualLogout(true);
+        setAgent(null);
+        setView('login');
+        localStorage.removeItem('agentSession');
+        toast.info("Logged out for security");
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [agent, isManualLogout]);
 
   const refreshBalance = async (silent = false) => {
     if (!agent) return;
     if (!silent) setIsRefreshing(true);
     try {
       const res = await api.agentGetBalance(agent.id);
-      setAgent(prev => prev ? { ...prev, balance: res.balance } : null);
+      const updatedAgent = { ...agent, balance: res.balance, cashbackBalance: res.cashbackBalance || agent.cashbackBalance };
+      setAgent(updatedAgent);
+      localStorage.setItem('agentSession', JSON.stringify(updatedAgent));
       if (!silent) {
            toast.success("Sync Complete");
            playSound('success');

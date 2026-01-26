@@ -848,11 +848,39 @@ export default function AdminPage() {
             )}
              {view === 'support' && (
                 <div className="space-y-4">
+                    {tickets && tickets.length > 0 && tickets.some(t => t.status !== 'resolved') && (
+                        <div className="bg-red-50 border-2 border-red-500 rounded-2xl p-4 flex items-start gap-3 animate-pulse">
+                            <div className="w-3 h-3 bg-red-500 rounded-full mt-1.5 flex-shrink-0 animate-ping"></div>
+                            <div>
+                                <p className="text-sm font-black text-red-700 uppercase">New Unresolved Tickets</p>
+                                <p className="text-xs text-red-600">{tickets.filter(t => t.status !== 'resolved').length} ticket(s) need attention</p>
+                            </div>
+                        </div>
+                    )}
                     {tickets?.map(t => (
-                        <div key={t.id} className="bg-white p-5 rounded-2xl border border-slate-100">
-                            <div className="flex justify-between mb-2">
+                        <div key={t.id} className={cn("bg-white p-5 rounded-2xl border-2 transition-all", t.status === 'resolved' ? "border-green-200 bg-green-50" : "border-slate-100 hover:shadow-lg")}>
+                            <div className="flex justify-between items-start mb-3">
                                 <span className="font-black text-slate-900">{t.phone}</span>
-                                <span className="text-[10px] bg-slate-100 px-2 py-1 rounded uppercase font-bold">{t.status}</span>
+                                <div className="flex gap-2">
+                                    <span className={cn("text-[10px] px-3 py-1 rounded-lg uppercase font-bold", t.status === 'resolved' ? "bg-green-500 text-white" : "bg-orange-500 text-white")}>{t.status}</span>
+                                    {t.status !== 'resolved' && (
+                                        <button onClick={async () => {
+                                            try {
+                                                await fetch('/api/admin/support/resolve', {
+                                                    method: 'POST',
+                                                    body: JSON.stringify({ ticketId: t.id, password })
+                                                });
+                                                fetchTickets();
+                                                toast.success("Ticket marked as resolved");
+                                            } catch (e) {
+                                                toast.error("Failed to resolve");
+                                            }
+                                        }} className="text-[10px] px-2 py-1 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 uppercase">
+                                            <CheckCircle2 className="w-3 h-3 inline mr-1" />
+                                            Mark Resolved
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-xl">{t.message}</p>
                             <p className="text-[10px] text-slate-400 mt-2 text-right">{new Date(t.createdAt).toLocaleString()}</p>

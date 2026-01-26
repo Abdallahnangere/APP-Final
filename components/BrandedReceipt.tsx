@@ -52,11 +52,11 @@ export const BrandedReceipt = forwardRef<HTMLDivElement, ReceiptProps>(({ transa
         className="w-[500px] h-[540px] bg-white text-slate-900 font-sans flex flex-col overflow-hidden relative rounded-lg"
         style={{ fontFamily: "'Inter', sans-serif" }}
       >
-        {/* === TOP SECTION: Premium Header with Gradient === */}
-        <div className="relative h-[140px] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 text-white overflow-hidden">
-          {/* Decorative gradient orbs */}
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl -mr-12 -mt-12"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/20 rounded-full blur-2xl -ml-12 -mb-12"></div>
+        {/* === TOP SECTION: Premium Fintech Header with Modern Gradient === */}
+        <div className="relative h-[140px] bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 text-white overflow-hidden">
+          {/* Decorative fintech-style gradient orbs */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-400/15 rounded-full blur-3xl -mr-16 -mt-16"></div>
+          <div className="absolute bottom-0 left-0 w-28 h-28 bg-indigo-400/15 rounded-full blur-3xl -ml-12 -mb-12"></div>
           
           {/* Content */}
           <div className="relative z-10 h-full flex flex-col justify-between p-4">
@@ -139,8 +139,8 @@ export const BrandedReceipt = forwardRef<HTMLDivElement, ReceiptProps>(({ transa
           </div>
         </div>
 
-        {/* === FOOTER SECTION: Brand & Support with DUAL PHONE NUMBERS === */}
-        <div className="bg-gradient-to-t from-slate-900 to-slate-800 text-white px-4 py-3 space-y-2.5">
+        {/* === FOOTER SECTION: Modern Fintech Footer === */}
+        <div className="bg-gradient-to-t from-blue-700 to-blue-600 text-white px-4 py-3 space-y-2.5">
           {/* TWO PHONE SUPPORT OPTIONS */}
           <div className="grid grid-cols-2 gap-2">
             {/* Primary Phone */}

@@ -181,19 +181,19 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             </MotionDiv>
         </div>
 
-        {/* GOOGLE PLAY BADGE CARD - Smart CTA */}
+        {/* GOOGLE PLAY BADGE CARD - Smaller CTA */}
         <MotionDiv
             whileTap={{ scale: 0.97 }}
             whileHover={{ y: -4 }}
             onClick={() => window.open('https://play.google.com/store/apps/details?id=online.saukimart.twa', '_blank')}
-            className="w-full bg-white rounded-3xl shadow-elevation-4 overflow-hidden cursor-pointer group border border-slate-100 hover:shadow-elevation-8 transition-all"
+            className="w-full bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer group border border-slate-100 hover:shadow-md transition-all"
         >
-            <div className="relative p-6 flex flex-col items-center justify-center text-center min-h-[240px] bg-gradient-to-br from-slate-50 to-white">
+            <div className="relative p-4 flex flex-col items-center justify-center text-center min-h-[120px] bg-gradient-to-br from-blue-50 to-white">
                 {/* Background accent */}
                 <div className="absolute top-0 right-0 w-40 h-40 bg-blue-100 rounded-full blur-3xl opacity-30 -mr-20 -mt-20"></div>
                 
-                <div className="relative z-10 flex flex-col items-center gap-4">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Download Now</p>
+                <div className="relative z-10 flex flex-col items-center gap-2">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Get on Google Play</p>
                     
                     {/* Google Play Badge Image */}
                     <img 
