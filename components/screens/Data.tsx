@@ -242,7 +242,6 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                      <p className="text-xs text-slate-500 font-semibold">Select your plan below</p>
                    </div>
                  </div>
-                   </div>
                </div>
                <div className="max-h-[400px] overflow-y-auto pr-2 mb-4">
                    <div className="grid grid-cols-2 gap-3">
