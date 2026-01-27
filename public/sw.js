@@ -152,7 +152,90 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
+// PUSH NOTIFICATION HANDLER (VAPID)
+self.addEventListener('push', (event) => {
+  try {
+    if (!event.data) {
+      console.warn('Push notification received without data');
+      return;
+    }
+
+    let notificationData = {};
+    try {
+      notificationData = event.data.json();
+    } catch (e) {
+      notificationData = {
+        title: 'Sauki Mart Notification',
+        body: event.data.text()
+      };
+    }
+
+    const options = {
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-192x192.png',
+      tag: 'sauki-notification',
+      requireInteraction: true,
+      vibrate: [200, 100, 200],
+      data: {
+        url: notificationData.url || '/',
+        timestamp: new Date().toISOString()
+      },
+      actions: [
+        {
+          action: 'open',
+          title: 'Open'
+        },
+        {
+          action: 'close',
+          title: 'Dismiss'
+        }
+      ]
+    };
+
+    if (notificationData.body) {
+      options.body = notificationData.body;
+    }
+    if (notificationData.image) {
+      options.image = notificationData.image;
+    }
+
+    event.waitUntil(
+      self.registration.showNotification(
+        notificationData.title || 'Sauki Mart Notification',
+        options
+      )
+    );
+  } catch (error) {
+    console.error('Push notification error:', error);
+  }
+});
+
+// NOTIFICATION CLICK HANDLER
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  if (event.action === 'close') {
+    return;
+  }
+
+  const url = event.notification.data?.url || '/';
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then((windowClients) => {
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url === url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
+    })
+  );
+});
+
 // NOTIFICATION CLOSE HANDLER
 self.addEventListener('notificationclose', (event) => {
-  // Analytics or cleanup can go here
+  console.log('Notification closed:', event.notification.tag);
 });
