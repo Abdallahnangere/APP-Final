@@ -20,12 +20,28 @@ try {
   // Handle background messages
   messaging.onBackgroundMessage(function(payload) {
     try {
-      const notificationTitle = (payload.notification && payload.notification.title) || payload.data?.title || 'Notification';
+      // FCM web push structure: notification details are in payload.data for web
+      const notificationTitle = payload.data?.title || payload.notification?.title || 'Notification';
       const notificationOptions = {
-        body: (payload.notification && payload.notification.body) || payload.data?.body || '',
+        body: payload.data?.body || payload.notification?.body || '',
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-192x192.png',
-        data: payload.data || {}
+        tag: 'sauki-notification',
+        requireInteraction: true,
+        data: {
+          url: payload.data?.url || payload.fcmOptions?.link || '/',
+          timestamp: payload.data?.timestamp || new Date().toISOString()
+        },
+        actions: [
+          {
+            action: 'open',
+            title: 'Open'
+          },
+          {
+            action: 'close',
+            title: 'Dismiss'
+          }
+        ]
       };
 
       self.registration.showNotification(notificationTitle, notificationOptions);

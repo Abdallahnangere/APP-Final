@@ -104,16 +104,21 @@ export async function POST(req: Request) {
                     const fcmToken = sub.endpoint.replace('fcm:', '');
                     const message: any = {
                         token: fcmToken,
-                        notification: {
-                            title: notificationPayload.title,
-                            body: notificationPayload.body
-                        },
                         webpush: {
+                            notification: {
+                                title: notificationPayload.title,
+                                body: notificationPayload.body,
+                                icon: '/icons/icon-192x192.png',
+                                badge: '/icons/icon-192x192.png',
+                                tag: 'sauki-notification'
+                            },
                             fcmOptions: {
                                 link: notificationPayload.data?.url || '/'
                             }
                         },
                         data: {
+                            title: notificationPayload.title,
+                            body: notificationPayload.body,
                             url: notificationPayload.data?.url || '/',
                             timestamp: notificationPayload.data?.timestamp || new Date().toISOString()
                         }
