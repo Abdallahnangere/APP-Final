@@ -9,7 +9,7 @@ The backend now supports sending real push notifications directly to users' devi
 VAPID keys were generated. Add these to your `.env.local` **AND Vercel Environment Variables**:
 
 ```env
-NEXT_PUBLIC_VAPID_PUBLIC_KEY=BOdoPRbgsp1Vr9qSzaAZ9YHDujQX3M0XA6YseL_zGVcJnUx01nyi976SgeBIrN7uXSf__qXJbSXiHZWcO8dA_Ws
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=BAV42PzlLbr8us6tO9vAJCjrs4jIHqhQyju1aOBHo_m81JLMV7N-RarAPvTue0Ndqr3F2VIW7eK7sDoTqgtX4og
 VAPID_PRIVATE_KEY=oGhQ41BD1NaNdaP1KVf7ug38rBZjhBSVnNGPjNayk7k
 VAPID_EMAIL=saukidatalinks@gmail.com
 ADMIN_PASSWORD=your_admin_password
@@ -24,7 +24,20 @@ DATABASE_URL=your_database_url
    - `VAPID_EMAIL`
    - Without these, production won't work!
 
-### 2. Database Migration
+### 2. Configure Firebase Console for Web Push
+
+**CRITICAL FOR FIREBASE CONSOLE CAMPAIGNS:**
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Select your project: `sauki-mart`
+3. Go to **Project Settings** (gear icon)
+4. Click on **Cloud Messaging** tab
+5. Scroll down to **Web push certificates**
+6. Click **Generate key pair** or **Add key pair**
+7. Enter the VAPID public key: `BAV42PzlLbr8us6tO9vAJCjrs4jIHqhQyju1aOBHo_m81JLMV7N-RarAPvTue0Ndqr3F2VIW7eK7sDoTqgtX4og`
+8. Save
+
+**Without this step, Firebase console campaigns won't work!**
 
 Run the following to add the PushSubscription table:
 

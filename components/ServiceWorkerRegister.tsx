@@ -1,71 +1,67 @@
-
 'use client';
 
 import { useEffect } from 'react';
+import { initFirebaseClient, getFirebaseMessaging } from '../lib/firebaseClient';
+import { getToken } from 'firebase/messaging';
 
 export default function ServiceWorkerRegister() {
   useEffect(() => {
     if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+      // Register Firebase messaging service worker
       navigator.serviceWorker
-        .register('/sw.js')
+        .register('/firebase-messaging-sw.js')
         .then((registration) => {
-          // Request notification permission
-          if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission().then((permission) => {
-              if (permission === 'granted') {
-                // Subscribe to push notifications and save subscription
-                if (registration.pushManager) {
-                  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-                  
-                  registration.pushManager
-                    .subscribe({
-                      userVisibleOnly: true,
-                      applicationServerKey: vapidPublicKey
-                        ? urlBase64ToUint8Array(vapidPublicKey)
-                        : undefined
-                    } as any)
-                    .then((subscription) => {
-                      // Send subscription to backend
+          console.log('Firebase messaging SW registered');
+
+          // Initialize Firebase
+          initFirebaseClient();
+          const messaging = getFirebaseMessaging();
+
+          if (messaging) {
+            // Request notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+              Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                  // Get FCM token
+                  getToken(messaging, {
+                    vapidKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+                    serviceWorkerRegistration: registration
+                  })
+                  .then((currentToken) => {
+                    if (currentToken) {
+                      console.log('FCM token available');
+
+                      // Send FCM token to backend as 'fcm:<token>'
                       fetch('/api/push-subscribe', {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                          subscription: subscription,
+                          subscription: {
+                            endpoint: `fcm:${currentToken}`
+                          },
                           phone: localStorage.getItem('userPhone') || null
                         })
                       })
                         .then(res => res.json())
                         .then(data => {
-                          console.log('✅ Push subscription saved:', data.subscriptionId);
+                          console.log('✅ FCM token saved:', data.subscriptionId);
                         })
-                        .catch(err => console.log('Push subscription error:', err));
-                    })
-                    .catch(err => console.log('Push subscription failed:', err));
+                        .catch(err => console.log('FCM token save error:', err));
+                    } else {
+                      console.log('No FCM token available');
+                    }
+                  })
+                  .catch(err => console.log('FCM token error:', err));
                 }
-              }
-            });
+              });
+            }
           }
         })
-        .catch(() => {}); // Silent catch to prevent console noise
+        .catch(err => console.log('SW registration failed:', err));
     }
   }, []);
 
   return null;
 }
-
-// Helper function to convert VAPID key to Uint8Array
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/\-/g, '+')
-    .replace(/_/g, '/');
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;}

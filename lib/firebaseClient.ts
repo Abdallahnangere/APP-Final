@@ -2,19 +2,18 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getMessaging } from 'firebase/messaging';
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+  apiKey: "AIzaSyDzQrdnbhabk7_4cDHb1I-Ohbg3bKYCysI",
+  authDomain: "sauki-mart.firebaseapp.com",
+  projectId: "sauki-mart",
+  storageBucket: "sauki-mart.firebasestorage.app",
+  messagingSenderId: "228994084382",
+  appId: "1:228994084382:web:b1079dd1898bb1da40880f"
 };
 
 export function initFirebaseClient() {
   if (!getApps().length) {
     try {
-      initializeApp(firebaseConfig as any);
+      initializeApp(firebaseConfig);
     } catch (e) {
       console.warn('Firebase init error', e);
     }
