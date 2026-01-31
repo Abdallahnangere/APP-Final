@@ -514,7 +514,9 @@ export default function AdminPage() {
             </div>
           </div>
         )}
-                </div>
+
+        <aside className="w-72 bg-primary-900/5 text-primary-50 flex flex-col shrink-0">
+            <div className="p-4">
                 <p className="text-accent-blue text-xs font-semibold uppercase tracking-widest">Master Control</p>
             </div>
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto no-scrollbar">
