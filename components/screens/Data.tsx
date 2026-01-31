@@ -8,7 +8,7 @@ import { BottomSheet } from '../ui/BottomSheet';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { PINKeyboard } from '../ui/PINKeyboard';
-import { CheckCircle2, Copy, Download, RefreshCw, Loader2, Wifi, Wallet, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, Copy, Download, RefreshCw, Loader2, Wifi, Wallet, ArrowLeft, Phone } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { BrandedReceipt } from '../BrandedReceipt';
 import { toast } from '../../lib/toast';
@@ -74,6 +74,25 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
   const handleNetworkSelect = (net: NetworkType) => {
     setSelectedNetwork(net);
     setStep('plans');
+  };
+
+  const handlePickContact = async () => {
+    try {
+      // Contact Picker API (experimental). Falls back with a toast if unsupported.
+      if ((navigator as any).contacts && typeof (navigator as any).contacts.select === 'function') {
+        const props = await (navigator as any).contacts.select(['name','tel'], { multiple: false });
+        if (props && props.length > 0) {
+          const c: any = props[0];
+          const tel = (c.tel && c.tel[0]) ? c.tel[0] : '';
+          setPhone(tel.replace(/\D/g, ''));
+        }
+      } else {
+        toast.info('Contact picker not supported on this device');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to pick contact');
+    }
   };
 
   const handlePlanSelect = (plan: DataPlan) => {
@@ -283,13 +302,22 @@ export const Data: React.FC<DataProps> = ({ agent, onBack }) => {
                    
                    <div>
                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-2 block">Recipient Phone</label>
-                       <Input 
+                       <div className="flex items-center gap-2">
+                         <Input 
                             placeholder="08012345678" 
                             type="tel" 
                             value={phone} 
-                            onChange={e => setPhone(e.target.value)} 
-                            className="h-11 text-base font-semibold rounded-lg border border-slate-200"
-                       />
+                            onChange={e => setPhone(e.target.value.replace(/\D/g, ''))} 
+                            className="h-11 text-base font-semibold rounded-lg border border-slate-200 flex-1"
+                         />
+                         <button
+                             onClick={handlePickContact}
+                             className="w-11 h-11 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-blue-600 hover:bg-slate-50"
+                             title="Pick from contacts"
+                         >
+                             <Phone className="w-5 h-5" />
+                         </button>
+                       </div>
                    </div>
                    
                    <div className="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-200">

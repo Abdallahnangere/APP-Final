@@ -7,6 +7,8 @@ import { Loader2, Lock, Trash2, Edit2, Send, Search, Package, Wifi, LayoutDashbo
 import { DataPlan, Product, Transaction, Agent } from '../../types';
 import { toast } from '../../lib/toast';
 import { BrandedReceipt } from '../../components/BrandedReceipt';
+import dynamic from 'next/dynamic';
+const AdminStatement = dynamic(() => import('../../components/AdminStatement').then(m => m.AdminStatement), { ssr: false });
 import { toPng } from 'html-to-image';
 
 // Force Desktop View Wrapper - Premium Styling
@@ -31,6 +33,10 @@ export default function AdminPage() {
   const [agents, setAgents] = useState<(Agent & { _count: { transactions: number } })[]>([]);
   const [webhooks, setWebhooks] = useState<any[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
+  const [viewMode, setViewMode] = useState<'list' | 'byDate' | 'byStatus'>('list');
+  const [filterDate, setFilterDate] = useState('');
+  const [groupedByDate, setGroupedByDate] = useState<Record<string, Transaction[]>>({});
+  const [groupedByStatus, setGroupedByStatus] = useState<Record<string, Transaction[]>>({});
 
   // Agent Drilldown State
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
@@ -54,6 +60,11 @@ export default function AdminPage() {
   // Receipt
   const receiptRef = useRef<HTMLDivElement>(null);
   const [receiptTx, setReceiptTx] = useState<any>(null);
+
+  // PDF Export
+  const pdfRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [pdfTransactions, setPdfTransactions] = useState<Transaction[] | null>(null);
 
   useEffect(() => {
     if (isAuthenticated) refreshAll();
@@ -81,7 +92,42 @@ export default function AdminPage() {
   // --- FETCHERS ---
   const fetchProducts = async () => setProducts(await fetch('/api/products').then(r => r.json()).catch(() => []));
   const fetchPlans = async () => setPlans(await fetch('/api/data-plans').then(r => r.json()).catch(() => []));
-  const fetchTransactions = async () => setTransactions(await fetch('/api/transactions/list').then(r => r.json()).catch(() => []));
+  const fetchTransactions = async (opts?: { date?: string, status?: string }) => {
+    try {
+      const url = new URL('/api/transactions/list', location.origin);
+      if (opts?.date) url.searchParams.set('date', opts.date);
+      if (opts?.status) url.searchParams.set('status', opts.status);
+
+      const res = await fetch(url.toString(), { headers: { 'x-admin-password': password } });
+      const data = await res.json();
+      if (data && Array.isArray(data)) {
+        setTransactions(data);
+        // compute groupings
+        const byDate: Record<string, Transaction[]> = {};
+        const byStatus: Record<string, Transaction[]> = {};
+        data.forEach((tx: Transaction) => {
+          const d = new Date(tx.createdAt).toISOString().slice(0,10);
+          byDate[d] = byDate[d] || [];
+          byDate[d].push(tx);
+
+          const s = tx.status || 'unknown';
+          byStatus[s] = byStatus[s] || [];
+          byStatus[s].push(tx);
+        });
+        // sort date groups descending
+        Object.keys(byDate).forEach(k => byDate[k].sort((a,b)=> new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        setGroupedByDate(byDate);
+        setGroupedByStatus(byStatus);
+      } else {
+        setTransactions([]);
+        setGroupedByDate({});
+        setGroupedByStatus({});
+      }
+    } catch (e) {
+      console.error('Failed to load transactions', e);
+      setTransactions([]);
+    }
+  };
   
   const fetchAgents = async () => {
       try {
@@ -304,12 +350,122 @@ export default function AdminPage() {
       }, 500);
   };
 
+  // ------------------ PDF Export logic ------------------
+  const generatePdf = async () => {
+    try {
+      setIsExporting(true);
+      // Determine which transactions to export (search takes precedence)
+      let exportItems: Transaction[] = [];
+      if (searchQuery && filteredTransactions.length > 0) {
+        exportItems = filteredTransactions;
+      } else if (filterDate && groupedByDate[filterDate]) {
+        exportItems = groupedByDate[filterDate];
+      } else if (viewMode === 'byStatus') {
+        // flatten all statuses
+        exportItems = Object.values(groupedByStatus).flat();
+      } else {
+        exportItems = transactions;
+      }
+
+      if (!exportItems || exportItems.length === 0) {
+        toast.error('No transactions to export');
+        setIsExporting(false);
+        return;
+      }
+
+      setPdfTransactions(exportItems);
+
+      // Wait for the DOM to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      if (!pdfRef.current) {
+        toast.error('PDF generation failed');
+        setIsExporting(false);
+        return;
+      }
+
+      // Generate image of the statement
+      const dataUrl = await toPng(pdfRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: '#ffffff' });
+
+      // Convert long image into multi-page PDF using jsPDF
+      const { jsPDF } = await import('jspdf');
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const imgW = img.naturalWidth;
+      const imgH = img.naturalHeight;
+
+      // Calculate rendered image size in mm for fitting width
+      const imgWidthMM = pageWidth;
+      const imgHeightMM = (imgH * imgWidthMM) / imgW;
+
+      // Convert to pixels per page slice height
+      const pxPerMM = imgW / imgWidthMM;
+      const sliceHeightPx = Math.floor(pageHeight * pxPerMM);
+
+      // Create canvas used to slice image into pages
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      canvas.width = imgW;
+      canvas.height = Math.min(sliceHeightPx, imgH);
+
+      let y = 0;
+      let page = 0;
+      while (y < imgH) {
+        canvas.height = Math.min(sliceHeightPx, imgH - y);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, y, imgW, canvas.height, 0, 0, canvas.width, canvas.height);
+        const sliceData = canvas.toDataURL('image/png');
+        if (page > 0) pdf.addPage();
+        pdf.addImage(sliceData, 'PNG', 0, 0, pageWidth, (canvas.height / pxPerMM));
+        y += canvas.height;
+        page += 1;
+      }
+
+      pdf.save(`SAUKI-TRANSACTIONS-${new Date().toISOString().slice(0,10)}.pdf`);
+      toast.success('PDF Exported');
+
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Export failed');
+    } finally {
+      setIsExporting(false);
+      setPdfTransactions(null);
+    }
+  };
+
   const filteredTransactions = transactions?.filter(t => 
       t.tx_ref.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.phone.includes(searchQuery)
   ) || [];
 
   const pendingOrders = transactions?.filter(t => t.type === 'ecommerce' && t.status === 'paid') || [];
+
+  // Recompute groupings when transactions or search change
+  React.useEffect(() => {
+    const data = filteredTransactions || [];
+    const byDate: Record<string, Transaction[]> = {};
+    const byStatus: Record<string, Transaction[]> = {};
+
+    data.forEach((tx: Transaction) => {
+      const d = new Date(tx.createdAt).toISOString().slice(0,10);
+      byDate[d] = byDate[d] || [];
+      byDate[d].push(tx);
+
+      const s = tx.status || 'unknown';
+      byStatus[s] = byStatus[s] || [];
+      byStatus[s].push(tx);
+    });
+
+    Object.keys(byDate).forEach(k => byDate[k].sort((a,b)=> new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    setGroupedByDate(byDate);
+    setGroupedByStatus(byStatus);
+  }, [filteredTransactions]);
 
   if (!isAuthenticated) return (
      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 p-6 relative overflow-hidden">
@@ -350,11 +506,14 @@ export default function AdminPage() {
             />
         )}
 
-        <aside className="w-72 bg-gradient-to-b from-primary-900 via-primary-800 to-primary-900 text-white flex flex-col h-full z-10 shadow-2xl shrink-0 border-r border-primary-700 overflow-hidden">
-            <div className="p-6 border-b border-primary-700/50 shrink-0">
-                <div className="flex items-center gap-3 mb-1">
-                    <div className="w-10 h-10 bg-gradient-to-br from-accent-blue to-accent-purple rounded-lg flex items-center justify-center font-bold">S</div>
-                    <h1 className="text-2xl font-bold tracking-tight">SAUKI</h1>
+        {/* Hidden Admin Statement rendered for PDF export */}
+        {pdfTransactions && (
+          <div ref={pdfRef}>
+            <div style={{ position: 'fixed', left: -9999, top: 0, opacity: 1, pointerEvents: 'none' }}>
+              <AdminStatement transactions={pdfTransactions} generatedAt={new Date().toLocaleString()} company={{ name: 'Sauki Mart', website: 'sukimart.online', phone: '08061934056', email: 'support@sukimart.online' }} />
+            </div>
+          </div>
+        )}
                 </div>
                 <p className="text-accent-blue text-xs font-semibold uppercase tracking-widest">Master Control</p>
             </div>
@@ -593,11 +752,21 @@ export default function AdminPage() {
 
             {view === 'transactions' && (
                 <div className="space-y-4">
-                     <div className="bg-white p-4 rounded-[2rem] border border-slate-100 flex gap-4 shrink-0">
+                     <div className="bg-white p-4 rounded-[2rem] border border-slate-100 flex gap-4 shrink-0 items-center">
                         <Search className="w-5 h-5 text-slate-400" />
                         <input className="flex-1 outline-none font-bold" placeholder="Search by reference or phone..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                        <div className="flex gap-2 ml-auto items-center">
+                            <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="p-2 rounded-lg border border-slate-200 text-sm" />
+                            <button onClick={() => fetchTransactions({ date: filterDate })} className="px-3 py-2 rounded-xl text-xs font-black uppercase bg-white">Fetch</button>
+                            <button onClick={() => { setViewMode('list'); }} className={cn("px-3 py-2 rounded-xl text-xs font-black uppercase", viewMode === 'list' ? 'bg-slate-900 text-white' : 'bg-white')}>List</button>
+                            <button onClick={() => { setViewMode('byDate'); }} className={cn("px-3 py-2 rounded-xl text-xs font-black uppercase", viewMode === 'byDate' ? 'bg-slate-900 text-white' : 'bg-white')}>By Date</button>
+                            <button onClick={() => { setViewMode('byStatus'); }} className={cn("px-3 py-2 rounded-xl text-xs font-black uppercase", viewMode === 'byStatus' ? 'bg-slate-900 text-white' : 'bg-white')}>By Status</button>
+                            <button onClick={() => generatePdf()} disabled={isExporting} className={cn("px-3 py-2 rounded-xl text-xs font-black uppercase", isExporting ? 'bg-slate-300 text-slate-600 cursor-not-allowed' : 'bg-slate-900 text-white')}>{isExporting ? 'Exporting...' : 'Export PDF'}</button>
+                        </div>
                     </div>
-                    <div className="bg-white rounded-[2rem] border border-slate-100 overflow-auto flex-1">
+
+                    {viewMode === 'list' && (
+                      <div className="bg-white rounded-[2rem] border border-slate-100 overflow-auto flex-1">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase text-slate-400 tracking-widest sticky top-0">
                                 <tr><th className="p-4">Date & Time</th><th className="p-4">Ref</th><th className="p-4">Phone</th><th className="p-4">Type</th><th className="p-4">Amount</th><th className="p-4">Status</th><th className="p-4">Action</th></tr>
@@ -633,7 +802,71 @@ export default function AdminPage() {
                                 ))}
                             </tbody>
                         </table>
-                    </div>
+                      </div>
+                    )}
+
+                    {viewMode === 'byDate' && (
+                      <div className="space-y-4">
+                        {Object.keys(groupedByDate).sort((a,b)=> b.localeCompare(a)).map(dateKey => (
+                          <div key={dateKey} className="bg-white rounded-[1rem] border border-slate-100 p-4">
+                            <div className="flex justify-between items-center mb-3">
+                              <h4 className="font-black">{dateKey}</h4>
+                              <span className="text-xs text-slate-400">{groupedByDate[dateKey].length} txns</span>
+                            </div>
+                            <div className="overflow-auto">
+                              <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                                  <tr><th className="p-2">Time</th><th className="p-2">Ref</th><th className="p-2">Phone</th><th className="p-2">Amount</th><th className="p-2">Status</th><th className="p-2">Action</th></tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {groupedByDate[dateKey].map(tx => (
+                                    <tr key={tx.id} className="hover:bg-slate-50">
+                                      <td className="p-2 font-mono text-xs text-slate-600">{new Date(tx.createdAt).toLocaleTimeString()}</td>
+                                      <td className="p-2 font-mono font-bold text-xs">{tx.tx_ref.slice(0,12)}</td>
+                                      <td className="p-2 font-bold text-xs">{tx.phone}</td>
+                                      <td className="p-2 font-bold">{formatCurrency(tx.amount)}</td>
+                                      <td className="p-2"><span className={cn("px-2 py-1 rounded text-[9px] font-black uppercase", tx.status === 'delivered' ? 'bg-green-100 text-green-700' : tx.status === 'paid' ? 'bg-blue-100 text-blue-700' : tx.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100')}>{tx.status}</span></td>
+                                      <td className="p-2"><button onClick={() => generateReceipt(tx)} className="text-blue-600 text-[10px] font-black uppercase">Receipt</button></td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {viewMode === 'byStatus' && (
+                      <div className="space-y-4">
+                        {['delivered','paid','pending','failed','unknown'].map(statusKey => (
+                          <div key={statusKey} className="bg-white rounded-[1rem] border border-slate-100 p-4">
+                            <div className="flex justify-between items-center mb-3">
+                              <h4 className="font-black uppercase">{statusKey}</h4>
+                              <span className="text-xs text-slate-400">{(groupedByStatus[statusKey] || []).length} txns</span>
+                            </div>
+                            <div className="overflow-auto">
+                              <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                                  <tr><th className="p-2">Date</th><th className="p-2">Ref</th><th className="p-2">Phone</th><th className="p-2">Amount</th><th className="p-2">Action</th></tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {(groupedByStatus[statusKey] || []).map(tx => (
+                                    <tr key={tx.id} className="hover:bg-slate-50">
+                                      <td className="p-2 font-mono text-xs text-slate-600 whitespace-nowrap">{new Date(tx.createdAt).toLocaleString()}</td>
+                                      <td className="p-2 font-mono font-bold text-xs">{tx.tx_ref.slice(0,12)}</td>
+                                      <td className="p-2 font-bold text-xs">{tx.phone}</td>
+                                      <td className="p-2 font-bold">{formatCurrency(tx.amount)}</td>
+                                      <td className="p-2"><button onClick={() => generateReceipt(tx)} className="text-blue-600 text-[10px] font-black uppercase">Receipt</button></td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                 </div>
             )}
 
