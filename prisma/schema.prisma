@@ -51,6 +51,7 @@ model Agent {
   updatedAt               DateTime      @updatedAt
   transactions            Transaction[]
   cashbackHistory         CashbackEntry[]
+  simOrders               AirtSIMOrder[] @relation("AirtSIMOrders")
 }
 
 model Transaction {
@@ -73,6 +74,10 @@ model Transaction {
   idempotencyKey      String?   @unique
   paymentData         Json?     
   deliveryData        Json?     
+  simOrderId          String?
+  simOrder            AirtSIMOrder? @relation(fields: [simOrderId], references: [id])
+  orderType           String    @default("regular")
+  transactionCost     TransactionCost?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 }
@@ -121,4 +126,55 @@ model CashbackEntry {
   description     String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+model TransactionCost {
+  id              String    @id @default(uuid())
+  transactionId   String    @unique
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  costPrice       Float     @default(0)
+  salePrice       Float
+  profit          Float     @default(0)
+  profitMargin    Float     @default(0)
+  itemType        String    @default("product")
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model AirtSIMProduct {
+  id              String    @id @default(uuid())
+  name            String    @unique
+  description     String?
+  price           Float
+  dataPackage     String?
+  validity        String?
+  isActive        Boolean   @default(true)
+  image           String?
+  orders          AirtSIMOrder[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model AirtSIMOrder {
+  id                      String    @id @default(uuid())
+  orderRef                String    @unique
+  productId               String
+  product                 AirtSIMProduct @relation(fields: [productId], references: [id])
+  phone                   String
+  customerName            String
+  email                   String?
+  imeiNumber              String?
+  simFrontImageUrl        String
+  simBackImageUrl         String
+  price                   Float
+  agentId                 String?
+  agent                   Agent?    @relation("AirtSIMOrders", fields: [agentId], references: [id])
+  status                  String    @default("pending")
+  transactionRef          String?
+  adminNotes              String?
+  estimatedActivationTime String    @default("5 hours")
+  transactions            Transaction[]
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 }

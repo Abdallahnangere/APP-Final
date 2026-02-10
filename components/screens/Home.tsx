@@ -181,36 +181,35 @@ export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
             </MotionDiv>
         </div>
 
-        {/* GOOGLE PLAY BADGE CARD - Smaller CTA */}
+        {/* GOOGLE PLAY BADGE CARD - Removed & moved to homepage */}
+        {/* Enhanced Features Showcase Section */}
         <MotionDiv
-            whileTap={{ scale: 0.97 }}
-            whileHover={{ y: -4 }}
-            onClick={() => window.open('https://play.google.com/store/apps/details?id=online.saukimart.twa', '_blank')}
-            className="w-full bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer group border border-slate-100 hover:shadow-md transition-all"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="w-full bg-gradient-to-br from-slate-900/5 to-blue-900/5 rounded-3xl p-6 border border-slate-200"
         >
-            <div className="relative p-4 flex flex-col items-center justify-center text-center min-h-[120px] bg-gradient-to-br from-blue-50 to-white">
-                {/* Background accent */}
-                <div className="absolute top-0 right-0 w-40 h-40 bg-blue-100 rounded-full blur-3xl opacity-30 -mr-20 -mt-20"></div>
-                
-                <div className="relative z-10 flex flex-col items-center gap-2">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Get on Google Play</p>
-                    
-                    {/* Google Play Badge Image */}
-                    <img 
-                        src="/google-play-badge.png" 
-                        alt="Get it on Google Play" 
-                        className="h-16 object-contain group-hover:scale-110 transition-transform duration-300"
-                        onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).src = 'https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png';
-                        }}
-                    />
-                    
-                    <p className="text-xs font-semibold text-slate-600 max-w-xs">Get SAUKI MART app on Google Play - Full features, offline access & push notifications</p>
-                    
-                    {/* Tap hint */}
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-2">Tap to download</div>
-                </div>
-            </div>
+          <p className="text-xs font-black uppercase text-slate-600 mb-4 tracking-widest">Advanced Features</p>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { icon: '🔐', label: 'Secure', desc: 'Bcrypt encryption' },
+              { icon: '⚡', label: 'Fast', desc: 'Instant delivery' },
+              { icon: '💰', label: 'Rewards', desc: '2% cashback' },
+              { icon: '📊', label: 'Track', desc: 'Real-time status' },
+              { icon: '👥', label: 'Agents', desc: 'Partner portals' },
+              { icon: '🛒', label: 'Store', desc: 'Premium gadgets' }
+            ].map((item, idx) => (
+              <MotionDiv 
+                key={idx}
+                whileTap={{ scale: 0.95 }}
+                className="text-center p-3 rounded-xl bg-white/60 backdrop-blur border border-white/80 hover:bg-white hover:shadow-elevation-2 transition-all group"
+              >
+                <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">{item.icon}</div>
+                <p className="text-xs font-black text-slate-900 uppercase tracking-tight leading-tight">{item.label}</p>
+                <p className="text-[10px] text-slate-500 font-medium mt-1">{item.desc}</p>
+              </MotionDiv>
+            ))}
+          </div>
         </MotionDiv>
 
         {/* SUPPORT CARD */}
