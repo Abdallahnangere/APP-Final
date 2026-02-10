@@ -2,7 +2,7 @@
 // File: app/api/admin/transaction-cost/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '../../../lib/prisma';
+import { prisma } from '../../../../lib/prisma';
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 
