@@ -1,238 +1,376 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Loader2, RefreshCw, Download, Search, Users, Smartphone, Signal, Clock } from 'lucide-react';
+import { Send, Play, Pause, History, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-type Entry = {
-  id: number;
+const NETWORK_COLORS: Record<string, string> = {
+  MTN: '#FFC300',
+  GLO: '#006633',
+  AIRTEL: '#E40000',
+  '9MOBILE': '#006E51',
+};
+
+type GiveawayEntry = {
+  id: string;
   phone: string;
   network: string;
   submitted_at: string;
 };
 
-const NETWORK_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  MTN:     { bg: 'bg-yellow-50',  text: 'text-yellow-700',  dot: '#FFC300' },
-  GLO:     { bg: 'bg-green-50',   text: 'text-green-700',   dot: '#006633' },
-  AIRTEL:  { bg: 'bg-red-50',     text: 'text-red-600',     dot: '#E40000' },
-  '9MOBILE': { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: '#006E51' },
+type GiveawayHistory = {
+  id: string;
+  phone: string;
+  network: string;
+  submitted_at: string;
+  sent_at: string;
 };
 
-function exportCSV(entries: Entry[]) {
-  const header = 'ID,Phone,Network,Submitted At\n';
-  const rows = entries.map(e =>
-    `${e.id},${e.phone},${e.network},"${new Date(e.submitted_at).toLocaleString()}"`
-  ).join('\n');
-  const blob = new Blob([header + rows], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `giveaway-entries-${Date.now()}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 export default function SGRMPage() {
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
+  const [entries, setEntries] = useState<GiveawayEntry[]>([]);
+  const [history, setHistory] = useState<GiveawayHistory[]>([]);
+  const [giveawayStatus, setGiveawayStatus] = useState({ is_paused: false });
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [networkFilter, setNetworkFilter] = useState('ALL');
   const [refreshing, setRefreshing] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [togglingStatus, setTogglingStatus] = useState(false);
 
-  const fetchEntries = async (silent = false) => {
-    if (!silent) setLoading(true);
-    else setRefreshing(true);
+  const fetchData = async () => {
     try {
-      const res = await fetch('/api/giveaway/entries');
-      const data = await res.json();
-      setEntries(Array.isArray(data) ? data : []);
-    } catch {
-      setEntries([]);
+      setLoading(true);
+      const [entriesRes, historyRes, statusRes] = await Promise.all([
+        fetch('/api/giveaway/entries'),
+        fetch('/api/giveaway/history'),
+        fetch('/api/giveaway/status'),
+      ]);
+
+      const entriesData = await entriesRes.json();
+      const historyData = await historyRes.json();
+      const statusData = await statusRes.json();
+
+      setEntries(Array.isArray(entriesData) ? entriesData : []);
+      setHistory(Array.isArray(historyData) ? historyData : []);
+      setGiveawayStatus(statusData || { is_paused: false });
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  useEffect(() => { fetchEntries(); }, []);
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const filtered = entries.filter(e => {
-    const matchSearch = e.phone.includes(search) || e.network.toLowerCase().includes(search.toLowerCase());
-    const matchNetwork = networkFilter === 'ALL' || e.network === networkFilter;
-    return matchSearch && matchNetwork;
-  });
+  const handleSendEntry = async (entryId: string) => {
+    setSendingId(entryId);
+    try {
+      const res = await fetch('/api/giveaway/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId }),
+      });
 
-  const networks = ['ALL', ...Array.from(new Set(entries.map(e => e.network)))];
+      if (res.ok) {
+        setEntries((prev: GiveawayEntry[]) => prev.filter((e: GiveawayEntry) => e.id !== entryId));
+        await fetchData();
+      }
+    } catch (error) {
+      console.error('Failed to send entry:', error);
+    } finally {
+      setSendingId(null);
+    }
+  };
 
-  // Stats
-  const networkCounts = entries.reduce<Record<string, number>>((acc, e) => {
-    acc[e.network] = (acc[e.network] || 0) + 1;
-    return acc;
-  }, {});
+  const handleToggleGiveawayStatus = async () => {
+    setTogglingStatus(true);
+    try {
+      const res = await fetch('/api/giveaway/status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_paused: !giveawayStatus.is_paused }),
+      });
 
-  const topNetwork = Object.entries(networkCounts).sort((a, b) => b[1] - a[1])[0];
+      if (res.ok) {
+        setGiveawayStatus({ is_paused: !giveawayStatus.is_paused });
+      }
+    } catch (error) {
+      console.error('Failed to toggle giveaway status:', error);
+    } finally {
+      setTogglingStatus(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  };
 
   return (
     <div
       className="min-h-screen w-full p-4 sm:p-8"
-      style={{ background: 'linear-gradient(145deg, #fdfaf4 0%, #fef9ee 50%, #fdf6e3 100%)' }}
+      style={{ background: 'linear-gradient(145deg, #fdfaf4 0%, #fef9ee 40%, #fdf6e3 100%)' }}
     >
-      {/* Header */}
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <p className="text-xs font-semibold tracking-[0.2em] uppercase mb-1" style={{ color: '#C9A84C' }}>
-                Saukimart · Ramadan Giveaway
-              </p>
-              <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">
-                Submissions
-              </h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => fetchEntries(true)}
-                disabled={refreshing}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-stone-200 bg-white/70 text-stone-600 text-sm font-medium hover:border-[#C9A84C]/50 transition-all"
-              >
-                <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />
-                Refresh
-              </button>
-              <button
-                onClick={() => exportCSV(filtered)}
-                disabled={filtered.length === 0}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white transition-all hover:opacity-90 disabled:opacity-40"
-                style={{ background: 'linear-gradient(135deg, #C9A84C, #8B6914)' }}
-              >
-                <Download className="w-4 h-4" />
-                Export CSV
-              </button>
-            </div>
-          </div>
-
-          {/* Gold divider */}
-          <div className="mt-4 h-px w-full" style={{ background: 'linear-gradient(90deg, #C9A84C44, transparent)' }} />
+          <h1 className="text-4xl font-bold text-stone-900 mb-2">Saukimart Giveaway</h1>
+          <h2 className="text-lg text-stone-600">Admin Control Panel</h2>
         </div>
 
-        {/* Stat Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-          <div className="bg-white/75 backdrop-blur-sm border border-stone-100 rounded-2xl px-5 py-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <Users className="w-4 h-4 text-[#C9A84C]" />
-              <span className="text-xs text-stone-400 uppercase tracking-wider font-medium">Total Entries</span>
-            </div>
-            <p className="text-3xl font-bold text-stone-900">{entries.length}</p>
-          </div>
-          <div className="bg-white/75 backdrop-blur-sm border border-stone-100 rounded-2xl px-5 py-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <Signal className="w-4 h-4 text-[#C9A84C]" />
-              <span className="text-xs text-stone-400 uppercase tracking-wider font-medium">Top Network</span>
-            </div>
-            <p className="text-3xl font-bold text-stone-900">{topNetwork ? topNetwork[0] : '—'}</p>
-            {topNetwork && <p className="text-xs text-stone-400 mt-0.5">{topNetwork[1]} entries</p>}
-          </div>
-          <div className="bg-white/75 backdrop-blur-sm border border-stone-100 rounded-2xl px-5 py-4 shadow-sm col-span-2 sm:col-span-1">
-            <div className="flex items-center gap-2 mb-1">
-              <Clock className="w-4 h-4 text-[#C9A84C]" />
-              <span className="text-xs text-stone-400 uppercase tracking-wider font-medium">Latest Entry</span>
-            </div>
-            <p className="text-sm font-semibold text-stone-700 truncate">
-              {entries[0]
-                ? new Date(entries[0].submitted_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-                : '—'}
-            </p>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 mb-4">
-          <div className="relative flex-1 min-w-[180px]">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-300" />
-            <input
-              type="text"
-              placeholder="Search by phone or network…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-white/70 text-sm text-stone-700 placeholder:text-stone-300 outline-none focus:border-[#C9A84C] transition-colors"
+        {/* Status Section */}
+        <div
+          className="mb-8 rounded-2xl border border-stone-200 p-6 flex items-center justify-between"
+          style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(10px)' }}
+        >
+          <div className="flex items-center gap-4">
+            <div
+              className="w-4 h-4 rounded-full animate-pulse"
+              style={{ backgroundColor: giveawayStatus.is_paused ? '#ef4444' : '#22c55e' }}
             />
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {networks.map(n => (
-              <button
-                key={n}
-                onClick={() => setNetworkFilter(n)}
-                className={cn(
-                  'px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wide border transition-all',
-                  networkFilter === n
-                    ? 'border-[#C9A84C] text-[#8B6914] bg-[#fdf8ec]'
-                    : 'border-stone-200 text-stone-400 bg-white/50 hover:border-stone-300'
-                )}
-              >
-                {n === 'ALL' ? `All (${entries.length})` : `${n} (${networkCounts[n] || 0})`}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="bg-white/75 backdrop-blur-sm border border-stone-100 rounded-2xl shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center py-24">
-              <Loader2 className="w-6 h-6 animate-spin text-[#C9A84C]" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="py-24 text-center">
-              <Smartphone className="w-8 h-8 text-stone-200 mx-auto mb-3" />
-              <p className="text-stone-400 text-sm font-medium">
-                {entries.length === 0 ? 'No submissions yet.' : 'No results match your search.'}
+            <div>
+              <p className="text-sm text-stone-500 uppercase tracking-widest">Giveaway Status</p>
+              <p className="text-lg font-semibold text-stone-900">
+                {giveawayStatus.is_paused ? 'Paused' : 'Active'}
               </p>
             </div>
-          ) : (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-stone-50">
-                  <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-stone-400">#</th>
-                  <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-stone-400">Phone</th>
-                  <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-stone-400">Network</th>
-                  <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-stone-400">Submitted</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-50">
-                {filtered.map((e, i) => {
-                  const net = NETWORK_COLORS[e.network] || { bg: 'bg-stone-50', text: 'text-stone-600', dot: '#aaa' };
-                  return (
-                    <tr key={e.id} className="hover:bg-stone-50/50 transition-colors">
-                      <td className="px-5 py-3.5 text-xs text-stone-300 font-mono">{i + 1}</td>
-                      <td className="px-5 py-3.5">
-                        <span className="font-mono text-sm font-semibold text-stone-800">{e.phone}</span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold uppercase', net.bg, net.text)}>
-                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: net.dot }} />
-                          {e.network}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-xs text-stone-400">
-                        {new Date(e.submitted_at).toLocaleString('en-GB', {
-                          day: 'numeric', month: 'short', year: 'numeric',
-                          hour: '2-digit', minute: '2-digit'
-                        })}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+          </div>
 
-          {/* Footer count */}
-          {filtered.length > 0 && (
-            <div className="px-5 py-3 border-t border-stone-50 text-xs text-stone-300 font-medium">
-              Showing {filtered.length} of {entries.length} entries
+          <button
+            onClick={handleToggleGiveawayStatus}
+            disabled={togglingStatus}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-white transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: giveawayStatus.is_paused ? '#8B6914' : '#ef4444',
+            }}
+          >
+            {giveawayStatus.is_paused ? (
+              <>
+                <Play className="w-4 h-4" />
+                Resume
+              </>
+            ) : (
+              <>
+                <Pause className="w-4 h-4" />
+                Pause
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Refresh Button */}
+        <div className="mb-6 flex justify-end">
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/50 border border-stone-200 hover:bg-white/70 transition-all duration-300 disabled:opacity-60"
+          >
+            <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />
+            Refresh
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-stone-200">
+          {[
+            { id: 'active', label: 'Active Entries', icon: '📋' },
+            { id: 'history', label: 'Sent History', icon: '📜' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as 'active' | 'history')}
+              className={cn(
+                'px-6 py-3 font-medium text-sm transition-all duration-300 border-b-2',
+                activeTab === tab.id
+                  ? 'border-[#C9A84C] text-[#C9A84C]'
+                  : 'border-transparent text-stone-400 hover:text-stone-600'
+              )}
+            >
+              <span className="mr-2">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-[#C9A84C] mx-auto mb-4" />
+              <p className="text-stone-500">Loading...</p>
             </div>
-          )}
+          </div>
+        ) : activeTab === 'active' ? (
+          <div
+            className="rounded-2xl border border-stone-200 overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(10px)' }}
+          >
+            {entries.length === 0 ? (
+              <div className="p-12 text-center">
+                <AlertCircle className="w-8 h-8 text-stone-300 mx-auto mb-3" />
+                <p className="text-stone-400">No active entries at the moment.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="border-b border-stone-100 bg-stone-50/50">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-stone-600 uppercase tracking-widest">
+                        Phone
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-stone-600 uppercase tracking-widest">
+                        Network
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-stone-600 uppercase tracking-widest">
+                        Submitted
+                      </th>
+                      <th className="px-6 py-4 text-center text-xs font-semibold text-stone-600 uppercase tracking-widest">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entries.map((entry, idx) => (
+                      <tr
+                        key={entry.id}
+                        className={cn(
+                          'transition-colors duration-200',
+                          idx !== entries.length - 1 && 'border-b border-stone-100',
+                          'hover:bg-stone-50/50'
+                        )}
+                      >
+                        <td className="px-6 py-4 text-sm font-medium text-stone-900">{entry.phone}</td>
+                        <td className="px-6 py-4">
+                          <span
+                            className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-white"
+                            style={{
+                              backgroundColor: NETWORK_COLORS[entry.network] || '#6b7280',
+                            }}
+                          >
+                            {entry.network}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-stone-500">
+                          {new Date(entry.submitted_at).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            onClick={() => handleSendEntry(entry.id)}
+                            disabled={sendingId === entry.id}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#C9A84C] hover:bg-[#B8860B] text-white font-medium text-sm transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {sendingId === entry.id ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <Send className="w-4 h-4" />
+                                Send
+                              </>
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div
+            className="rounded-2xl border border-stone-200 overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(10px)' }}
+          >
+            {history.length === 0 ? (
+              <div className="p-12 text-center">
+                <History className="w-8 h-8 text-stone-300 mx-auto mb-3" />
+                <p className="text-stone-400">No sent entries yet.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="border-b border-stone-100 bg-stone-50/50">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-stone-600 uppercase tracking-widest">
+                        Phone
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-stone-600 uppercase tracking-widest">
+                        Network
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-stone-600 uppercase tracking-widest">
+                        Submitted
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-stone-600 uppercase tracking-widest">
+                        Sent At
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map((item, idx) => (
+                      <tr
+                        key={item.id}
+                        className={cn(
+                          'transition-colors duration-200',
+                          idx !== history.length - 1 && 'border-b border-stone-100',
+                          'hover:bg-stone-50/50'
+                        )}
+                      >
+                        <td className="px-6 py-4 text-sm font-medium text-stone-900">{item.phone}</td>
+                        <td className="px-6 py-4">
+                          <span
+                            className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-white"
+                            style={{
+                              backgroundColor: NETWORK_COLORS[item.network] || '#6b7280',
+                            }}
+                          >
+                            {item.network}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-stone-500">
+                          {new Date(item.submitted_at).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-stone-500">
+                          {new Date(item.sent_at).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Stats Footer */}
+        <div className="mt-8 grid grid-cols-3 gap-4">
+          {[
+            { label: 'Active Entries', value: entries.length, color: '#3B82F6' },
+            { label: 'Total Sent', value: history.length, color: '#10B981' },
+            { label: 'Status', value: giveawayStatus.is_paused ? 'Paused' : 'Running', color: '#F59E0B' },
+          ].map((stat, idx) => (
+            <div
+              key={idx}
+              className="rounded-xl border border-stone-200 p-6"
+              style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(10px)' }}
+            >
+              <p className="text-xs text-stone-500 uppercase tracking-widest mb-2">{stat.label}</p>
+              <p
+                className="text-2xl font-bold"
+                style={{ color: stat.color }}
+              >
+                {stat.value}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
-      }
+}

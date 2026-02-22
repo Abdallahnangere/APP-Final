@@ -11,12 +11,9 @@ const NETWORKS = [
   { value: '9MOBILE', label: '9mobile', color: '#006E51' },
 ];
 
-// ── Islamic Geometry SVG Patterns ────────────────────────────────────────────
-
 const IslamicStar = ({ size = 80, opacity = 0.12, className = '' }: { size?: number; opacity?: number; className?: string }) => (
   <svg width={size} height={size} viewBox="0 0 100 100" className={className} style={{ opacity }}>
     <g fill="#B8860B" stroke="none">
-      {/* 8-pointed Islamic star */}
       {[0, 45, 90, 135, 180, 225, 270, 315].map((deg, i) => (
         <polygon
           key={i}
@@ -34,7 +31,6 @@ const GeometricPattern = () => (
   <svg width="100%" height="100%" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 pointer-events-none">
     <defs>
       <pattern id="islamic-grid" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
-        {/* Interlocking geometric tile */}
         <g stroke="#C9A84C" strokeWidth="0.6" fill="none" opacity="0.35">
           <polygon points="40,4 76,20 76,60 40,76 4,60 4,20" />
           <polygon points="40,14 66,24 66,56 40,66 14,56 14,24" />
@@ -64,17 +60,9 @@ const MoonCrescent = ({ className = '' }: { className?: string }) => (
   </svg>
 );
 
-// ── Custom Dropdown ───────────────────────────────────────────────────────────
-
 type Network = { value: string; label: string; color: string };
 
-function NetworkDropdown({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
+function NetworkDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const selected = NETWORKS.find((n) => n.value === value);
@@ -94,33 +82,22 @@ function NetworkDropdown({
         onClick={() => setOpen((o) => !o)}
         className={cn(
           'w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border-2 transition-all duration-300 text-left bg-white/70 backdrop-blur-sm',
-          open
-            ? 'border-[#C9A84C] shadow-[0_0_0_4px_rgba(201,168,76,0.15)]'
-            : 'border-stone-200 hover:border-[#C9A84C]/50'
+          open ? 'border-[#C9A84C] shadow-[0_0_0_4px_rgba(201,168,76,0.15)]' : 'border-stone-200 hover:border-[#C9A84C]/50'
         )}
       >
         <span className="flex items-center gap-3">
           {selected ? (
             <>
-              <span
-                className="w-3 h-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: selected.color }}
-              />
+              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: selected.color }} />
               <span className="text-stone-800 font-medium text-sm">{selected.label}</span>
             </>
           ) : (
             <span className="text-stone-400 text-sm">Select your network</span>
           )}
         </span>
-        <ChevronDown
-          className={cn(
-            'w-4 h-4 text-stone-400 transition-transform duration-300',
-            open && 'rotate-180 text-[#C9A84C]'
-          )}
-        />
+        <ChevronDown className={cn('w-4 h-4 text-stone-400 transition-transform duration-300', open && 'rotate-180 text-[#C9A84C]')} />
       </button>
 
-      {/* Dropdown Panel */}
       <div
         className={cn(
           'absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-md border border-stone-100 rounded-2xl shadow-2xl z-50 overflow-hidden transition-all duration-300 origin-top',
@@ -139,10 +116,7 @@ function NetworkDropdown({
             )}
           >
             <span className="flex items-center gap-3">
-              <span
-                className="w-3 h-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: net.color }}
-              />
+              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: net.color }} />
               <span className={cn('text-sm font-medium', value === net.value ? 'text-[#B8860B]' : 'text-stone-700')}>
                 {net.label}
               </span>
@@ -155,13 +129,30 @@ function NetworkDropdown({
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
-
 export default function GiveawayPage() {
   const [phone, setPhone] = useState('');
   const [network, setNetwork] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [giveawayPaused, setGiveawayPaused] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch('/api/giveaway/status');
+        const data = await res.json();
+        setGiveawayPaused(data.is_paused ?? false);
+      } catch (error) {
+        console.error('Failed to fetch giveaway status:', error);
+      } finally {
+        setLoadingStatus(false);
+      }
+    };
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = async () => {
     setErrorMsg('');
@@ -191,30 +182,23 @@ export default function GiveawayPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-8 relative overflow-hidden"
+    <div
+      className="min-h-screen w-full flex items-center justify-center p-4 sm:p-8 relative overflow-hidden"
       style={{ background: 'linear-gradient(145deg, #fdfaf4 0%, #fef9ee 40%, #fdf6e3 100%)' }}
     >
-
-      {/* Background geometric pattern */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <GeometricPattern />
       </div>
 
-      {/* Decorative corner stars */}
       <IslamicStar size={160} opacity={0.07} className="absolute -top-8 -left-8" />
       <IslamicStar size={120} opacity={0.06} className="absolute -bottom-6 -right-6" />
-      <IslamicStar size={80}  opacity={0.05} className="absolute top-1/4 right-4" />
-      <IslamicStar size={64}  opacity={0.05} className="absolute bottom-1/3 left-2" />
+      <IslamicStar size={80} opacity={0.05} className="absolute top-1/4 right-4" />
+      <IslamicStar size={64} opacity={0.05} className="absolute bottom-1/3 left-2" />
 
-      {/* Card */}
       <div className="relative w-full max-w-md z-10">
-
-        {/* Thin gold top border line */}
         <div className="h-0.5 w-full rounded-t-3xl" style={{ background: 'linear-gradient(90deg, transparent, #C9A84C, transparent)' }} />
 
         <div className="bg-white/75 backdrop-blur-xl rounded-b-3xl rounded-tr-3xl border border-stone-100/80 shadow-[0_32px_80px_rgba(0,0,0,0.08)] px-8 py-10 sm:px-10">
-
-          {/* Header */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-3 mb-5">
               <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, #C9A84C)' }} />
@@ -235,7 +219,9 @@ export default function GiveawayPage() {
                   </span>
                 </h1>
                 <p className="text-stone-500 text-sm leading-relaxed max-w-xs mx-auto">
-                  Enter your phone number for a chance to win this blessed season. One winner. Real prize.
+                  {giveawayPaused && !loadingStatus
+                    ? 'The giveaway session has ended. Watch for announcements about future opportunities.'
+                    : 'Enter your phone number for a chance to win this blessed season. One winner. Real prize.'}
                 </p>
               </>
             ) : (
@@ -246,22 +232,19 @@ export default function GiveawayPage() {
             )}
           </div>
 
-          {/* Decorative divider */}
           <div className="flex items-center gap-3 mb-8">
             <div className="h-px flex-1 bg-stone-100" />
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M9 1L10.5 7H16.5L11.5 10.5L13 16.5L9 13L5 16.5L6.5 10.5L1.5 7H7.5L9 1Z" fill="#C9A84C" opacity="0.5"/>
+              <path d="M9 1L10.5 7H16.5L11.5 10.5L13 16.5L9 13L5 16.5L6.5 10.5L1.5 7H7.5L9 1Z" fill="#C9A84C" opacity="0.5" />
             </svg>
             <div className="h-px flex-1 bg-stone-100" />
           </div>
 
           {status === 'success' ? (
-            /* ── Success State ── */
             <div className="text-center py-4">
-              <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #fef8e7, #fdeec4)' }}>
+              <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #fef8e7, #fdeec4)' }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                  <path d="M20 6L9 17L4 12" stroke="#C9A84C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M20 6L9 17L4 12" stroke="#C9A84C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
               <p className="text-stone-400 text-xs uppercase tracking-widest mt-2">Entry confirmed</p>
@@ -270,9 +253,7 @@ export default function GiveawayPage() {
               </p>
             </div>
           ) : (
-            /* ── Form ── */
             <div className="space-y-5">
-              {/* Phone */}
               <div>
                 <label className="block text-xs font-semibold text-stone-500 uppercase tracking-widest mb-2">
                   Phone Number
@@ -292,7 +273,6 @@ export default function GiveawayPage() {
                 />
               </div>
 
-              {/* Network */}
               <div>
                 <label className="block text-xs font-semibold text-stone-500 uppercase tracking-widest mb-2">
                   Network Provider
@@ -300,33 +280,31 @@ export default function GiveawayPage() {
                 <NetworkDropdown value={network} onChange={setNetwork} />
               </div>
 
-              {/* Error */}
               {errorMsg && (
                 <p className="text-red-500 text-xs text-center bg-red-50 rounded-xl py-2.5 px-4">
                   {errorMsg}
                 </p>
               )}
 
-              {/* Submit */}
               <button
                 onClick={handleSubmit}
-                disabled={status === 'loading'}
+                disabled={status === 'loading' || giveawayPaused}
                 className={cn(
                   'w-full py-4 rounded-2xl font-semibold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2',
-                  status === 'loading'
-                    ? 'opacity-60 cursor-not-allowed'
-                    : 'hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]'
+                  status === 'loading' || giveawayPaused ? 'opacity-60 cursor-not-allowed' : 'hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]'
                 )}
                 style={{
-                  background: status === 'loading'
-                    ? '#d4b06a'
-                    : 'linear-gradient(135deg, #C9A84C 0%, #8B6914 100%)',
+                  background: status === 'loading' || giveawayPaused ? '#d4b06a' : 'linear-gradient(135deg, #C9A84C 0%, #8B6914 100%)',
                   color: '#fff',
-                  boxShadow: status === 'loading' ? 'none' : '0 8px 32px rgba(139,105,20,0.35)',
+                  boxShadow: status === 'loading' || giveawayPaused ? 'none' : '0 8px 32px rgba(139,105,20,0.35)',
                 }}
               >
-                {status === 'loading' ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+                {giveawayPaused ? (
+                  'Giveaway Ended'
+                ) : status === 'loading' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Submitting...
+                  </>
                 ) : (
                   'Enter the Giveaway'
                 )}
@@ -339,7 +317,6 @@ export default function GiveawayPage() {
           )}
         </div>
 
-        {/* Bottom decorative line */}
         <div className="h-0.5 w-3/4 mx-auto rounded-b-full" style={{ background: 'linear-gradient(90deg, transparent, #C9A84C44, transparent)' }} />
       </div>
     </div>
