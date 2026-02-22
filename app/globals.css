@@ -8,6 +8,8 @@
   --background-start-rgb: 248, 250, 252;
   --background-end-rgb: 248, 250, 252;
   --app-max-width: 480px;
+  --font-playfair: "Playfair Display", serif;
+  --font-dm-sans: "DM Sans", sans-serif;
 }
 
 html, body {

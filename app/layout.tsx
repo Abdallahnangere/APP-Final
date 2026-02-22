@@ -1,11 +1,13 @@
 
 import React from 'react';
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Playfair_Display, DM_Sans } from "next/font/google";
 import "./globals.css";
 import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
 
 const inter = Inter({ subsets: ["latin"] });
+const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
 
 export const metadata: Metadata = {
   title: "Sauki Mart | Premium Mobile Commerce & Instant Data Delivery Nigeria",
@@ -127,8 +129,10 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <link rel="preload" href="/logo.png" as="image" />
+        <link rel="preload" href="/render.png" as="image" />
       </head>
-      <body className={inter.className}>
+      <body className={`${inter.className} ${playfair.variable} ${dmSans.variable}`}>
         <div id="root">
             {children}
             <ServiceWorkerRegister />
