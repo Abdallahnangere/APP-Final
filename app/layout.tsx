@@ -10,9 +10,9 @@ const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfa
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
 
 export const metadata: Metadata = {
-  title: "Sauki Mart | Premium Mobile Commerce & Instant Data Delivery Nigeria",
-  description: "Nigeria's trusted digital marketplace for instant MTN, Airtel, Glo data bundles, authentic mobile devices, and secure wallet services. SMEDAN-certified commerce platform.",
-  keywords: "data plans Nigeria, buy data online, instant airtime, mobile commerce, digital marketplace, secure payment, mobile devices Nigeria, data reseller platform",
+  title: "SaukiMart | Nigeria's Trusted Digital Marketplace for Data, Devices & Payments",
+  description: "Buy instant MTN, Airtel, Glo data bundles, premium gadgets, and manage secure payments on Nigeria's trusted marketplace. Join 10,000+ users. SMEDAN certified.",
+  keywords: "instant data Nigeria, buy data online, airtime, mobile devices Nigeria, digital marketplace, secure payment, data reseller, SaukiMart",
   manifest: "/manifest.json",
   icons: {
     icon: "/icons/icon-192x192.png",
@@ -20,13 +20,13 @@ export const metadata: Metadata = {
     other: [
       { rel: "icon", sizes: "any", url: "/icons/icon-192x192.png" },
       { rel: "apple-touch-icon", url: "/icons/icon-192x192.png" },
-      { rel: "mask-icon", url: "/icons/icon-maskable-192x192.png", color: "#1e293b" }
+      { rel: "mask-icon", url: "/icons/icon-maskable-192x192.png", color: "#2563eb" }
     ]
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Sauki Mart",
+    title: "SaukiMart",
   },
   formatDetection: {
     telephone: false,
@@ -40,14 +40,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_NG",
     url: "https://www.saukimart.online",
-    siteName: "Sauki Mart",
-    title: "Sauki Mart | Premium Mobile Commerce Platform",
-    description: "Secure, fast, and reliable digital marketplace for data bundles and mobile devices",
-    images: [{ url: "https://www.saukimart.online/icons/icon-512x512.png", width: 512, height: 512, alt: "Sauki Mart - Premium Digital Marketplace" }],
+    siteName: "SaukiMart",
+    title: "SaukiMart | Nigeria's Premium Digital Marketplace",
+    description: "Instant data, premium devices, secure payments. Trusted by thousands.",
+    images: [{ url: "https://www.saukimart.online/icons/icon-512x512.png", width: 512, height: 512, alt: "SaukiMart - Digital Marketplace" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Sauki Mart | Instant Data & Devices",
+    title: "SaukiMart | Instant Data & Devices",
     description: "Nigeria's trusted platform for data bundles, airtime, and mobile devices",
     images: ["https://www.saukimart.online/icons/icon-512x512.png"],
   },
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     "max-video-preview": -1,
   },
   category: "Business",
-  applicationName: "Sauki Mart",
+  applicationName: "SaukiMart",
   creator: "Sauki Data Links",
   publisher: "Sauki Data Links",
   verification: {
