@@ -1,3 +1,6 @@
+// SaukiMart — Prisma Schema
+// PostgreSQL via Vercel / Supabase / Railway
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,6 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── PRODUCT ─────────────────────────────────────────────────────────────────
 model Product {
   id           String        @id @default(uuid())
   name         String
@@ -14,94 +18,124 @@ model Product {
   price        Float
   image        String
   inStock      Boolean       @default(true)
-  category     String        @default("device")
+  category     String        @default("device") // device | sim | package
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   transactions Transaction[]
 }
 
+// ─── DATA PLAN ────────────────────────────────────────────────────────────────
 model DataPlan {
   id           String        @id @default(uuid())
-  network      String        
-  data         String        
-  validity     String        
+  network      String        // MTN | AIRTEL | GLO
+  data         String        // e.g. "5GB"
+  validity     String        // e.g. "30 Days"
   price        Float
-  planId       Int           
+  planId       Int           // Amigo API plan ID
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   transactions Transaction[]
 }
 
+// ─── AGENT ────────────────────────────────────────────────────────────────────
 model Agent {
-  id                      String        @id @default(uuid())
-  firstName               String
-  lastName                String
-  phone                   String        @unique
-  pin                     String        
-  balance                 Float         @default(0.0)
-  cashbackBalance         Float         @default(0.0)
-  totalCashbackEarned     Float         @default(0.0)
-  cashbackRedeemed        Float         @default(0.0)
-  isActive                Boolean       @default(true)
-  flwAccountNumber        String?
-  flwAccountName          String?
-  flwBankName             String?
-  
-  createdAt               DateTime      @default(now()) 
-  updatedAt               DateTime      @updatedAt
-  transactions            Transaction[]
-  cashbackHistory         CashbackEntry[]
+  id                  String          @id @default(uuid())
+  firstName           String
+  lastName            String
+  phone               String          @unique
+  pin                 String          // bcryptjs hashed 4-digit PIN
+  balance             Float           @default(0.0)
+  cashbackBalance     Float           @default(0.0)
+  totalCashbackEarned Float           @default(0.0)
+  cashbackRedeemed    Float           @default(0.0)
+  isActive            Boolean         @default(true)
+
+  // Flutterwave Virtual Account
+  flwAccountNumber    String?
+  flwAccountName      String?
+  flwBankName         String?
+
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  transactions        Transaction[]
+  cashbackHistory     CashbackEntry[]
+
+  @@index([phone])
 }
 
+// ─── TRANSACTION ──────────────────────────────────────────────────────────────
 model Transaction {
   id                  String    @id @default(uuid())
   tx_ref              String    @unique
-  type                String    
-  status              String    
-  phone               String
+  type                String    // data | ecommerce | wallet_funding
+  status              String    @default("pending") // pending | paid | delivered | failed
+  phone               String    // Customer / recipient phone
   amount              Float
+
   agentCashbackAmount Float?    @default(0)
   cashbackProcessed   Boolean   @default(false)
+
+  // Relations
   productId           String?
   product             Product?  @relation(fields: [productId], references: [id])
   planId              String?
   dataPlan            DataPlan? @relation(fields: [planId], references: [id])
   agentId             String?
   agent               Agent?    @relation(fields: [agentId], references: [id])
+
+  // Customer info
   customerName        String?
   deliveryState       String?
+
+  // Dedup
   idempotencyKey      String?   @unique
-  paymentData         Json?     
-  deliveryData        Json?     
+
+  // Raw API data
+  paymentData         Json?     // Flutterwave response
+  deliveryData        Json?     // Amigo response
+
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+
+  @@index([phone])
+  @@index([tx_ref])
+  @@index([status])
+  @@index([agentId])
+  @@index([createdAt])
 }
 
+// ─── SUPPORT TICKET ───────────────────────────────────────────────────────────
 model SupportTicket {
   id        String   @id @default(uuid())
   phone     String
   message   String
-  status    String   @default("open")
+  status    String   @default("open") // open | closed
+  reply     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([phone])
 }
 
+// ─── SYSTEM MESSAGE ───────────────────────────────────────────────────────────
 model SystemMessage {
   id        String   @id @default(uuid())
   content   String
-  type      String   @default("info")
+  type      String   @default("info") // info | warning | error | success
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
+// ─── WEBHOOK LOG ──────────────────────────────────────────────────────────────
 model WebhookLog {
   id        String   @id @default(uuid())
-  source    String
+  source    String   // flutterwave | amigo
   payload   Json
   createdAt DateTime @default(now())
 }
 
+// ─── PUSH SUBSCRIPTION ───────────────────────────────────────────────────────
 model PushSubscription {
   id        String   @id @default(uuid())
   endpoint  String   @unique
@@ -111,14 +145,18 @@ model PushSubscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// ─── CASHBACK ENTRY ──────────────────────────────────────────────────────────
 model CashbackEntry {
-  id              String    @id @default(uuid())
-  agentId         String
-  agent           Agent     @relation(fields: [agentId], references: [id])
-  type            String    // 'earned', 'redeemed'
-  amount          Float
-  transactionId   String?
-  description     String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id            String   @id @default(uuid())
+  agentId       String
+  agent         Agent    @relation(fields: [agentId], references: [id])
+  type          String   // earned | redeemed
+  amount        Float
+  transactionId String?
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([agentId])
 }

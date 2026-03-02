@@ -1,188 +1,154 @@
+// app/api/webhook/flutterwave/route.ts
+// Critical: Handles all Flutterwave payment webhooks
+// - Data payment confirmation → Amigo delivery
+// - Ecommerce payment confirmation
+// - Agent wallet funding
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { verifyWebhookSignature } from '@/lib/flutterwave';
+import { deliverData } from '@/lib/amigo';
+import { sendPushNotification } from '@/lib/firebase-admin';
+import { generateIdempotencyKey } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
-import { NextResponse } from 'next/server';
-import { prisma } from '../../../../lib/prisma';
-import { callAmigoAPI, AMIGO_NETWORKS } from '../../../../lib/amigo';
-import { Prisma } from '@prisma/client';
-
-export async function POST(req: Request) {
-  const secret = process.env.FLUTTERWAVE_WEBHOOK_SECRET;
-  const signature = req.headers.get('verif-hash');
-
-  if (secret && signature !== secret) {
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    
-    // 1. DATA EXTRACTION
-    const payload = body.data || body;
-    
-    // Log for debugging
-    try {
-        await prisma.webhookLog.create({
-            data: { source: 'flutterwave', payload: body as any }
-        });
-    } catch (e) { console.error("Logging failed", e); }
-
-    const status = (payload.status || '').toLowerCase();
-    const amount = Number(payload.amount);
-    const customerPhone = payload.customer?.phone_number || payload.phone_number;
-    const flwId = String(payload.id); 
-    const incomingRef = payload.txRef || payload.tx_ref || payload.reference;
-
-    console.log(`[Webhook] ID: ${flwId} | Ref: ${incomingRef} | Phone: ${customerPhone} | Status: ${status}`);
-
-    // 3. SUCCESS CHECK
-    const isSuccessful = status === 'successful' || status === 'completed' || status === 'success' || amount > 0;
-
-    if (!isSuccessful) {
-        return NextResponse.json({ received: true });
+    // 1. Verify webhook signature
+    const signature = req.headers.get('verif-hash');
+    if (!verifyWebhookSignature(signature)) {
+      logger.warn('WEBHOOK', 'INVALID_SIGNATURE', { signature });
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    // ==========================================================
-    // CASE 1: AGENT WALLET FUNDING
-    // ==========================================================
-    if (customerPhone) {
-        const agent = await prisma.agent.findUnique({ where: { phone: customerPhone } });
+    const payload = await req.json();
 
+    // 2. Log all webhooks
+    await prisma.webhookLog.create({
+      data: { source: 'flutterwave', payload },
+    }).catch(() => {}); // non-fatal
+
+    const data = payload?.data;
+    if (!data) return NextResponse.json({ received: true });
+
+    const { status, tx_ref, amount, customer, id: flw_id } = data;
+
+    logger.info('WEBHOOK', 'PAYMENT_CONFIRMED', { tx_ref, status, amount });
+
+    if (status !== 'successful') {
+      // Mark failed if we have a pending transaction
+      if (tx_ref) {
+        await prisma.transaction.updateMany({
+          where: { tx_ref, status: 'pending' },
+          data: { status: 'failed' },
+        }).catch(() => {});
+      }
+      return NextResponse.json({ received: true });
+    }
+
+    // 3. Find transaction
+    const transaction = await prisma.transaction.findUnique({
+      where: { tx_ref },
+      include: { dataPlan: true, product: true },
+    });
+
+    if (!transaction) {
+      // ── Agent wallet funding (no prior transaction record) ──────────────
+      const phone = customer?.phone_number;
+      if (phone) {
+        const agent = await prisma.agent.findUnique({ where: { phone } });
         if (agent) {
-            const uniqueFundingRef = `FUND-${flwId}`;
-            const existingTx = await prisma.transaction.findUnique({ where: { tx_ref: uniqueFundingRef } });
-
-            if (existingTx) return NextResponse.json({ received: true });
-
-            await prisma.$transaction([
-                prisma.agent.update({
-                    where: { id: agent.id },
-                    data: { balance: { increment: amount } }
-                }),
-                prisma.transaction.create({
-                    data: {
-                        tx_ref: uniqueFundingRef,
-                        type: 'wallet_funding',
-                        status: 'delivered',
-                        phone: agent.phone,
-                        amount: amount,
-                        agentId: agent.id,
-                        paymentData: payload as any,
-                        deliveryData: { 
-                            method: 'Virtual Account Deposit', 
-                            original_flw_ref: incomingRef,
-                            flw_id: flwId
-                        }
-                    }
-                })
-            ]);
-            return NextResponse.json({ received: true });
-        }
-    }
-
-    // ==========================================================
-    // CASE 2: REGULAR E-COMMERCE / DATA
-    // ==========================================================
-    if (incomingRef && !incomingRef.startsWith('FUND-')) {
-        const transaction = await prisma.transaction.findUnique({ where: { tx_ref: incomingRef } });
-        
-        if (transaction) {
-            // Idempotency check: if already paid or delivered, skip processing
-            if (transaction.status === 'delivered' || transaction.status === 'paid') {
-                console.log(`[Webhook] Idempotent skip - transaction ${incomingRef} already ${transaction.status}`);
-                return NextResponse.json({ received: true });
-            }
-            
-            // Mark as Paid if not already
-            await prisma.transaction.update({
-                where: { id: transaction.id },
-                data: { status: 'paid', paymentData: payload as any }
+          // Check idempotency — prevent double credit
+          const existing = await prisma.transaction.findFirst({
+            where: { tx_ref },
+          });
+          if (!existing) {
+            await prisma.agent.update({
+              where: { id: agent.id },
+              data: { balance: { increment: amount } },
             });
+            await prisma.transaction.create({
+              data: {
+                tx_ref,
+                type: 'wallet_funding',
+                status: 'delivered',
+                phone,
+                amount,
+                agentId: agent.id,
+                paymentData: data,
+              },
+            });
+            logger.info('WEBHOOK', 'WALLET_FUNDED', { phone, amount });
 
-            // IDEMPOTENCY / LOCKING LOGIC FOR DATA
-            if (transaction.type === 'data' && transaction.planId) {
-                
-                // Attempt to acquire lock. 
-                // This ensures if User clicked "Verify" at the same time, only one wins.
-                const lockResult = await prisma.transaction.updateMany({
-                    where: { 
-                        id: transaction.id,
-                        OR: [
-                            { deliveryData: { equals: Prisma.DbNull } },
-                            { deliveryData: { equals: Prisma.JsonNull } }
-                        ]
-                    },
-                    data: { 
-                        deliveryData: { status: 'processing', source: 'webhook' } 
-                    }
-                });
-
-                if (lockResult.count > 0) {
-                    // WE WON THE LOCK. CALL AMIGO AND DELIVER AUTOMATICALLY.
-                    console.log(`[Webhook] Processing auto-delivery for ${incomingRef}`);
-                    const plan = await prisma.dataPlan.findUnique({ where: { id: transaction.planId } });
-                    
-                    if (plan) {
-                        const networkId = AMIGO_NETWORKS[plan.network];
-                        const amigoPayload = {
-                            network: networkId,
-                            mobile_number: transaction.phone,
-                            plan: Number(plan.planId),
-                            Ported_number: true
-                        };
-
-                        const amigoRes = await callAmigoAPI('/data/', amigoPayload, incomingRef);
-                        
-                        const isAmigoSuccess = amigoRes.success && (
-                            amigoRes.data.success === true || 
-                            amigoRes.data.Status === 'successful' ||
-                            amigoRes.data.status === 'delivered' ||
-                            amigoRes.data.status === 'successful'
-                        );
-
-                        if (isAmigoSuccess) {
-                            await prisma.transaction.update({
-                                where: { id: transaction.id },
-                                data: { 
-                                    status: 'delivered', 
-                                    deliveryData: amigoRes.data 
-                                }
-                            });
-                            console.log(`[Webhook] Successfully delivered ${incomingRef}`);
-                        } else {
-                            await prisma.transaction.update({
-                                where: { id: transaction.id },
-                                data: {
-                                    status: 'failed',
-                                    deliveryData: { error: 'Auto-delivery failed', response: amigoRes.data }
-                                }
-                            });
-                            console.log(`[Webhook] Auto-delivery failed for ${incomingRef}: ${amigoRes.data}`);
-                        }
-                    }
-                } else {
-                    console.log(`[Webhook] Another process already handling ${incomingRef}, skipping lock acquisition.`);
-                }
-            } else if (transaction.type === 'ecommerce') {
-                // E-COMMERCE: Mark as delivered (customer data delivery happens via admin verification)
-                await prisma.transaction.update({
-                    where: { id: transaction.id },
-                    data: { 
-                        status: 'delivered',
-                        deliveryData: { 
-                            ...((transaction.deliveryData as object) || {}),
-                            webhook_processed: true,
-                            processed_at: new Date().toISOString()
-                        }
-                    }
-                });
-                console.log(`[Webhook] E-commerce transaction ${incomingRef} marked delivered`);
-            }
+            // Push notification
+            await sendPushNotification({
+              topic: 'all',
+              title: '💰 Wallet Funded!',
+              body: `₦${amount.toLocaleString()} added to your wallet`,
+              data: { type: 'wallet_funded', amount: String(amount) },
+            }).catch(() => {});
+          }
         }
+      }
+      return NextResponse.json({ received: true });
     }
 
-    return NextResponse.json({ received: true });
+    // 4. Already processed?
+    if (transaction.status !== 'pending') {
+      return NextResponse.json({ received: true, message: 'Already processed' });
+    }
 
-  } catch (error) {
-      console.error('[Webhook] Error', error);
-      return NextResponse.json({ error: 'Internal Error' }, { status: 200 });
+    // 5. Update to paid
+    await prisma.transaction.update({
+      where: { id: transaction.id },
+      data: { status: 'paid', paymentData: data },
+    });
+
+    // 6. Data purchase — deliver via Amigo
+    if (transaction.type === 'data' && transaction.dataPlan) {
+      logger.info('WEBHOOK', 'DELIVERY_STARTED', { tx_ref });
+
+      const delivery = await deliverData({
+        network: transaction.dataPlan.network,
+        phone: transaction.phone,
+        planId: transaction.dataPlan.planId,
+        idempotencyKey: transaction.idempotencyKey || generateIdempotencyKey(),
+      });
+
+      await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: delivery.success ? 'delivered' : 'failed',
+          deliveryData: delivery.data || { error: delivery.error },
+        },
+      });
+
+      if (delivery.success) {
+        logger.info('WEBHOOK', 'DELIVERY_COMPLETE', { tx_ref, phone: transaction.phone });
+        await sendPushNotification({
+          topic: 'all',
+          title: '✅ Data Delivered!',
+          body: `${transaction.dataPlan.data} sent to ${transaction.phone}`,
+          data: { tx_ref, type: 'data_delivered' },
+        }).catch(() => {});
+      } else {
+        logger.error('WEBHOOK', 'DELIVERY_FAILED', { tx_ref, error: delivery.error });
+        // TODO: Manual retry or refund flow
+      }
+    }
+
+    // 7. Ecommerce purchase — mark paid (physical delivery handled by admin)
+    if (transaction.type === 'ecommerce') {
+      await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: { status: 'paid' },
+      });
+      logger.info('WEBHOOK', 'ECOM_PAID', { tx_ref, phone: transaction.phone });
+    }
+
+    return NextResponse.json({ received: true, processed: true });
+  } catch (err: any) {
+    logger.error('WEBHOOK', 'WEBHOOK_ERROR', { error: err.message });
+    // Always return 200 to Flutterwave so they don't retry indefinitely
+    return NextResponse.json({ received: true, error: err.message });
   }
 }

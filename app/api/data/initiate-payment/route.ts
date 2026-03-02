@@ -1,102 +1,71 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '../../../../lib/prisma';
-import axios from 'axios';
-import { v4 as uuidv4 } from 'uuid';
+// app/api/data/initiate-payment/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { initiateBankTransfer } from '@/lib/flutterwave';
+import { generateTxRef } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
-export const dynamic = 'force-dynamic';
+const Schema = z.object({
+  planId: z.string().uuid(),
+  phone: z.string().regex(/^[0-9]{10,11}$/),
+});
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { planId, phone } = body;
+    const parsed = Schema.safeParse(body);
+    if (!parsed.success) return NextResponse.json({ message: 'Invalid request', errors: parsed.error.errors }, { status: 400 });
 
-    if (!process.env.FLUTTERWAVE_SECRET_KEY) {
-      return NextResponse.json({ error: 'Server configuration error: Missing API Key' }, { status: 500 });
-    }
+    const { planId, phone } = parsed.data;
 
     const plan = await prisma.dataPlan.findUnique({ where: { id: planId } });
-    if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
+    if (!plan) return NextResponse.json({ message: 'Data plan not found' }, { status: 404 });
 
-    const tx_ref = `SAUKI-DATA-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const amount = plan.price;
+    const tx_ref = generateTxRef('DATA');
 
-    console.log(`[Data Init] Charges Flow for ${phone}`);
+    // Create pending transaction
+    await prisma.transaction.create({
+      data: {
+        tx_ref,
+        type: 'data',
+        status: 'pending',
+        phone,
+        amount: plan.price,
+        planId: plan.id,
+        idempotencyKey: tx_ref,
+      },
+    });
 
-    const flwPayload = {
-      tx_ref: tx_ref,
-      amount: amount.toString(),
-      email: "saukidatalinks@gmail.com",
-      phone_number: phone,
-      currency: "NGN",
-      narration: `Data: ${plan.network} ${plan.data}`,
-      is_permanent: false
-    };
+    // Initiate Flutterwave bank transfer
+    const flwResponse = await initiateBankTransfer({
+      tx_ref,
+      amount: plan.price,
+      phone,
+      narration: `${plan.network} ${plan.data} Data`,
+      meta: { consumer_id: phone, plan_id: planId },
+    });
 
-    try {
-        const flwResponse = await axios.post(
-          'https://api.flutterwave.com/v3/charges?type=bank_transfer',
-          flwPayload,
-          {
-            headers: { 
-                Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
-                'Content-Type': 'application/json'
-            }
-          }
-        );
-
-        const responseBody = flwResponse.data;
-
-        // 1. Check for success status
-        if (responseBody.status !== 'success') {
-          console.error('[Flutterwave Error]', responseBody);
-          throw new Error(responseBody.message || 'Payment initialization failed');
-        }
-
-        // 2. SMART EXTRACTION: Check for 'meta' at ROOT first, then inside 'data'
-        const metaObj = responseBody.meta || responseBody.data?.meta;
-        const bankInfo = metaObj?.authorization;
-
-        // 3. Validate Bank Info
-        if (!bankInfo || !bankInfo.transfer_bank || !bankInfo.transfer_account) {
-            console.error('[Flutterwave Error] Missing bank details:', JSON.stringify(responseBody, null, 2));
-            throw new Error('Payment gateway did not return bank account details. Please try again or contact support.');
-        }
-
-        // 4. Save to DB using the full responseBody
-        await prisma.transaction.create({
-          data: {
-            tx_ref,
-            type: 'data',
-            status: 'pending',
-            phone,
-            amount,
-            planId,
-            idempotencyKey: uuidv4(),
-            paymentData: responseBody, 
-          }
-        });
-
-        // 5. Return success response
-        return NextResponse.json({
-          tx_ref,
-          bank: bankInfo.transfer_bank,
-          account_number: bankInfo.transfer_account,
-          account_name: 'SAUKI MART FLW', 
-          amount,
-          note: bankInfo.transfer_note
-        });
-
-    } catch (flwError: any) {
-        const msg = flwError.response?.data?.message || flwError.message;
-        console.error('[Flutterwave API Exception]', msg);
-        return NextResponse.json({ 
-            error: 'Payment Gateway Error', 
-            details: msg 
-        }, { status: 502 });
+    if (flwResponse?.status !== 'success') {
+      await prisma.transaction.update({ where: { tx_ref }, data: { status: 'failed' } });
+      return NextResponse.json({ message: 'Payment initiation failed' }, { status: 502 });
     }
 
-  } catch (error: any) {
-    console.error('Data Payment Init Error:', error);
-    return NextResponse.json({ error: error.message || 'Payment initiation failed' }, { status: 500 });
+    const auth = flwResponse.data?.meta?.authorization || {};
+    logger.info('PAYMENT', 'PAYMENT_INITIATED', { tx_ref, phone, amount: plan.price });
+
+    return NextResponse.json({
+      success: true,
+      tx_ref,
+      bank: auth.transfer_bank,
+      account_number: auth.transfer_account,
+      account_name: 'SAUKI MART FLW',
+      amount: plan.price,
+      note: auth.transfer_note,
+      plan: { network: plan.network, data: plan.data, validity: plan.validity },
+    });
+  } catch (err: any) {
+    logger.error('PAYMENT', 'INITIATE_ERROR', { error: err.message });
+    return NextResponse.json({ message: 'Payment initiation failed', error: err.message }, { status: 500 });
   }
 }

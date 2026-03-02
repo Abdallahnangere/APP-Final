@@ -1,28 +1,46 @@
+// app/api/admin/agents/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { verifyAdminPassword } from '@/lib/auth';
 
-import { NextResponse } from 'next/server';
-import { prisma } from '../../../../lib/prisma';
+function auth(req: NextRequest) {
+  return verifyAdminPassword(req.headers.get('x-admin-password') || '');
+}
 
-export const dynamic = 'force-dynamic';
+export async function GET(req: NextRequest) {
+  if (!auth(req)) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-export async function POST(req: Request) {
-    try {
-        const { password } = await req.json();
+  const sp = req.nextUrl.searchParams;
+  const search = sp.get('search') || '';
+  const isActive = sp.get('isActive');
+  const limit = Math.min(parseInt(sp.get('limit') || '100'), 500);
 
-        if (password !== process.env.ADMIN_PASSWORD) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+  const where: any = {};
+  if (search) {
+    where.OR = [
+      { phone: { contains: search } },
+      { firstName: { contains: search, mode: 'insensitive' } },
+      { lastName:  { contains: search, mode: 'insensitive' } },
+    ];
+  }
+  if (isActive !== null && isActive !== undefined) {
+    where.isActive = isActive === 'true';
+  }
 
-        const agents = await prisma.agent.findMany({
-            orderBy: { createdAt: 'desc' },
-            include: {
-                _count: {
-                    select: { transactions: true }
-                }
-            }
-        });
+  const [agents, total] = await Promise.all([
+    prisma.agent.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: {
+        id: true, firstName: true, lastName: true, phone: true,
+        balance: true, cashbackBalance: true, totalCashbackEarned: true,
+        cashbackRedeemed: true, isActive: true, flwAccountNumber: true,
+        flwAccountName: true, flwBankName: true, createdAt: true,
+      },
+    }),
+    prisma.agent.count({ where }),
+  ]);
 
-        return NextResponse.json({ agents });
-    } catch (e) {
-        return NextResponse.json({ error: 'Server Error' }, { status: 500 });
-    }
+  return NextResponse.json({ agents, total });
 }

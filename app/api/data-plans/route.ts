@@ -1,78 +1,32 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '../../../lib/prisma';
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { verifyAdminPassword } from '@/lib/auth';
 
-export const dynamic = 'force-dynamic';
+const CreateSchema = z.object({
+  network: z.enum(['MTN','AIRTEL','GLO']),
+  data: z.string().min(1),
+  validity: z.string().min(1),
+  price: z.number().positive(),
+  planId: z.number().int().positive(),
+  password: z.string(),
+});
 
-export async function GET() {
-  try {
-    const plans = await prisma.dataPlan.findMany({
-      orderBy: { price: 'asc' }
-    });
-    return NextResponse.json(plans);
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  }
+export async function GET(req: NextRequest) {
+  const network = req.nextUrl.searchParams.get('network');
+  const plans = await prisma.dataPlan.findMany({
+    where: network ? { network: network.toUpperCase() } : {},
+    orderBy: [{ network: 'asc' }, { price: 'asc' }],
+  });
+  return NextResponse.json(plans);
 }
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const { network, data, validity, price, planId } = body;
-    
-    if (!network || !data || !price || !planId) {
-         return NextResponse.json({ error: 'All fields required' }, { status: 400 });
-    }
-
-    const plan = await prisma.dataPlan.create({
-      data: {
-        network,
-        data,
-        validity: validity || '30 Days',
-        price: Number(price),
-        planId: Number(planId)
-      }
-    });
-    return NextResponse.json(plan);
-  } catch (error) {
-    console.error("Create Plan Error:", error);
-    return NextResponse.json({ error: 'Failed to create plan' }, { status: 500 });
-  }
-}
-
-export async function PUT(req: Request) {
-    try {
-        const body = await req.json();
-        const { id, ...data } = body;
-
-        if (!id) return NextResponse.json({ error: 'Plan ID required' }, { status: 400 });
-
-        const plan = await prisma.dataPlan.update({
-            where: { id: String(id) },
-            data: {
-                network: data.network,
-                data: data.data,
-                validity: data.validity,
-                price: Number(data.price),
-                planId: Number(data.planId)
-            }
-        });
-        return NextResponse.json(plan);
-    } catch (e) {
-        console.error("Update Plan Error:", e);
-        return NextResponse.json({ error: 'Update failed' }, { status: 500 });
-    }
-}
-
-export async function DELETE(req: Request) {
-    try {
-        const { searchParams } = new URL(req.url);
-        const id = searchParams.get('id');
-        if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
-
-        await prisma.dataPlan.delete({ where: { id } });
-        return NextResponse.json({ success: true });
-    } catch (e) {
-        console.error("Delete Plan Error:", e);
-        return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
-    }
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const parsed = CreateSchema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ message: 'Invalid' }, { status: 400 });
+  if (!verifyAdminPassword(parsed.data.password)) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  const { password, ...data } = parsed.data;
+  const plan = await prisma.dataPlan.create({ data });
+  return NextResponse.json(plan, { status: 201 });
 }

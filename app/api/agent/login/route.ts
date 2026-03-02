@@ -1,67 +1,79 @@
+// app/api/agent/login/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { verifyPin } from '@/lib/auth';
+import { loginLimiter, resetLoginLimiter } from '@/lib/rateLimiter';
+import { logger } from '@/lib/logger';
 
-import { NextResponse } from 'next/server';
-import { prisma } from '../../../../lib/prisma';
-import { verifyPin } from '../../../../lib/security';
-import { AgentLoginSchema, validateRequestBody } from '../../../../lib/validation';
-import { logger } from '../../../../lib/logger';
-import { loginLimiter } from '../../../../lib/rate-limit';
+const LoginSchema = z.object({
+  phone: z.string().regex(/^[0-9]{10,11}$/),
+  pin: z.string().regex(/^[0-9]{4}$/),
+});
 
-export async function POST(req: Request) {
-  let phone = '';
-  const endLog = logger.logApiRequest('AUTH', 'AGENT_LOGIN');
-
+export async function POST(req: NextRequest) {
+  const start = Date.now();
   try {
     const body = await req.json();
+    const parsed = LoginSchema.safeParse(body);
 
-    // Validate request body against schema
-    const validation = await validateRequestBody(body, AgentLoginSchema);
-    if (!validation.valid) {
-      const errors = validation.errors.errors.map(e => `${e.path.join('.')}: ${e.message}`);
-      logger.logSecurityEvent('INVALID_REQUEST', { service: 'LOGIN', errors });
-      endLog(400, { error: 'Validation failed' });
-      return NextResponse.json({ error: 'Validation failed', details: errors }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json({ message: 'Invalid request' }, { status: 400 });
     }
 
-    const { phone: validPhone, pin } = validation.data;
-    phone = validPhone;
+    const { phone, pin } = parsed.data;
 
-    // Check rate limit
-    if (!loginLimiter.check(phone)) {
-      const info = loginLimiter.getInfo(phone);
-      logger.logSecurityEvent('RATE_LIMITED', { phone, resetTime: info.resetTime });
-      endLog(429, { error: 'Too many attempts' });
+    // Rate limiting
+    const rl = loginLimiter(phone);
+    if (!rl.allowed) {
+      logger.warn('AUTH', 'RATE_LIMITED', { phone, action: 'LOGIN' });
       return NextResponse.json(
-        { error: 'Too many login attempts. Please try again later.' },
-        { status: 429, headers: { 'Retry-After': String(Math.ceil((info.resetTime - Date.now()) / 1000)) } }
+        { message: `Too many attempts. Retry after ${rl.retryAfter} seconds.` },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
       );
     }
 
     const agent = await prisma.agent.findUnique({ where: { phone } });
-
     if (!agent) {
-        logger.logAuth('LOGIN', phone, false, { reason: 'Agent not found' });
-        logger.logSecurityEvent('INVALID_REQUEST', { phone, reason: 'No such agent' });
-        endLog(401, { error: 'Invalid credentials' });
-        return NextResponse.json({ error: 'Invalid Phone or PIN' }, { status: 401 });
+      logger.warn('AUTH', 'AUTHENTICATION_FAILED', { phone, reason: 'not_found' });
+      return NextResponse.json({ message: 'Invalid phone number or PIN' }, { status: 401 });
     }
 
-    // Verify PIN against hash
-    const isPinValid = await verifyPin(pin, agent.pin);
-    if (!isPinValid) {
-        logger.logAuth('LOGIN', phone, false, { reason: 'Invalid PIN' });
-        logger.logSecurityEvent('INVALID_REQUEST', { phone, reason: 'PIN mismatch' });
-        endLog(401, { error: 'Invalid PIN' });
-        return NextResponse.json({ error: 'Invalid Phone or PIN' }, { status: 401 });
+    if (!agent.isActive) {
+      return NextResponse.json({ message: 'Account suspended. Contact support.' }, { status: 403 });
     }
 
-    // On successful login, reset rate limit
-    loginLimiter.reset(phone);
-    logger.logAuth('LOGIN', phone, true);
-    endLog(200, { agentId: agent.id, success: true });
-    return NextResponse.json({ success: true, agent });
-  } catch (error) {
-    logger.logError('AUTH', 'AGENT_LOGIN', error as Error, { phone });
-    endLog(500, { error: 'Internal error' });
-    return NextResponse.json({ error: 'Login failed' }, { status: 500 });
+    const pinValid = await verifyPin(pin, agent.pin);
+    if (!pinValid) {
+      logger.warn('AUTH', 'AUTHENTICATION_FAILED', { phone, reason: 'wrong_pin' });
+      return NextResponse.json({ message: 'Invalid phone number or PIN' }, { status: 401 });
+    }
+
+    // Reset rate limiter on success
+    resetLoginLimiter(phone);
+
+    logger.info('AUTH', 'LOGIN', { phone, userId: agent.id, duration: Date.now() - start });
+
+    return NextResponse.json({
+      success: true,
+      agent: {
+        id: agent.id,
+        firstName: agent.firstName,
+        lastName: agent.lastName,
+        phone: agent.phone,
+        balance: agent.balance,
+        cashbackBalance: agent.cashbackBalance,
+        totalCashbackEarned: agent.totalCashbackEarned,
+        cashbackRedeemed: agent.cashbackRedeemed,
+        isActive: agent.isActive,
+        flwAccountNumber: agent.flwAccountNumber,
+        flwAccountName: agent.flwAccountName,
+        flwBankName: agent.flwBankName,
+        createdAt: agent.createdAt,
+      },
+    });
+  } catch (err: any) {
+    logger.error('AUTH', 'LOGIN_ERROR', { error: err.message });
+    return NextResponse.json({ message: 'Login failed' }, { status: 500 });
   }
 }

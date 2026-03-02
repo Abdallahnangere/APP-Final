@@ -1,1131 +1,1286 @@
-
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { cn, formatCurrency, generateReceiptData } from '../../lib/utils';
-import { Loader2, Lock, Trash2, Edit2, Send, Search, Package, Wifi, LayoutDashboard, Users, Activity, Terminal, Megaphone, Server, Save, Plus, Ban, ArrowUpCircle, RefreshCw, FileText, CheckCircle2, AlertCircle, ShoppingBag, Truck, MessageSquare, Download, UploadCloud, Bell, X, ChevronRight, Smartphone, ArrowDownCircle, Banknote, Landmark } from 'lucide-react';
-import { DataPlan, Product, Transaction, Agent } from '../../types';
-import { toast } from '../../lib/toast';
-import { BrandedReceipt } from '../../components/BrandedReceipt';
-import dynamic from 'next/dynamic';
-const AdminStatement = dynamic(() => import('../../components/AdminStatement').then(m => m.AdminStatement), { ssr: false });
-import { toPng } from 'html-to-image';
+/**
+ * SaukiMart Admin Panel — /admin/page.tsx
+ * Full CRUD: Products, DataPlans, Agents, Transactions, SystemMessages, Support, Webhooks, Console
+ */
 
-// Force Desktop View Wrapper - Premium Styling
-const DesktopWrapper = ({ children }: { children?: React.ReactNode }) => (
-    <div className="min-h-screen w-screen flex flex-row overflow-hidden fixed inset-0 z-50 bg-gradient-to-br from-primary-50 via-white to-primary-50">
-        {children}
-    </div>
+import React, { useState, useEffect, useCallback } from 'react';
+
+// ─── TYPES ─────────────────────────────────────────────────────────────────
+interface Agent { id: string; firstName: string; lastName: string; phone: string; balance: number; cashbackBalance: number; totalCashbackEarned: number; isActive: boolean; flwAccountNumber?: string; flwBankName?: string; flwAccountName?: string; createdAt: string; }
+interface Product { id: string; name: string; description?: string; price: number; image: string; inStock: boolean; category: string; }
+interface DataPlan { id: string; network: string; data: string; validity: string; price: number; planId: number; }
+interface Transaction { id: string; tx_ref: string; type: string; status: string; phone: string; amount: number; agentCashbackAmount?: number; createdAt: string; dataPlan?: { network: string; data: string; validity: string }; product?: { name: string }; agent?: { firstName: string; lastName: string }; }
+interface SystemMessage { id: string; content: string; type: string; isActive: boolean; createdAt: string; }
+interface SupportTicket { id: string; phone: string; message: string; status: string; createdAt: string; }
+interface WebhookLog { id: string; source: string; payload: any; createdAt: string; }
+
+type Tab = 'dashboard' | 'agents' | 'products' | 'plans' | 'transactions' | 'messages' | 'support' | 'webhooks' | 'console';
+
+// ─── STYLES ────────────────────────────────────────────────────────────────
+const AdminStyle = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', system-ui, sans-serif; background: #08080E; color: #CBD5E1; -webkit-font-smoothing: antialiased; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+    input, textarea, select { outline: none; font-family: inherit; }
+    button { border: none; cursor: pointer; font-family: inherit; }
+
+    .ai { background: #0F0F18; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; overflow: hidden; }
+    .ai-p { background: #0F0F18; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 20px; }
+
+    .inp { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 9px 13px; color: #E2E8F0; font-size: 14px; transition: border-color 0.2s; }
+    .inp:focus { border-color: rgba(99,102,241,0.5); background: rgba(99,102,241,0.04); }
+    .inp::placeholder { color: rgba(255,255,255,0.2); }
+    select.inp option { background: #1a1a2e; }
+
+    .btn { padding: 8px 16px; border-radius: 9px; font-size: 13px; font-weight: 600; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-p { background: linear-gradient(135deg,#6366F1,#7C3AED); color: #fff; }
+    .btn-p:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-d { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.18); }
+    .btn-d:hover { background: rgba(239,68,68,0.22); }
+    .btn-g { background: rgba(255,255,255,0.04); color: #94A3B8; border: 1px solid rgba(255,255,255,0.08); }
+    .btn-g:hover { background: rgba(255,255,255,0.08); color: #CBD5E1; }
+    .btn-s { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.18); }
+    .btn-s:hover { background: rgba(34,197,94,0.22); }
+    .btn-o { background: rgba(251,146,60,0.12); color: #fb923c; border: 1px solid rgba(251,146,60,0.18); }
+    .btn-o:hover { background: rgba(251,146,60,0.22); }
+
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .b-green { background: rgba(34,197,94,0.12); color: #4ade80; }
+    .b-red { background: rgba(239,68,68,0.12); color: #f87171; }
+    .b-yellow { background: rgba(251,191,36,0.12); color: #fbbf24; }
+    .b-blue { background: rgba(99,102,241,0.12); color: #a5b4fc; }
+    .b-purple { background: rgba(168,85,247,0.12); color: #c084fc; }
+    .b-gray { background: rgba(255,255,255,0.06); color: #64748B; }
+
+    .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; color: #475569; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all 0.15s; width: 100%; background: none; border: none; }
+    .nav-link:hover { background: rgba(255,255,255,0.04); color: #94A3B8; }
+    .nav-link.active { background: rgba(99,102,241,0.14); color: #A5B4FC; }
+
+    .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .tbl th { padding: 10px 14px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #334155; border-bottom: 1px solid rgba(255,255,255,0.05); white-space: nowrap; }
+    .tbl td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.03); color: #64748B; vertical-align: middle; }
+    .tbl tr:hover td { background: rgba(255,255,255,0.015); }
+    .tbl tr:last-child td { border-bottom: none; }
+
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .modal { background: #0F0F18; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; padding: 28px; }
+
+    @keyframes fi { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fi { animation: fi 0.22s ease; }
+
+    .spin { width: 18px; height: 18px; border: 2px solid rgba(99,102,241,0.2); border-top-color: #6366F1; border-radius: 50%; animation: rot 0.7s linear infinite; }
+    @keyframes rot { to { transform: rotate(360deg); } }
+
+    .code { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+    .stat-g { background: linear-gradient(135deg,rgba(99,102,241,0.12),rgba(124,58,237,0.06)); border: 1px solid rgba(99,102,241,0.15); border-radius: 16px; padding: 20px; }
+  `}</style>
 );
 
-export default function AdminPage() {
-  const [password, setPassword] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [view, setView] = useState<'dashboard' | 'products' | 'plans' | 'transactions' | 'orders' | 'agents' | 'support' | 'console' | 'communication' | 'webhooks'>('dashboard');
+// ─── HELPERS ───────────────────────────────────────────────────────────────
+const Spinner = () => <div className="spin" />;
+
+function useToast() {
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const show = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3200); };
+  return { toast, show };
+}
+
+function Toast({ t }: { t: { msg: string; ok: boolean } }) {
+  return (
+    <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, background: '#0F0F18', border: `1px solid ${t.ok ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, borderRadius: 12, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 9, boxShadow: '0 8px 32px rgba(0,0,0,0.5)', animation: 'fi 0.2s ease', maxWidth: 360 }}>
+      <div style={{ width: 7, height: 7, borderRadius: 4, background: t.ok ? '#4ade80' : '#f87171', flexShrink: 0 }} />
+      <span style={{ color: '#E2E8F0', fontSize: 13.5, fontWeight: 500 }}>{t.msg}</span>
+    </div>
+  );
+}
+
+function ModalConfirm({ title, desc, onConfirm, onCancel }: { title: string; desc: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="overlay">
+      <div className="modal" style={{ maxWidth: 380 }}>
+        <h3 style={{ fontSize: 17, fontWeight: 700, color: '#E2E8F0', marginBottom: 8 }}>{title}</h3>
+        <p style={{ color: '#475569', fontSize: 14, marginBottom: 24 }}>{desc}</p>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onCancel} className="btn btn-g" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+          <button onClick={onConfirm} className="btn btn-d" style={{ flex: 1, justifyContent: 'center' }}>Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionHead({ title, sub, right }: { title: string; sub: string; right?: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 }}>
+      <div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: '#E2E8F0', letterSpacing: -0.5 }}>{title}</h2>
+        <p style={{ color: '#334155', fontSize: 13.5, marginTop: 3 }}>{sub}</p>
+      </div>
+      {right}
+    </div>
+  );
+}
+
+function FieldLabel({ label }: { label: string }) {
+  return <label style={{ display: 'block', fontSize: 11, color: '#475569', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.7 }}>{label}</label>;
+}
+
+// ─── STATUS BADGES ─────────────────────────────────────────────────────────
+const statusClass: Record<string, string> = { delivered: 'b-green', paid: 'b-blue', pending: 'b-yellow', failed: 'b-red', open: 'b-yellow', closed: 'b-green', active: 'b-green', suspended: 'b-red', data: 'b-blue', ecommerce: 'b-purple', wallet_funding: 'b-green', info: 'b-blue', warning: 'b-yellow', error: 'b-red', success: 'b-green' };
+
+// ─── LOGIN ─────────────────────────────────────────────────────────────────
+function AdminLogin({ onLogin }: { onLogin: () => void }) {
+  const [pw, setPw] = useState('');
   const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [updatingTx, setUpdatingTx] = useState<string | null>(null);
-  
-  // Data State
-  const [products, setProducts] = useState<Product[]>([]);
-  const [plans, setPlans] = useState<DataPlan[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [agents, setAgents] = useState<(Agent & { _count: { transactions: number } })[]>([]);
-  const [webhooks, setWebhooks] = useState<any[]>([]);
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [viewMode, setViewMode] = useState<'list' | 'byDate' | 'byStatus'>('list');
-  const [filterDate, setFilterDate] = useState('');
-  const [groupedByDate, setGroupedByDate] = useState<Record<string, Transaction[]>>({});
-  const [groupedByStatus, setGroupedByStatus] = useState<Record<string, Transaction[]>>({});
+  const [err, setErr] = useState('');
 
-  // Agent Drilldown State
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [agentHistory, setAgentHistory] = useState<Transaction[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
-
-  // Forms
-  const [productForm, setProductForm] = useState<Partial<Product>>({ name: '', description: '', price: 0, image: '', category: 'device' });
-  const [planForm, setPlanForm] = useState<Partial<DataPlan>>({ network: 'MTN', data: '', validity: '30 Days', price: 0, planId: 0 });
-  const [broadcastForm, setBroadcastForm] = useState({ content: '', type: 'info', isActive: true });
-  const [pushForm, setPushForm] = useState({ title: '', body: '', targetType: 'all' }); // 'all', 'agents', 'users'
-  const [editMode, setEditMode] = useState(false);
-
-  // Console State
-  const [consoleType, setConsoleType] = useState<'amigo' | 'flutterwave'>('amigo');
-  const [consoleEndpoint, setConsoleEndpoint] = useState('');
-  const [consoleMethod, setConsoleMethod] = useState('GET');
-  const [consolePayload, setConsolePayload] = useState('{}');
-  const [consoleOutput, setConsoleOutput] = useState<any>(null);
-
-  // Receipt
-  const receiptRef = useRef<HTMLDivElement>(null);
-  const [receiptTx, setReceiptTx] = useState<any>(null);
-
-  // PDF Export
-  const pdfRef = useRef<HTMLDivElement>(null);
-  const [isExporting, setIsExporting] = useState(false);
-  const [pdfTransactions, setPdfTransactions] = useState<Transaction[] | null>(null);
-
-  useEffect(() => {
-    if (isAuthenticated) refreshAll();
-  }, [isAuthenticated, view]);
-
-  const refreshAll = async () => {
-    setLoading(true);
+  const submit = async () => {
+    setLoading(true); setErr('');
     try {
-        if (view === 'dashboard') {
-            await Promise.all([fetchProducts(), fetchPlans(), fetchAgents(), fetchTransactions()]);
-        }
-        else if (view === 'products') await fetchProducts();
-        else if (view === 'plans') await fetchPlans();
-        else if (view === 'agents') await fetchAgents();
-        else if (view === 'transactions' || view === 'orders') await fetchTransactions();
-        else if (view === 'webhooks') await fetchWebhooks();
-        else if (view === 'communication') await fetchBroadcast();
-        else if (view === 'support') await fetchTickets();
-    } catch (e) {
-        console.error("Data fetch error", e);
-    } 
+      const r = await fetch('/api/admin/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
+      if (!r.ok) throw new Error();
+      onLogin();
+    } catch { setErr('Invalid password.'); }
     finally { setLoading(false); }
   };
 
-  // --- FETCHERS ---
-  const fetchProducts = async () => setProducts(await fetch('/api/products').then(r => r.json()).catch(() => []));
-  const fetchPlans = async () => setPlans(await fetch('/api/data-plans').then(r => r.json()).catch(() => []));
-  const fetchTransactions = async (opts?: { date?: string, status?: string }) => {
-    try {
-      const url = new URL('/api/transactions/list', location.origin);
-      if (opts?.date) url.searchParams.set('date', opts.date);
-      if (opts?.status) url.searchParams.set('status', opts.status);
-
-      const res = await fetch(url.toString(), { headers: { 'x-admin-password': password } });
-      const data = await res.json();
-      if (data && Array.isArray(data)) {
-        setTransactions(data);
-        // compute groupings
-        const byDate: Record<string, Transaction[]> = {};
-        const byStatus: Record<string, Transaction[]> = {};
-        data.forEach((tx: Transaction) => {
-          const d = new Date(tx.createdAt).toISOString().slice(0,10);
-          byDate[d] = byDate[d] || [];
-          byDate[d].push(tx);
-
-          const s = tx.status || 'unknown';
-          byStatus[s] = byStatus[s] || [];
-          byStatus[s].push(tx);
-        });
-        // sort date groups descending
-        Object.keys(byDate).forEach(k => byDate[k].sort((a,b)=> new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-        setGroupedByDate(byDate);
-        setGroupedByStatus(byStatus);
-      } else {
-        setTransactions([]);
-        setGroupedByDate({});
-        setGroupedByStatus({});
-      }
-    } catch (e) {
-      console.error('Failed to load transactions', e);
-      setTransactions([]);
-    }
-  };
-  
-  const fetchAgents = async () => {
-      try {
-        const res = await fetch('/api/admin/agents', { method: 'POST', body: JSON.stringify({ password }) });
-        const data = await res.json();
-        setAgents(data.agents || []);
-      } catch (e) { setAgents([]); }
-  };
-  
-  const fetchWebhooks = async () => {
-      try {
-        const res = await fetch('/api/admin/webhooks', { method: 'POST', body: JSON.stringify({ password }) });
-        const data = await res.json();
-        setWebhooks(data.logs || []);
-      } catch (e) { setWebhooks([]); }
-  };
-  
-  const fetchBroadcast = async () => {
-      try {
-        const res = await fetch('/api/system/message').then(r => r.json());
-        if(res && res.type !== 'PUSH') setBroadcastForm(res); // Only load if not push
-      } catch(e) {}
-  };
-  
-  const fetchTickets = async () => {
-      try {
-        const res = await fetch('/api/admin/support', { method: 'POST', body: JSON.stringify({ password }) });
-        const data = await res.json();
-        setTickets(data.tickets || []);
-      } catch (e) { setTickets([]); }
-  };
-
-  const openAgentDetails = async (agent: Agent) => {
-      setSelectedAgent(agent);
-      setLoadingHistory(true);
-      try {
-          const res = await fetch(`/api/agent/transactions?agentId=${agent.id}`);
-          const data = await res.json();
-          setAgentHistory(data.transactions || []);
-      } catch (e) {
-          toast.error("Could not load history");
-      } finally {
-          setLoadingHistory(false);
-      }
-  };
-
-  const checkAuth = async () => {
-      setLoading(true);
-      try {
-          const res = await fetch('/api/admin/auth', { method: 'POST', body: JSON.stringify({ password }) });
-          if (res.ok) setIsAuthenticated(true);
-          else toast.error("Incorrect Password");
-      } catch (e) { toast.error("Error"); } 
-      finally { setLoading(false); }
-  };
-
-  // --- ACTIONS ---
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-              setProductForm(prev => ({ ...prev, image: reader.result as string }));
-          };
-          reader.readAsDataURL(file);
-      }
-  };
-
-  const saveProduct = async () => {
-      await fetch('/api/products', {
-          method: editMode ? 'PUT' : 'POST',
-          body: JSON.stringify(productForm)
-      });
-      setEditMode(false);
-      setProductForm({ name: '', description: '', price: 0, image: '', category: 'device' });
-      fetchProducts();
-      toast.success("Product Saved");
-  };
-
-  const deleteProduct = async (id: string) => {
-      if(!confirm("Delete?")) return;
-      await fetch(`/api/products?id=${id}`, { method: 'DELETE' });
-      fetchProducts();
-  };
-
-  const savePlan = async () => {
-      await fetch('/api/data-plans', {
-          method: editMode ? 'PUT' : 'POST',
-          body: JSON.stringify(planForm)
-      });
-      setEditMode(false);
-      setPlanForm({ network: 'MTN', data: '', validity: '30 Days', price: 0, planId: 0 });
-      fetchPlans();
-      toast.success("Plan Saved");
-  };
-
-  const deletePlan = async (id: string) => {
-      if(!confirm("Delete?")) return;
-      await fetch(`/api/data-plans?id=${id}`, { method: 'DELETE' });
-      fetchPlans();
-  };
-
-  // UPDATED: Fund Agent now handles credit AND debit
-  const fundAgent = async (agentId: string, type: 'credit' | 'debit') => {
-      const amount = prompt(`Amount to ${type.toUpperCase()}:`);
-      if(!amount) return;
-      await fetch('/api/admin/agent-fund', {
-          method: 'POST',
-          body: JSON.stringify({ agentId, amount: Number(amount), password, action: type })
-      });
-      fetchAgents();
-      toast.success(`Wallet ${type === 'credit' ? 'Funded' : 'Debited'}`);
-  };
-
-  const toggleAgent = async (agentId: string) => {
-      await fetch('/api/admin/agent-fund', {
-          method: 'POST',
-          body: JSON.stringify({ agentId, password, action: 'toggle_status' })
-      });
-      fetchAgents();
-      toast.success("Status Updated");
-  };
-
-  const updateBroadcast = async () => {
-      await fetch('/api/system/message', {
-          method: 'POST',
-          body: JSON.stringify({ ...broadcastForm, password })
-      });
-      toast.success("Ticker Updated");
-  };
-
-  const sendPushNotification = async () => {
-      if(!pushForm.title || !pushForm.body) return toast.error("Enter Title & Body");
-      try {
-          await fetch('/api/admin/push', {
-              method: 'POST',
-              body: JSON.stringify({ ...pushForm, password })
-          });
-          toast.success(`Push Sent to ${pushForm.targetType === 'all' ? 'All Users' : pushForm.targetType === 'agents' ? 'Agents' : 'General Users'}`);
-          setPushForm({ title: '', body: '', targetType: 'all' });
-      } catch(e) {
-          toast.error("Push failed");
-      }
-  };
-
-  const executeConsole = async () => {
-      setLoading(true);
-      try {
-          const endpoint = consoleType === 'amigo' ? '/api/admin/console' : '/api/admin/console/flutterwave';
-          const res = await fetch(endpoint, {
-              method: 'POST',
-              body: JSON.stringify({
-                  endpoint: consoleEndpoint,
-                  method: consoleMethod,
-                  payload: JSON.parse(consolePayload),
-                  password
-              })
-          });
-          setConsoleOutput(await res.json());
-      } catch(e) { setConsoleOutput({ error: 'Failed' }); }
-      finally { setLoading(false); }
-  };
-
-  const applyTemplate = (type: string) => {
-      if (type === 'amigo_data') {
-          setConsoleEndpoint('/data/');
-          setConsolePayload(JSON.stringify({ network: 1, mobile_number: "080...", plan: 1001, Ported_number: true }, null, 2));
-      } else if (type === 'flw_verify') {
-          setConsoleMethod('GET');
-          setConsoleEndpoint('/transactions/verify_by_reference?tx_ref=TX_REF_HERE');
-          setConsolePayload('{}');
-      }
-  };
-
-  const markDelivered = async (tx_ref: string) => {
-      await fetch('/api/admin/transactions/update', {
-          method: 'POST',
-          body: JSON.stringify({ tx_ref, status: 'delivered', password })
-      });
-      fetchTransactions();
-      toast.success("Marked Delivered");
-  };
-
-  const toggleToPaid = async (tx_ref: string) => {
-      setUpdatingTx(tx_ref);
-      try {
-          await fetch('/api/admin/transactions/update', {
-              method: 'POST',
-              body: JSON.stringify({ tx_ref, status: 'paid', password })
-          });
-          await fetchTransactions();
-          toast.success("Transaction marked as paid. User can now proceed.");
-      } catch (e) {
-          toast.error("Failed to update transaction");
-      } finally {
-          setUpdatingTx(null);
-      }
-  };
-
-  // UPDATED: Uses centralized helper for consistent receipts
-  const generateReceipt = (tx: Transaction) => {
-      // Find agent if agentId exists
-      let agent = undefined;
-      if (tx.agentId) {
-          agent = agents.find(a => a.id === tx.agentId);
-      }
-      const enrichedTx = generateReceiptData(tx, agent);
-      setReceiptTx(enrichedTx);
-      
-      setTimeout(async () => {
-          if (receiptRef.current) {
-              const dataUrl = await toPng(receiptRef.current, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff' });
-              const link = document.createElement('a');
-              link.download = `RECEIPT-${tx.tx_ref}.png`;
-              link.href = dataUrl;
-              link.click();
-              toast.success("Downloaded");
-              setReceiptTx(null);
-          }
-      }, 500);
-  };
-
-  // ------------------ PDF Export logic ------------------
-  const generatePdf = async () => {
-    try {
-      setIsExporting(true);
-      // Determine which transactions to export (search takes precedence)
-      let exportItems: Transaction[] = [];
-      if (searchQuery && filteredTransactions.length > 0) {
-        exportItems = filteredTransactions;
-      } else if (filterDate && groupedByDate[filterDate]) {
-        exportItems = groupedByDate[filterDate];
-      } else if (viewMode === 'byStatus') {
-        // flatten all statuses
-        exportItems = Object.values(groupedByStatus).flat();
-      } else {
-        exportItems = transactions;
-      }
-
-      if (!exportItems || exportItems.length === 0) {
-        toast.error('No transactions to export');
-        setIsExporting(false);
-        return;
-      }
-
-      setPdfTransactions(exportItems);
-
-      // Wait for the DOM to update
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      if (!pdfRef.current) {
-        toast.error('PDF generation failed');
-        setIsExporting(false);
-        return;
-      }
-
-      // Generate image of the statement
-      const dataUrl = await toPng(pdfRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: '#ffffff' });
-
-      // Convert long image into multi-page PDF using jsPDF
-      const { jsPDF } = await import('jspdf');
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
-
-      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      const imgW = img.naturalWidth;
-      const imgH = img.naturalHeight;
-
-      // Calculate rendered image size in mm for fitting width
-      const imgWidthMM = pageWidth;
-      const imgHeightMM = (imgH * imgWidthMM) / imgW;
-
-      // Convert to pixels per page slice height
-      const pxPerMM = imgW / imgWidthMM;
-      const sliceHeightPx = Math.floor(pageHeight * pxPerMM);
-
-      // Create canvas used to slice image into pages
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-      canvas.width = imgW;
-      canvas.height = Math.min(sliceHeightPx, imgH);
-
-      let y = 0;
-      let page = 0;
-      while (y < imgH) {
-        canvas.height = Math.min(sliceHeightPx, imgH - y);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, y, imgW, canvas.height, 0, 0, canvas.width, canvas.height);
-        const sliceData = canvas.toDataURL('image/png');
-        if (page > 0) pdf.addPage();
-        pdf.addImage(sliceData, 'PNG', 0, 0, pageWidth, (canvas.height / pxPerMM));
-        y += canvas.height;
-        page += 1;
-      }
-
-      pdf.save(`SAUKI-TRANSACTIONS-${new Date().toISOString().slice(0,10)}.pdf`);
-      toast.success('PDF Exported');
-
-    } catch (err: any) {
-      console.error(err);
-      toast.error('Export failed');
-    } finally {
-      setIsExporting(false);
-      setPdfTransactions(null);
-    }
-  };
-
-  const filteredTransactions = transactions?.filter(t => 
-      t.tx_ref.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.phone.includes(searchQuery)
-  ) || [];
-
-  const pendingOrders = transactions?.filter(t => t.type === 'ecommerce' && t.status === 'paid') || [];
-
-  // Recompute groupings when transactions or search change
-  React.useEffect(() => {
-    const data = filteredTransactions || [];
-    const byDate: Record<string, Transaction[]> = {};
-    const byStatus: Record<string, Transaction[]> = {};
-
-    data.forEach((tx: Transaction) => {
-      const d = new Date(tx.createdAt).toISOString().slice(0,10);
-      byDate[d] = byDate[d] || [];
-      byDate[d].push(tx);
-
-      const s = tx.status || 'unknown';
-      byStatus[s] = byStatus[s] || [];
-      byStatus[s].push(tx);
-    });
-
-    Object.keys(byDate).forEach(k => byDate[k].sort((a,b)=> new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-    setGroupedByDate(byDate);
-    setGroupedByStatus(byStatus);
-  }, [filteredTransactions]);
-
-  if (!isAuthenticated) return (
-     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 p-6 relative overflow-hidden">
-        {/* Background elements */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-blue/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent-purple/20 rounded-full blur-3xl"></div>
-        
-        <div className="bg-white/95 backdrop-blur-xl p-12 rounded-3xl shadow-elevation-8 w-full max-w-md text-center border border-white/20 relative z-10">
-            <div className="w-16 h-16 bg-gradient-to-br from-accent-blue to-accent-purple rounded-2xl flex items-center justify-center text-white mx-auto mb-8 shadow-elevation-4">
-                <Lock className="w-8 h-8" />
-            </div>
-            <h1 className="text-3xl font-bold text-primary-900 mb-2">SAUKI Admin</h1>
-            <p className="text-primary-500 text-sm font-medium mb-8">Master Control Panel</p>
-            <input 
-              type="password" 
-              className="border border-primary-200 p-4 rounded-2xl w-full mb-6 text-center text-2xl font-bold tracking-widest focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20 transition-all" 
-              placeholder="••••••••" 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-            />
-            <button 
-              onClick={checkAuth} 
-              className="bg-accent-blue text-white p-4 rounded-xl w-full font-bold uppercase tracking-wide shadow-elevation-4 hover:bg-blue-600 active:scale-95 transition-all"
-            >
-              {loading ? <Loader2 className="animate-spin mx-auto" /> : 'Enter Dashboard'}
-            </button>
-            <p className="text-xs text-primary-400 mt-6">Secured access • Encrypted connection</p>
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#08080E' }}>
+      <div style={{ width: 360, padding: 36, background: '#0F0F18', borderRadius: 24, border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ width: 54, height: 54, borderRadius: 16, background: 'linear-gradient(135deg,#6366F1,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', fontSize: 24 }}>⚡</div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#E2E8F0', letterSpacing: -0.5 }}>Admin Console</h1>
+          <p style={{ color: '#334155', fontSize: 13, marginTop: 4 }}>SaukiMart Management System</p>
         </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder="Admin password" className="inp" autoFocus style={{ padding: '12px 14px', fontSize: 15 }} />
+          {err && <p style={{ color: '#f87171', fontSize: 13 }}>{err}</p>}
+          <button onClick={submit} disabled={loading} className="btn btn-p" style={{ justifyContent: 'center', padding: '12px', fontSize: 15, width: '100%' }}>
+            {loading ? <Spinner /> : 'Sign In →'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── DASHBOARD ─────────────────────────────────────────────────────────────
+function Dashboard() {
+  const [stats, setStats] = useState<any>(null);
+  const [recentTx, setRecentTx] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [agR, prR, plR, txR] = await Promise.all([
+          fetch('/api/admin/agents').then(r => r.json()),
+          fetch('/api/products').then(r => r.json()),
+          fetch('/api/data-plans').then(r => r.json()),
+          fetch('/api/transactions/list?limit=200').then(r => r.json()),
+        ]);
+        const agents = Array.isArray(agR) ? agR : [];
+        const products = Array.isArray(prR) ? prR : [];
+        const plans = Array.isArray(plR) ? plR : [];
+        const txs: Transaction[] = Array.isArray(txR) ? txR : (txR?.transactions || []);
+        setRecentTx(txs.slice(0, 8));
+        setStats({
+          agents: agents.length, active: agents.filter((a: any) => a.isActive).length,
+          products: products.length, plans: plans.length,
+          txCount: txs.length,
+          revenue: txs.filter(t => ['delivered','paid'].includes(t.status)).reduce((s, t) => s + t.amount, 0),
+          pending: txs.filter(t => t.status === 'pending').length,
+          failed: txs.filter(t => t.status === 'failed').length,
+          walletTotal: agents.reduce((s: number, a: any) => s + (a.balance || 0), 0),
+          cashbackTotal: agents.reduce((s: number, a: any) => s + (a.cashbackBalance || 0), 0),
+        });
+      } catch {} finally { setLoading(false); }
+    })();
+  }, []);
+
+  if (loading) return <div style={{ padding: 60, display: 'flex', justifyContent: 'center' }}><Spinner /></div>;
+
+  const kpis = [
+    { label: 'Total Revenue', value: `₦${(stats?.revenue || 0).toLocaleString()}`, icon: '💰', cls: 'b-green' },
+    { label: 'Transactions', value: (stats?.txCount || 0).toLocaleString(), icon: '💳', cls: 'b-blue' },
+    { label: 'Registered Users', value: stats?.agents || 0, icon: '👥', cls: 'b-purple' },
+    { label: 'Pending Orders', value: stats?.pending || 0, icon: '⏳', cls: 'b-yellow' },
+    { label: 'Failed Orders', value: stats?.failed || 0, icon: '❌', cls: 'b-red' },
+    { label: 'Wallet Holdings', value: `₦${(stats?.walletTotal || 0).toLocaleString()}`, icon: '🏦', cls: 'b-blue' },
+    { label: 'Cashback Owed', value: `₦${(stats?.cashbackTotal || 0).toFixed(0)}`, icon: '🎁', cls: 'b-purple' },
+    { label: 'Products', value: `${stats?.products || 0} / ${stats?.plans || 0} plans`, icon: '📦', cls: 'b-gray' },
+  ];
+
+  return (
+    <div className="fi">
+      <SectionHead title="Dashboard" sub="Platform at a glance" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 28 }}>
+        {kpis.map(k => (
+          <div key={k.label} className="stat-g">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <span style={{ fontSize: 22 }}>{k.icon}</span>
+              <span className={`badge ${k.cls}`}>{typeof k.value === 'number' && k.value === 0 ? '—' : ''}</span>
+            </div>
+            <p style={{ fontSize: 24, fontWeight: 800, color: '#E2E8F0', letterSpacing: -0.8 }}>{k.value}</p>
+            <p style={{ fontSize: 12.5, color: '#334155', marginTop: 4 }}>{k.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="ai">
+        <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#334155', textTransform: 'uppercase', letterSpacing: 0.8 }}>Recent Transactions</p>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="tbl">
+            <thead><tr><th>Ref</th><th>Type</th><th>Phone</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+              {recentTx.map(tx => (
+                <tr key={tx.id}>
+                  <td className="code" style={{ color: '#6366F1' }}>{tx.tx_ref?.slice(-12) || '—'}</td>
+                  <td><span className={`badge ${statusClass[tx.type] || 'b-gray'}`}>{tx.type}</span></td>
+                  <td>{tx.phone}</td>
+                  <td style={{ color: '#4ade80', fontWeight: 600 }}>₦{tx.amount.toLocaleString()}</td>
+                  <td><span className={`badge ${statusClass[tx.status] || 'b-gray'}`}>{tx.status}</span></td>
+                  <td>{new Date(tx.createdAt).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── AGENTS ────────────────────────────────────────────────────────────────
+function Agents({ showToast }: { showToast: (m: string, ok?: boolean) => void }) {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [detail, setDetail] = useState<Agent | null>(null);
+  const [balModal, setBalModal] = useState<Agent | null>(null);
+  const [balAmount, setBalAmount] = useState('');
+  const [balType, setBalType] = useState<'credit' | 'debit'>('credit');
+  const [balLoading, setBalLoading] = useState(false);
+  const [agentTxs, setAgentTxs] = useState<Transaction[]>([]);
+  const [showTxModal, setShowTxModal] = useState<Agent | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { const r = await fetch('/api/admin/agents'); setAgents(await r.json()); } catch {}
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const toggle = async (a: Agent) => {
+    try {
+      const r = await fetch(`/api/admin/agents/${a.id}/toggle`, { method: 'POST' });
+      if (!r.ok) throw new Error();
+      showToast(`Agent ${a.isActive ? 'suspended' : 'activated'}`);
+      load();
+    } catch { showToast('Failed', false); }
+  };
+
+  const adjustBal = async () => {
+    if (!balAmount || !balModal) return;
+    setBalLoading(true);
+    try {
+      const r = await fetch(`/api/admin/agents/${balModal.id}/balance`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: parseFloat(balAmount), type: balType }),
+      });
+      if (!r.ok) throw new Error();
+      showToast(`₦${parseFloat(balAmount).toLocaleString()} ${balType}ed`);
+      setBalModal(null); setBalAmount(''); load();
+    } catch { showToast('Failed', false); }
+    finally { setBalLoading(false); }
+  };
+
+  const loadTxs = async (a: Agent) => {
+    setShowTxModal(a);
+    try {
+      const r = await fetch(`/api/admin/agents/${a.id}/transactions`);
+      const d = await r.json();
+      setAgentTxs(d.transactions || d || []);
+    } catch {}
+  };
+
+  const filtered = agents.filter(a =>
+    `${a.firstName} ${a.lastName} ${a.phone}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="fi">
+      {detail && (
+        <div className="overlay">
+          <div className="modal">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: '#E2E8F0' }}>Agent Details</h3>
+              <button onClick={() => setDetail(null)} className="btn btn-g" style={{ padding: '4px 10px' }}>✕</button>
+            </div>
+            {([
+              ['Full Name', `${detail.firstName} ${detail.lastName}`],
+              ['Phone', detail.phone],
+              ['Balance', `₦${detail.balance.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`],
+              ['Cashback Balance', `₦${detail.cashbackBalance.toFixed(2)}`],
+              ['Total Earned', `₦${(detail.totalCashbackEarned || 0).toFixed(2)}`],
+              ['Account Number', detail.flwAccountNumber || '—'],
+              ['Account Name', detail.flwAccountName || '—'],
+              ['Bank', detail.flwBankName || '—'],
+              ['Status', detail.isActive ? '✅ Active' : '❌ Suspended'],
+              ['Member Since', new Date(detail.createdAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' })],
+            ] as [string, string][]).map(([l, v]) => (
+              <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <span style={{ color: '#475569', fontSize: 13.5 }}>{l}</span>
+                <span style={{ color: '#CBD5E1', fontSize: 13.5, fontWeight: 500, textAlign: 'right', maxWidth: 220 }}>{v}</span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+              <button onClick={() => { setDetail(null); setBalModal(detail); }} className="btn btn-p" style={{ flex: 1, justifyContent: 'center' }}>💰 Adjust Balance</button>
+              <button onClick={() => { setDetail(null); loadTxs(detail); }} className="btn btn-g" style={{ flex: 1, justifyContent: 'center' }}>📋 Transactions</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {balModal && (
+        <div className="overlay">
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: '#E2E8F0', marginBottom: 4 }}>Adjust Balance</h3>
+            <p style={{ color: '#475569', fontSize: 13, marginBottom: 20 }}>{balModal.firstName} {balModal.lastName} — Current: <strong style={{ color: '#4ade80' }}>₦{balModal.balance.toLocaleString()}</strong></p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['credit', 'debit'] as const).map(t => (
+                  <button key={t} onClick={() => setBalType(t)} className={`btn ${balType === t ? (t === 'credit' ? 'btn-s' : 'btn-d') : 'btn-g'}`} style={{ flex: 1, justifyContent: 'center', textTransform: 'capitalize' }}>{t}</button>
+                ))}
+              </div>
+              <div>
+                <FieldLabel label="Amount (₦)" />
+                <input value={balAmount} onChange={e => setBalAmount(e.target.value)} placeholder="0.00" type="number" className="inp" />
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <button onClick={() => { setBalModal(null); setBalAmount(''); }} className="btn btn-g" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+                <button onClick={adjustBal} disabled={balLoading} className="btn btn-p" style={{ flex: 1, justifyContent: 'center' }}>
+                  {balLoading ? <Spinner /> : 'Apply'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTxModal && (
+        <div className="overlay">
+          <div className="modal" style={{ maxWidth: 680 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: '#E2E8F0' }}>{showTxModal.firstName}'s Transactions</h3>
+              <button onClick={() => setShowTxModal(null)} className="btn btn-g" style={{ padding: '4px 10px' }}>✕</button>
+            </div>
+            <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+              <table className="tbl">
+                <thead><tr><th>Type</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+                <tbody>
+                  {agentTxs.map(tx => (
+                    <tr key={tx.id}>
+                      <td><span className={`badge ${statusClass[tx.type] || 'b-gray'}`}>{tx.type}</span></td>
+                      <td style={{ color: '#4ade80', fontWeight: 600 }}>₦{tx.amount.toLocaleString()}</td>
+                      <td><span className={`badge ${statusClass[tx.status] || 'b-gray'}`}>{tx.status}</span></td>
+                      <td>{new Date(tx.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SectionHead title="Users / Agents" sub={`${agents.length} registered accounts`} right={
+        <div style={{ display: 'flex', gap: 10 }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or phone…" className="inp" style={{ width: 240 }} />
+          <button onClick={load} className="btn btn-g">↻</button>
+        </div>
+      } />
+
+      <div className="ai">
+        {loading ? <div style={{ padding: 48, display: 'flex', justifyContent: 'center' }}><Spinner /></div> : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="tbl">
+              <thead>
+                <tr><th>Name</th><th>Phone</th><th>Balance</th><th>Cashback</th><th>Account #</th><th>Status</th><th>Joined</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {filtered.map(a => (
+                  <tr key={a.id}>
+                    <td style={{ color: '#CBD5E1', fontWeight: 600 }}>{a.firstName} {a.lastName}</td>
+                    <td className="code">{a.phone}</td>
+                    <td style={{ color: '#4ade80', fontWeight: 600 }}>₦{a.balance.toLocaleString()}</td>
+                    <td>₦{a.cashbackBalance.toFixed(2)}</td>
+                    <td className="code" style={{ fontSize: 12 }}>{a.flwAccountNumber || '—'}</td>
+                    <td><span className={`badge ${a.isActive ? 'b-green' : 'b-red'}`}>{a.isActive ? 'Active' : 'Suspended'}</span></td>
+                    <td style={{ fontSize: 12 }}>{new Date(a.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 5 }}>
+                        <button onClick={() => setDetail(a)} className="btn btn-g" style={{ padding: '4px 9px', fontSize: 12 }}>View</button>
+                        <button onClick={() => setBalModal(a)} className="btn btn-p" style={{ padding: '4px 9px', fontSize: 12 }}>₦</button>
+                        <button onClick={() => toggle(a)} className={`btn ${a.isActive ? 'btn-d' : 'btn-s'}`} style={{ padding: '4px 9px', fontSize: 12 }}>
+                          {a.isActive ? 'Suspend' : 'Activate'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── PRODUCTS ──────────────────────────────────────────────────────────────
+function Products({ showToast }: { showToast: (m: string, ok?: boolean) => void }) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState<Partial<Product> | null>(null);
+  const [del, setDel] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { const r = await fetch('/api/products'); setProducts(await r.json()); } catch {}
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async () => {
+    if (!modal?.name || !modal?.price) return showToast('Name and price are required', false);
+    setSaving(true);
+    try {
+      const r = await fetch(modal.id ? `/api/admin/products/${modal.id}` : '/api/admin/products', {
+        method: modal.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(modal),
+      });
+      if (!r.ok) throw new Error();
+      showToast(modal.id ? 'Product updated' : 'Product created');
+      setModal(null); load();
+    } catch { showToast('Save failed', false); }
+    finally { setSaving(false); }
+  };
+
+  const remove = async (id: string) => {
+    try {
+      await fetch(`/api/admin/products/${id}`, { method: 'DELETE' });
+      showToast('Product deleted');
+      setDel(null); load();
+    } catch { showToast('Delete failed', false); }
+  };
+
+  const F = ({ label, field, type = 'text', placeholder = '' }: { label: string; field: keyof Product; type?: string; placeholder?: string }) => (
+    <div>
+      <FieldLabel label={label} />
+      <input type={type} value={(modal as any)?.[field] ?? ''} onChange={e => setModal(m => ({ ...m, [field]: type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }) as any)} placeholder={placeholder} className="inp" />
     </div>
   );
 
   return (
-    <DesktopWrapper>
-        {receiptTx && (
-            <BrandedReceipt 
-                ref={receiptRef} 
-                transaction={receiptTx}
-            />
-        )}
-
-        {/* Hidden Admin Statement rendered for PDF export */}
-        {pdfTransactions && (
-          <div ref={pdfRef}>
-            <div style={{ position: 'fixed', left: -9999, top: 0, opacity: 1, pointerEvents: 'none' }}>
-              <AdminStatement transactions={pdfTransactions} generatedAt={new Date().toLocaleString()} company={{ name: 'Sauki Mart', website: 'sukimart.online', phone: '08061934056', email: 'support@sukimart.online' }} />
+    <div className="fi">
+      {del && <ModalConfirm title="Delete Product?" desc="This action cannot be undone." onConfirm={() => remove(del)} onCancel={() => setDel(null)} />}
+      {modal && (
+        <div className="overlay">
+          <div className="modal">
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: '#E2E8F0', marginBottom: 20 }}>{modal.id ? 'Edit Product' : 'New Product'}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+              <F label="Name *" field="name" />
+              <F label="Description" field="description" placeholder="Optional" />
+              <F label="Price (₦) *" field="price" type="number" />
+              <F label="Image URL" field="image" placeholder="https://..." />
+              <div>
+                <FieldLabel label="Category" />
+                <select value={modal.category || 'device'} onChange={e => setModal(m => ({ ...m, category: e.target.value }) as any)} className="inp">
+                  {['device', 'sim', 'package'].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 9, color: '#94A3B8', fontSize: 14, cursor: 'pointer' }}>
+                <input type="checkbox" checked={modal.inStock !== false} onChange={e => setModal(m => ({ ...m, inStock: e.target.checked }) as any)} />
+                In Stock
+              </label>
+              <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                <button onClick={() => setModal(null)} className="btn btn-g" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+                <button onClick={save} disabled={saving} className="btn btn-p" style={{ flex: 1, justifyContent: 'center' }}>
+                  {saving ? <Spinner /> : 'Save Product'}
+                </button>
+              </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        <aside className="w-72 bg-primary-900/5 text-primary-50 flex flex-col shrink-0">
-            <div className="p-4">
-                <p className="text-accent-blue text-xs font-semibold uppercase tracking-widest">Master Control</p>
-            </div>
-            <nav className="flex-1 p-4 space-y-1 overflow-y-auto no-scrollbar">
-                {[
-                    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-                    { id: 'orders', label: 'Store Orders', icon: ShoppingBag, badge: pendingOrders.length },
-                    { id: 'transactions', label: 'All Transactions', icon: FileText },
-                    { id: 'products', label: 'Inventory', icon: Package },
-                    { id: 'plans', label: 'Data Plans', icon: Wifi },
-                    { id: 'agents', label: 'Agents', icon: Users },
-                    { id: 'support', label: 'Support Tickets', icon: MessageSquare },
-                    { id: 'communication', label: 'Notifications', icon: Megaphone },
-                    { id: 'console', label: 'API Console', icon: Terminal },
-                    { id: 'webhooks', label: 'Webhooks Log', icon: Activity },
-                ].map(item => (
-                    <button 
-                      key={item.id} 
-                      onClick={() => setView(item.id as any)} 
-                      className={cn(
-                        "flex items-center justify-between w-full px-4 py-3 rounded-xl text-xs font-semibold transition-all group",
-                        view === item.id 
-                          ? "bg-white text-primary-900 shadow-elevation-4" 
-                          : "text-primary-300 hover:bg-white/10"
-                      )}
-                    >
-                        <div className="flex items-center gap-3">
-                          <item.icon className="w-4 h-4" /> 
-                          <span>{item.label}</span>
-                        </div>
-                        {item.badge ? (
-                          <span className="bg-accent-red text-white px-2 py-0.5 rounded-full text-[9px] font-bold animate-pulse">
-                            {item.badge}
-                          </span>
-                        ) : null}
-                    </button>
+      <SectionHead title="Products" sub={`${products.length} items in store`} right={
+        <button onClick={() => setModal({ inStock: true, category: 'device' })} className="btn btn-p">+ New Product</button>
+      } />
+
+      <div className="ai">
+        {loading ? <div style={{ padding: 48, display: 'flex', justifyContent: 'center' }}><Spinner /></div> : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="tbl">
+              <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+              <tbody>
+                {products.map(p => (
+                  <tr key={p.id}>
+                    <td>{p.image ? <img src={p.image} alt="" style={{ width: 38, height: 38, objectFit: 'cover', borderRadius: 8 }} /> : <div style={{ width: 38, height: 38, background: 'rgba(255,255,255,0.04)', borderRadius: 8 }} />}</td>
+                    <td style={{ color: '#CBD5E1', fontWeight: 600 }}>{p.name}</td>
+                    <td><span className="badge b-purple">{p.category}</span></td>
+                    <td style={{ color: '#4ade80', fontWeight: 600 }}>₦{p.price.toLocaleString()}</td>
+                    <td><span className={`badge ${p.inStock ? 'b-green' : 'b-red'}`}>{p.inStock ? 'In Stock' : 'Out'}</span></td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 5 }}>
+                        <button onClick={() => setModal(p)} className="btn btn-g" style={{ padding: '4px 9px', fontSize: 12 }}>Edit</button>
+                        <button onClick={() => setDel(p.id)} className="btn btn-d" style={{ padding: '4px 9px', fontSize: 12 }}>Del</button>
+                      </div>
+                    </td>
+                  </tr>
                 ))}
-            </nav>
-            
-            {/* Admin Footer Info */}
-            <div className="p-4 border-t border-primary-700/50 space-y-3 shrink-0">
-                <div className="bg-white/10 backdrop-blur rounded-lg p-3 text-[10px] space-y-1">
-                    <p className="text-primary-400 font-semibold uppercase tracking-wide">Admin Wallet</p>
-                    <p className="text-white font-bold flex items-center gap-1.5">
-                        <Landmark className="w-3.5 h-3.5" />
-                        Zenith: 1210631613
-                    </p>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── DATA PLANS ─────────────────────────────────────────────────────────────
+function DataPlans({ showToast }: { showToast: (m: string, ok?: boolean) => void }) {
+  const [plans, setPlans] = useState<DataPlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState<Partial<DataPlan> | null>(null);
+  const [del, setDel] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [netFilter, setNetFilter] = useState('ALL');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { const r = await fetch('/api/data-plans'); setPlans(await r.json()); } catch {}
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async () => {
+    if (!modal?.network || !modal?.data || !modal?.validity || !modal?.price) return showToast('All fields required', false);
+    setSaving(true);
+    try {
+      const r = await fetch(modal.id ? `/api/admin/data-plans/${modal.id}` : '/api/admin/data-plans', {
+        method: modal.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(modal),
+      });
+      if (!r.ok) throw new Error();
+      showToast(modal.id ? 'Plan updated' : 'Plan created');
+      setModal(null); load();
+    } catch { showToast('Save failed', false); }
+    finally { setSaving(false); }
+  };
+
+  const remove = async (id: string) => {
+    try {
+      await fetch(`/api/admin/data-plans/${id}`, { method: 'DELETE' });
+      showToast('Plan deleted');
+      setDel(null); load();
+    } catch { showToast('Failed', false); }
+  };
+
+  const netColors: Record<string, string> = { MTN: '#FFCC00', AIRTEL: '#E40000', GLO: '#00892C' };
+  const filtered = netFilter === 'ALL' ? plans : plans.filter(p => p.network === netFilter);
+
+  return (
+    <div className="fi">
+      {del && <ModalConfirm title="Delete Plan?" desc="Agents won't be able to purchase this plan." onConfirm={() => remove(del)} onCancel={() => setDel(null)} />}
+      {modal && (
+        <div className="overlay">
+          <div className="modal">
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: '#E2E8F0', marginBottom: 20 }}>{modal.id ? 'Edit Plan' : 'New Data Plan'}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+              <div>
+                <FieldLabel label="Network *" />
+                <select value={modal.network || ''} onChange={e => setModal(m => ({ ...m, network: e.target.value }) as any)} className="inp">
+                  <option value="">Select network…</option>
+                  {['MTN', 'AIRTEL', 'GLO'].map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+              {([
+                { label: 'Data Size *', field: 'data', placeholder: 'e.g. 5GB' },
+                { label: 'Validity *', field: 'validity', placeholder: 'e.g. 30 Days' },
+                { label: 'Price (₦) *', field: 'price', type: 'number' },
+                { label: 'Amigo Plan ID *', field: 'planId', type: 'number', placeholder: 'API plan ID' },
+              ] as any[]).map(({ label, field, type = 'text', placeholder = '' }) => (
+                <div key={field}>
+                  <FieldLabel label={label} />
+                  <input type={type} value={(modal as any)[field] ?? ''} onChange={e => setModal(m => ({ ...m, [field]: type === 'number' ? parseInt(e.target.value) || 0 : e.target.value }) as any)} placeholder={placeholder} className="inp" />
                 </div>
+              ))}
+              <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                <button onClick={() => setModal(null)} className="btn btn-g" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+                <button onClick={save} disabled={saving} className="btn btn-p" style={{ flex: 1, justifyContent: 'center' }}>
+                  {saving ? <Spinner /> : 'Save Plan'}
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      <SectionHead title="Data Plans" sub={`${plans.length} plans configured`} right={
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {['ALL', 'MTN', 'AIRTEL', 'GLO'].map(n => (
+              <button key={n} onClick={() => setNetFilter(n)} className={`btn ${netFilter === n ? 'btn-p' : 'btn-g'}`} style={{ padding: '6px 12px' }}>{n}</button>
+            ))}
+          </div>
+          <button onClick={() => setModal({})} className="btn btn-p">+ New Plan</button>
+        </div>
+      } />
+
+      <div className="ai">
+        {loading ? <div style={{ padding: 48, display: 'flex', justifyContent: 'center' }}><Spinner /></div> : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="tbl">
+              <thead><tr><th>Network</th><th>Data</th><th>Validity</th><th>Price</th><th>Amigo ID</th><th>Actions</th></tr></thead>
+              <tbody>
+                {filtered.map(p => (
+                  <tr key={p.id}>
+                    <td>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: 5, background: netColors[p.network] || '#fff', display: 'inline-block' }} />
+                        <span style={{ color: '#CBD5E1', fontWeight: 700 }}>{p.network}</span>
+                      </span>
+                    </td>
+                    <td style={{ fontWeight: 700, color: '#E2E8F0', fontSize: 15 }}>{p.data}</td>
+                    <td>{p.validity}</td>
+                    <td style={{ color: '#4ade80', fontWeight: 600 }}>₦{p.price.toLocaleString()}</td>
+                    <td className="code" style={{ color: '#6366F1' }}>{p.planId}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 5 }}>
+                        <button onClick={() => setModal(p)} className="btn btn-g" style={{ padding: '4px 9px', fontSize: 12 }}>Edit</button>
+                        <button onClick={() => setDel(p.id)} className="btn btn-d" style={{ padding: '4px 9px', fontSize: 12 }}>Del</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── TRANSACTIONS ─────────────────────────────────────────────────────────
+function Transactions({ showToast }: { showToast: (m: string, ok?: boolean) => void }) {
+  const [txs, setTxs] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [detail, setDetail] = useState<Transaction | null>(null);
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ limit: '500' });
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      const r = await fetch(`/api/transactions/list?${params}`);
+      const d = await r.json();
+      setTxs(Array.isArray(d) ? d : (d?.transactions || []));
+    } catch {}
+    finally { setLoading(false); }
+  }, [statusFilter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const updateStatus = async (id: string, status: string) => {
+    setUpdating(id);
+    try {
+      const r = await fetch(`/api/admin/transactions/${id}/status`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (!r.ok) throw new Error();
+      showToast(`Status updated to ${status}`);
+      load();
+    } catch { showToast('Update failed', false); }
+    finally { setUpdating(null); }
+  };
+
+  const filtered = txs.filter(t => {
+    const matchType = typeFilter === 'all' || t.type === typeFilter;
+    const matchSearch = !search || t.phone.includes(search) || t.tx_ref?.toLowerCase().includes(search.toLowerCase());
+    return matchType && matchSearch;
+  });
+
+  const statuses = ['all', 'pending', 'paid', 'delivered', 'failed'];
+  const types = ['all', 'data', 'ecommerce', 'wallet_funding'];
+
+  return (
+    <div className="fi">
+      {detail && (
+        <div className="overlay">
+          <div className="modal" style={{ maxWidth: 560 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: '#E2E8F0' }}>Transaction Details</h3>
+              <button onClick={() => setDetail(null)} className="btn btn-g" style={{ padding: '4px 10px' }}>✕</button>
+            </div>
+            {([
+              ['Reference', detail.tx_ref],
+              ['Type', detail.type],
+              ['Status', detail.status],
+              ['Phone', detail.phone],
+              ['Amount', `₦${detail.amount.toLocaleString()}`],
+              ['Cashback', `₦${(detail.agentCashbackAmount || 0).toFixed(2)}`],
+              ['Data Plan', detail.dataPlan ? `${detail.dataPlan.data} (${detail.dataPlan.network})` : '—'],
+              ['Product', detail.product?.name || '—'],
+              ['Agent', detail.agent ? `${detail.agent.firstName} ${detail.agent.lastName}` : '—'],
+              ['Date', new Date(detail.createdAt).toLocaleString()],
+            ] as [string, string][]).map(([l, v]) => (
+              <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <span style={{ color: '#475569', fontSize: 13 }}>{l}</span>
+                <span style={{ color: '#CBD5E1', fontSize: 13, fontWeight: 500, fontFamily: l === 'Reference' ? 'monospace' : 'inherit' }}>{v}</span>
+              </div>
+            ))}
+            <div style={{ marginTop: 16 }}>
+              <FieldLabel label="Update Status" />
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {['pending', 'paid', 'delivered', 'failed'].map(s => (
+                  <button key={s} onClick={() => { updateStatus(detail.id, s); setDetail(null); }}
+                    className={`btn ${detail.status === s ? 'btn-p' : 'btn-g'}`} style={{ padding: '6px 12px', textTransform: 'capitalize' }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SectionHead title="Transactions" sub={`${txs.length} total records`} right={
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search phone / ref…" className="inp" style={{ width: 200 }} />
+          <button onClick={load} className="btn btn-g">↻</button>
+        </div>
+      } />
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        {statuses.map(s => (
+          <button key={s} onClick={() => setStatusFilter(s)} className={`btn ${statusFilter === s ? 'btn-p' : 'btn-g'}`} style={{ padding: '5px 12px', textTransform: 'capitalize' }}>{s}</button>
+        ))}
+        <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
+        {types.map(t => (
+          <button key={t} onClick={() => setTypeFilter(t)} className={`btn ${typeFilter === t ? 'btn-o' : 'btn-g'}`} style={{ padding: '5px 12px', textTransform: 'capitalize' }}>{t}</button>
+        ))}
+      </div>
+
+      <div className="ai">
+        {loading ? <div style={{ padding: 48, display: 'flex', justifyContent: 'center' }}><Spinner /></div> : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="tbl">
+              <thead><tr><th>Ref</th><th>Type</th><th>Phone</th><th>Amount</th><th>Status</th><th>Agent</th><th>Date</th><th>Actions</th></tr></thead>
+              <tbody>
+                {filtered.slice(0, 100).map(tx => (
+                  <tr key={tx.id}>
+                    <td className="code" style={{ color: '#6366F1', fontSize: 11 }}>{tx.tx_ref?.slice(-14) || '—'}</td>
+                    <td><span className={`badge ${statusClass[tx.type] || 'b-gray'}`}>{tx.type}</span></td>
+                    <td>{tx.phone}</td>
+                    <td style={{ color: '#4ade80', fontWeight: 600 }}>₦{tx.amount.toLocaleString()}</td>
+                    <td><span className={`badge ${statusClass[tx.status] || 'b-gray'}`}>{tx.status}</span></td>
+                    <td style={{ fontSize: 12 }}>{tx.agent ? `${tx.agent.firstName}` : '—'}</td>
+                    <td style={{ fontSize: 12 }}>{new Date(tx.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 5 }}>
+                        <button onClick={() => setDetail(tx)} className="btn btn-g" style={{ padding: '4px 9px', fontSize: 12 }}>View</button>
+                        {tx.status === 'pending' && (
+                          <button onClick={() => updateStatus(tx.id, 'delivered')} disabled={!!updating} className="btn btn-s" style={{ padding: '4px 9px', fontSize: 12 }}>
+                            {updating === tx.id ? <Spinner /> : '✓ Mark Delivered'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── SYSTEM MESSAGES ──────────────────────────────────────────────────────
+function SystemMessages({ showToast }: { showToast: (m: string, ok?: boolean) => void }) {
+  const [msgs, setMsgs] = useState<SystemMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState<Partial<SystemMessage> | null>(null);
+  const [del, setDel] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { const r = await fetch('/api/admin/messages'); setMsgs(await r.json()); } catch {}
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async () => {
+    if (!modal?.content) return showToast('Content required', false);
+    setSaving(true);
+    try {
+      const r = await fetch(modal.id ? `/api/admin/messages/${modal.id}` : '/api/admin/messages', {
+        method: modal.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(modal),
+      });
+      if (!r.ok) throw new Error();
+      showToast(modal.id ? 'Message updated' : 'Message created');
+      setModal(null); load();
+    } catch { showToast('Save failed', false); }
+    finally { setSaving(false); }
+  };
+
+  const remove = async (id: string) => {
+    await fetch(`/api/admin/messages/${id}`, { method: 'DELETE' });
+    showToast('Message deleted');
+    setDel(null); load();
+  };
+
+  const toggleActive = async (m: SystemMessage) => {
+    try {
+      await fetch(`/api/admin/messages/${m.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...m, isActive: !m.isActive }),
+      });
+      showToast(`Message ${m.isActive ? 'deactivated' : 'activated'}`);
+      load();
+    } catch { showToast('Failed', false); }
+  };
+
+  return (
+    <div className="fi">
+      {del && <ModalConfirm title="Delete Message?" desc="The message will be removed." onConfirm={() => remove(del)} onCancel={() => setDel(null)} />}
+      {modal && (
+        <div className="overlay">
+          <div className="modal">
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: '#E2E8F0', marginBottom: 20 }}>{modal.id ? 'Edit Message' : 'New System Message'}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+              <div>
+                <FieldLabel label="Message Content *" />
+                <textarea value={modal.content || ''} onChange={e => setModal(m => ({ ...m, content: e.target.value }) as any)} placeholder="Announcement text…" className="inp" rows={4} style={{ resize: 'vertical' }} />
+              </div>
+              <div>
+                <FieldLabel label="Type" />
+                <select value={modal.type || 'info'} onChange={e => setModal(m => ({ ...m, type: e.target.value }) as any)} className="inp">
+                  {['info', 'warning', 'error', 'success'].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 9, color: '#94A3B8', fontSize: 14, cursor: 'pointer' }}>
+                <input type="checkbox" checked={modal.isActive !== false} onChange={e => setModal(m => ({ ...m, isActive: e.target.checked }) as any)} />
+                Active (visible to users)
+              </label>
+              <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                <button onClick={() => setModal(null)} className="btn btn-g" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+                <button onClick={save} disabled={saving} className="btn btn-p" style={{ flex: 1, justifyContent: 'center' }}>
+                  {saving ? <Spinner /> : 'Save Message'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SectionHead title="System Messages" sub="Announcements visible to app users" right={
+        <button onClick={() => setModal({ isActive: true, type: 'info' })} className="btn btn-p">+ New Message</button>
+      } />
+
+      <div className="ai">
+        {loading ? <div style={{ padding: 48, display: 'flex', justifyContent: 'center' }}><Spinner /></div> : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="tbl">
+              <thead><tr><th>Content</th><th>Type</th><th>Active</th><th>Created</th><th>Actions</th></tr></thead>
+              <tbody>
+                {msgs.map(m => (
+                  <tr key={m.id}>
+                    <td style={{ maxWidth: 300, color: '#CBD5E1' }}><span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{m.content}</span></td>
+                    <td><span className={`badge ${statusClass[m.type] || 'b-gray'}`}>{m.type}</span></td>
+                    <td><span className={`badge ${m.isActive ? 'b-green' : 'b-gray'}`}>{m.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td style={{ fontSize: 12 }}>{new Date(m.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 5 }}>
+                        <button onClick={() => setModal(m)} className="btn btn-g" style={{ padding: '4px 9px', fontSize: 12 }}>Edit</button>
+                        <button onClick={() => toggleActive(m)} className={`btn ${m.isActive ? 'btn-d' : 'btn-s'}`} style={{ padding: '4px 9px', fontSize: 12 }}>{m.isActive ? 'Deactivate' : 'Activate'}</button>
+                        <button onClick={() => setDel(m.id)} className="btn btn-d" style={{ padding: '4px 9px', fontSize: 12 }}>Del</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── SUPPORT TICKETS ──────────────────────────────────────────────────────
+function Support({ showToast }: { showToast: (m: string, ok?: boolean) => void }) {
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [detail, setDetail] = useState<SupportTicket | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/admin/support');
+      setTickets(await r.json());
+    } catch {}
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const closeTicket = async (id: string) => {
+    try {
+      await fetch(`/api/admin/support/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'closed' }) });
+      showToast('Ticket closed');
+      setDetail(null); load();
+    } catch { showToast('Failed', false); }
+  };
+
+  const filtered = filter === 'all' ? tickets : tickets.filter(t => t.status === filter);
+
+  return (
+    <div className="fi">
+      {detail && (
+        <div className="overlay">
+          <div className="modal">
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: '#E2E8F0' }}>Support Ticket</h3>
+              <button onClick={() => setDetail(null)} className="btn btn-g" style={{ padding: '4px 10px' }}>✕</button>
+            </div>
+            {([
+              ['Phone', detail.phone],
+              ['Status', detail.status],
+              ['Created', new Date(detail.createdAt).toLocaleString()],
+            ] as [string, string][]).map(([l, v]) => (
+              <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span style={{ color: '#475569', fontSize: 13 }}>{l}</span>
+                <span style={{ color: '#CBD5E1', fontSize: 13, fontWeight: 500 }}>{v}</span>
+              </div>
+            ))}
+            <div style={{ marginTop: 16 }}>
+              <FieldLabel label="Message" />
+              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 14, color: '#94A3B8', fontSize: 14, lineHeight: 1.7 }}>{detail.message}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <a href={`https://wa.me/${detail.phone.replace(/^0/, '234')}`} target="_blank" rel="noopener noreferrer" className="btn btn-s" style={{ flex: 1, justifyContent: 'center', textDecoration: 'none' }}>💬 WhatsApp</a>
+              {detail.status === 'open' && (
+                <button onClick={() => closeTicket(detail.id)} className="btn btn-p" style={{ flex: 1, justifyContent: 'center' }}>✓ Close Ticket</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SectionHead title="Support Tickets" sub={`${tickets.filter(t => t.status === 'open').length} open tickets`} right={
+        <div style={{ display: 'flex', gap: 8 }}>
+          {['all', 'open', 'closed'].map(f => (
+            <button key={f} onClick={() => setFilter(f)} className={`btn ${filter === f ? 'btn-p' : 'btn-g'}`} style={{ padding: '5px 12px', textTransform: 'capitalize' }}>{f}</button>
+          ))}
+          <button onClick={load} className="btn btn-g">↻</button>
+        </div>
+      } />
+
+      <div className="ai">
+        {loading ? <div style={{ padding: 48, display: 'flex', justifyContent: 'center' }}><Spinner /></div> : filtered.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#334155' }}>No tickets found</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="tbl">
+              <thead><tr><th>Phone</th><th>Message</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+              <tbody>
+                {filtered.map(t => (
+                  <tr key={t.id}>
+                    <td>{t.phone}</td>
+                    <td style={{ maxWidth: 300 }}><span style={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: '#94A3B8' }}>{t.message}</span></td>
+                    <td><span className={`badge ${statusClass[t.status] || 'b-gray'}`}>{t.status}</span></td>
+                    <td style={{ fontSize: 12 }}>{new Date(t.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      <button onClick={() => setDetail(t)} className="btn btn-g" style={{ padding: '4px 9px', fontSize: 12 }}>View</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── WEBHOOKS ─────────────────────────────────────────────────────────────
+function Webhooks({ showToast }: { showToast: (m: string, ok?: boolean) => void }) {
+  const [logs, setLogs] = useState<WebhookLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<WebhookLog | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { const r = await fetch('/api/admin/webhooks'); const d = await r.json(); setLogs(Array.isArray(d) ? d : (d?.logs || [])); } catch {}
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <div className="fi">
+      {detail && (
+        <div className="overlay">
+          <div className="modal" style={{ maxWidth: 620 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: '#E2E8F0' }}>Webhook Payload</h3>
+              <button onClick={() => setDetail(null)} className="btn btn-g" style={{ padding: '4px 10px' }}>✕</button>
+            </div>
+            <p style={{ color: '#475569', fontSize: 12.5, marginBottom: 12 }}>Source: <strong style={{ color: '#a5b4fc' }}>{detail.source}</strong> · {new Date(detail.createdAt).toLocaleString()}</p>
+            <pre className="code" style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 10, padding: 16, color: '#94A3B8', overflowX: 'auto', maxHeight: 400, fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+              {JSON.stringify(detail.payload, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      <SectionHead title="Webhook Logs" sub="Incoming payment & delivery webhooks" right={
+        <button onClick={load} className="btn btn-g">↻ Refresh</button>
+      } />
+
+      <div className="ai">
+        {loading ? <div style={{ padding: 48, display: 'flex', justifyContent: 'center' }}><Spinner /></div> : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="tbl">
+              <thead><tr><th>Source</th><th>Event</th><th>Status</th><th>Amount</th><th>Date</th><th>Actions</th></tr></thead>
+              <tbody>
+                {logs.map(l => {
+                  const p = l.payload || {};
+                  return (
+                    <tr key={l.id}>
+                      <td><span className="badge b-blue">{l.source}</span></td>
+                      <td style={{ fontSize: 12, fontFamily: 'monospace' }}>{p.event || p.type || '—'}</td>
+                      <td><span className={`badge ${(p.data?.status === 'successful' || p.status === 'successful') ? 'b-green' : 'b-yellow'}`}>{p.data?.status || p.status || '—'}</span></td>
+                      <td style={{ color: '#4ade80' }}>{p.data?.amount ? `₦${p.data.amount.toLocaleString()}` : '—'}</td>
+                      <td style={{ fontSize: 12 }}>{new Date(l.createdAt).toLocaleString()}</td>
+                      <td>
+                        <button onClick={() => setDetail(l)} className="btn btn-g" style={{ padding: '4px 9px', fontSize: 12 }}>View JSON</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── CONSOLE ──────────────────────────────────────────────────────────────
+function DevConsole({ showToast }: { showToast: (m: string, ok?: boolean) => void }) {
+  const [method, setMethod] = useState('GET');
+  const [url, setUrl] = useState('');
+  const [body, setBody] = useState('');
+  const [output, setOutput] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const run = async () => {
+    if (!url) return;
+    setLoading(true); setOutput('Loading…');
+    try {
+      const opts: RequestInit = { method, headers: { 'Content-Type': 'application/json' } };
+      if (['POST', 'PUT'].includes(method) && body) opts.body = body;
+      const r = await fetch(url, opts);
+      const text = await r.text();
+      try {
+        const json = JSON.parse(text);
+        setOutput(`// HTTP ${r.status}\n${JSON.stringify(json, null, 2)}`);
+      } catch { setOutput(`// HTTP ${r.status}\n${text}`); }
+    } catch (e: any) { setOutput(`// Error\n${e.message}`); }
+    finally { setLoading(false); }
+  };
+
+  const presets = [
+    { label: 'List Agents', method: 'GET', url: '/api/admin/agents' },
+    { label: 'List Products', method: 'GET', url: '/api/products' },
+    { label: 'List Plans', method: 'GET', url: '/api/data-plans' },
+    { label: 'Recent Transactions', method: 'GET', url: '/api/transactions/list?limit=10' },
+    { label: 'Support Tickets', method: 'GET', url: '/api/admin/support' },
+    { label: 'Webhook Logs', method: 'GET', url: '/api/admin/webhooks' },
+    { label: 'System Messages', method: 'GET', url: '/api/admin/messages' },
+  ];
+
+  return (
+    <div className="fi">
+      <SectionHead title="API Console" sub="Test API endpoints directly" />
+
+      <div style={{ marginBottom: 16 }}>
+        <p style={{ fontSize: 12, color: '#334155', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.7 }}>Presets</p>
+        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+          {presets.map(p => (
+            <button key={p.label} onClick={() => { setMethod(p.method); setUrl(p.url); }} className="btn btn-g" style={{ padding: '5px 12px', fontSize: 12 }}>{p.label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="ai-p" style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+          <select value={method} onChange={e => setMethod(e.target.value)} className="inp" style={{ width: 100 }}>
+            {['GET', 'POST', 'PUT', 'DELETE'].map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <input value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => e.key === 'Enter' && run()} placeholder="/api/…" className="inp" style={{ flex: 1, fontFamily: 'monospace' }} />
+          <button onClick={run} disabled={loading || !url} className="btn btn-p">
+            {loading ? <Spinner /> : '▶ Run'}
+          </button>
+        </div>
+        {['POST', 'PUT'].includes(method) && (
+          <div>
+            <FieldLabel label="Request Body (JSON)" />
+            <textarea value={body} onChange={e => setBody(e.target.value)} placeholder='{"key": "value"}' className="inp code" rows={4} style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: 12 }} />
+          </div>
+        )}
+      </div>
+
+      {output && (
+        <div className="ai">
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: '#334155', textTransform: 'uppercase', letterSpacing: 0.7 }}>Response</p>
+            <button onClick={() => navigator.clipboard?.writeText(output)} className="btn btn-g" style={{ padding: '3px 9px', fontSize: 11 }}>Copy</button>
+          </div>
+          <pre className="code" style={{ padding: 16, color: '#94A3B8', overflowX: 'auto', maxHeight: 500, fontSize: 12, lineHeight: 1.6 }}>{output}</pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── SIDEBAR ───────────────────────────────────────────────────────────────
+const NAV_ITEMS: { key: Tab; label: string; icon: string }[] = [
+  { key: 'dashboard', label: 'Dashboard', icon: '⊞' },
+  { key: 'agents', label: 'Users & Agents', icon: '👥' },
+  { key: 'products', label: 'Products', icon: '📦' },
+  { key: 'plans', label: 'Data Plans', icon: '📶' },
+  { key: 'transactions', label: 'Transactions', icon: '💳' },
+  { key: 'messages', label: 'System Messages', icon: '📢' },
+  { key: 'support', label: 'Support Tickets', icon: '🎫' },
+  { key: 'webhooks', label: 'Webhook Logs', icon: '🔗' },
+  { key: 'console', label: 'API Console', icon: '⌨️' },
+];
+
+// ─── MAIN ADMIN ─────────────────────────────────────────────────────────────
+export default function AdminPage() {
+  const [authed, setAuthed] = useState(false);
+  const [tab, setTab] = useState<Tab>('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { toast, show } = useToast();
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('sm_admin');
+    if (saved) setAuthed(true);
+  }, []);
+
+  const handleLogin = () => { sessionStorage.setItem('sm_admin', '1'); setAuthed(true); };
+  const handleLogout = () => { sessionStorage.removeItem('sm_admin'); setAuthed(false); };
+
+  if (!authed) return <><AdminStyle /><AdminLogin onLogin={handleLogin} /></>;
+
+  const renderTab = () => {
+    const props = { showToast: show };
+    switch (tab) {
+      case 'dashboard': return <Dashboard />;
+      case 'agents': return <Agents {...props} />;
+      case 'products': return <Products {...props} />;
+      case 'plans': return <DataPlans {...props} />;
+      case 'transactions': return <Transactions {...props} />;
+      case 'messages': return <SystemMessages {...props} />;
+      case 'support': return <Support {...props} />;
+      case 'webhooks': return <Webhooks {...props} />;
+      case 'console': return <DevConsole {...props} />;
+      default: return <Dashboard />;
+    }
+  };
+
+  return (
+    <>
+      <AdminStyle />
+      {toast && <Toast t={toast} />}
+
+      <div style={{ display: 'flex', minHeight: '100vh' }}>
+        {/* Sidebar */}
+        <aside style={{
+          width: sidebarOpen ? 220 : 60, flexShrink: 0,
+          background: '#0A0A12', borderRight: '1px solid rgba(255,255,255,0.05)',
+          display: 'flex', flexDirection: 'column',
+          transition: 'width 0.2s cubic-bezier(0.32,0.72,0,1)',
+          position: 'sticky', top: 0, height: '100vh', overflow: 'hidden',
+        }}>
+          {/* Logo */}
+          <div style={{ padding: '16px 14px 8px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(255,255,255,0.05)', flexShrink: 0 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg,#6366F1,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 18 }}>⚡</div>
+            {sidebarOpen && <div>
+              <p style={{ fontSize: 14, fontWeight: 800, color: '#E2E8F0', lineHeight: 1 }}>SaukiMart</p>
+              <p style={{ fontSize: 10.5, color: '#334155', marginTop: 2 }}>Admin Console</p>
+            </div>}
+          </div>
+
+          {/* Nav items */}
+          <nav style={{ flex: 1, overflowY: 'auto', padding: '10px 8px' }}>
+            {NAV_ITEMS.map(item => (
+              <button key={item.key} onClick={() => setTab(item.key)} className={`nav-link ${tab === item.key ? 'active' : ''}`} title={!sidebarOpen ? item.label : undefined}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
+                {sidebarOpen && <span>{item.label}</span>}
+              </button>
+            ))}
+          </nav>
+
+          {/* Bottom */}
+          <div style={{ padding: '10px 8px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            <button onClick={() => setSidebarOpen(o => !o)} className="nav-link" title="Toggle sidebar">
+              <span style={{ fontSize: 16 }}>{sidebarOpen ? '←' : '→'}</span>
+              {sidebarOpen && <span>Collapse</span>}
+            </button>
+            <button onClick={handleLogout} className="nav-link" style={{ color: '#7f1d1d' }}>
+              <span style={{ fontSize: 16 }}>⎋</span>
+              {sidebarOpen && <span>Sign Out</span>}
+            </button>
+          </div>
         </aside>
 
-        <main className="flex-1 p-6 overflow-y-auto h-screen bg-primary-50 relative flex flex-col">
-             {/* Header */}
-             <header className="flex justify-between items-center mb-8 shrink-0">
-                <div>
-                    <p className="text-primary-600 text-sm font-semibold uppercase tracking-wide mb-1">Control Panel</p>
-                    <h2 className="text-4xl font-bold text-primary-900 uppercase tracking-tight">{view.replace('_', ' ')}</h2>
-                </div>
-                <div className="flex gap-4 items-center">
-                    <button 
-                      onClick={refreshAll} 
-                      className="p-3 bg-white rounded-xl shadow-elevation-2 border border-primary-100 hover:bg-primary-50 transition-all"
-                      title="Refresh data"
-                    >
-                        <RefreshCw className={cn("w-5 h-5 text-primary-600", loading && "animate-spin")} />
-                    </button>
-                </div>
-            </header>
-
-            {/* Content Area - Scrollable */}
-            <div className="flex-1 overflow-y-auto">
-                {view === 'dashboard' && (
-                <div className="space-y-8">
-                    {/* Key Metrics Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Pending Orders Card */}
-                        <div className="bg-gradient-to-br from-white to-primary-50/50 p-8 rounded-2xl border border-primary-100/50 shadow-elevation-4 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-accent-red/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
-                            <div className="relative z-10">
-                                <p className="text-primary-600 text-xs font-semibold uppercase tracking-widest mb-2">Pending Orders</p>
-                                <h3 className="text-5xl font-bold text-primary-900 mb-4">{pendingOrders.length}</h3>
-                                <div className="flex items-center gap-2 text-accent-red text-sm font-semibold">
-                                    <ShoppingBag className="w-5 h-5" /> Action Required
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Total Agents Card */}
-                        <div className="bg-gradient-to-br from-white to-primary-50/50 p-8 rounded-2xl border border-primary-100/50 shadow-elevation-4 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-accent-blue/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
-                            <div className="relative z-10">
-                                <p className="text-primary-600 text-xs font-semibold uppercase tracking-widest mb-2">Partner Network</p>
-                                <h3 className="text-5xl font-bold text-primary-900 mb-4">{agents?.length || 0}</h3>
-                                <div className="flex items-center gap-2 text-accent-blue text-sm font-semibold">
-                                    <Users className="w-5 h-5" /> Active Agents
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Inventory Card */}
-                        <div className="bg-gradient-to-br from-white to-primary-50/50 p-8 rounded-2xl border border-primary-100/50 shadow-elevation-4 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-accent-green/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
-                            <div className="relative z-10">
-                                <p className="text-primary-600 text-xs font-semibold uppercase tracking-widest mb-2">Inventory</p>
-                                <h3 className="text-5xl font-bold text-primary-900 mb-4">{products?.length || 0}</h3>
-                                <div className="flex items-center gap-2 text-accent-green text-sm font-semibold">
-                                    <Package className="w-5 h-5" /> Items
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div className="bg-white rounded-2xl border border-primary-100/50 shadow-elevation-2 p-8">
-                        <h3 className="text-lg font-bold text-primary-900 mb-6 uppercase tracking-tight">Quick Actions</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <button onClick={() => setView('orders')} className="p-4 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors border border-primary-100 font-semibold text-primary-900 text-sm">
-                                <ShoppingBag className="w-5 h-5 mx-auto mb-2" />
-                                View Orders
-                            </button>
-                            <button onClick={() => setView('agents')} className="p-4 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors border border-primary-100 font-semibold text-primary-900 text-sm">
-                                <Users className="w-5 h-5 mx-auto mb-2" />
-                                Manage Agents
-                            </button>
-                            <button onClick={() => setView('products')} className="p-4 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors border border-primary-100 font-semibold text-primary-900 text-sm">
-                                <Package className="w-5 h-5 mx-auto mb-2" />
-                                Inventory
-                            </button>
-                            <button onClick={() => setView('communication')} className="p-4 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors border border-primary-100 font-semibold text-primary-900 text-sm">
-                                <Megaphone className="w-5 h-5 mx-auto mb-2" />
-                                Send Message
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {view === 'orders' && (
-                <div className="space-y-6">
-                    {pendingOrders.length === 0 ? <div className="text-center py-20 text-slate-400 font-bold uppercase text-xs">No Pending Orders</div> : 
-                    pendingOrders.map(tx => (
-                        <div key={tx.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600"><ShoppingBag className="w-6 h-6" /></div>
-                                <div>
-                                    <h4 className="font-black text-slate-900 uppercase text-sm">{tx.deliveryData?.manifest || 'Order'}</h4>
-                                    <p className="text-xs text-slate-500 font-bold">{tx.customerName} • {tx.phone}</p>
-                                    <p className="text-[10px] text-slate-400 font-mono mt-1">{tx.deliveryState}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <button onClick={() => generateReceipt(tx)} className="text-blue-600 p-2"><Download className="w-5 h-5" /></button>
-                                <button onClick={() => markDelivered(tx.tx_ref)} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black uppercase text-[10px] flex items-center gap-2 hover:bg-slate-800">
-                                    <Truck className="w-4 h-4" /> Mark Delivered
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {view === 'products' && (
-                <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-                        <h4 className="font-black text-xs text-slate-400 uppercase tracking-widest mb-4">{editMode ? 'Edit Product' : 'Add New Product'}</h4>
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <input className="p-3 border rounded-xl" placeholder="Name" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} />
-                            <input className="p-3 border rounded-xl" placeholder="Price" type="number" value={productForm.price || ''} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} />
-                            <select className="p-3 border rounded-xl" value={productForm.category} onChange={(e:any) => setProductForm({...productForm, category: e.target.value})}>
-                                <option value="device">Device</option><option value="sim">SIM</option><option value="package">Package</option>
-                            </select>
-                            <label className="p-3 border border-dashed border-slate-300 rounded-xl flex items-center justify-center cursor-pointer hover:bg-slate-50">
-                                <UploadCloud className="w-5 h-5 mr-2 text-slate-400" />
-                                <span className="text-xs font-bold text-slate-500">{productForm.image ? 'Image Selected' : 'Upload Image'}</span>
-                                <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
-                            </label>
-                        </div>
-                        <div className="flex gap-2">
-                             <button onClick={saveProduct} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black uppercase text-xs">Save</button>
-                             {editMode && <button onClick={() => { setEditMode(false); setProductForm({ name: '', description: '', price: 0, image: '', category: 'device' }); }} className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-black uppercase text-xs">Cancel</button>}
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {products?.map(p => (
-                            <div key={p.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4 group hover:shadow-md transition-all">
-                                <img src={p.image} className="w-12 h-12 rounded-lg object-cover" />
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-sm truncate">{p.name}</p>
-                                    <p className="text-blue-600 font-black text-xs">{formatCurrency(p.price)}</p>
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <button onClick={() => { setProductForm(p); setEditMode(true); }} className="text-blue-500 hover:bg-blue-50 p-1 rounded"><Edit2 className="w-4 h-4" /></button>
-                                    <button onClick={() => deleteProduct(p.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 className="w-4 h-4" /></button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {view === 'plans' && (
-                <div className="space-y-6">
-                     <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-                        <h4 className="font-black text-xs text-slate-400 uppercase tracking-widest mb-4">{editMode ? 'Edit Plan' : 'Add New Plan'}</h4>
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <select className="p-3 border rounded-xl" value={planForm.network} onChange={(e:any) => setPlanForm({...planForm, network: e.target.value})}>
-                                <option>MTN</option><option>AIRTEL</option><option>GLO</option>
-                            </select>
-                            <input className="p-3 border rounded-xl" placeholder="Data (1GB)" value={planForm.data} onChange={e => setPlanForm({...planForm, data: e.target.value})} />
-                            <input className="p-3 border rounded-xl" placeholder="Price" type="number" value={planForm.price || ''} onChange={e => setPlanForm({...planForm, price: Number(e.target.value)})} />
-                            <input className="p-3 border rounded-xl" placeholder="Amigo Plan ID" type="number" value={planForm.planId || ''} onChange={e => setPlanForm({...planForm, planId: Number(e.target.value)})} />
-                        </div>
-                        <div className="flex gap-2">
-                            <button onClick={savePlan} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2"><Save className="w-4 h-4" /> Save</button>
-                            {editMode && <button onClick={() => { setEditMode(false); setPlanForm({ network: 'MTN', data: '', validity: '30 Days', price: 0, planId: 0 }); }} className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-black uppercase text-xs">Cancel</button>}
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {plans?.length > 0 ? plans.map(p => (
-                            <div key={p.id} className="bg-white p-4 rounded-[1.5rem] border border-slate-100 flex justify-between items-center hover:shadow-md transition-all">
-                                <div>
-                                    <span className={cn("font-black text-[10px] px-2 py-0.5 rounded mb-1 inline-block", p.network === 'MTN' ? 'bg-yellow-100 text-yellow-700' : p.network === 'AIRTEL' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700')}>{p.network}</span>
-                                    <p className="font-bold text-sm">{p.data} - {p.validity}</p>
-                                    <p className="text-blue-600 font-bold text-xs">{formatCurrency(p.price)}</p>
-                                    <p className="text-[10px] text-slate-400">ID: {p.planId}</p>
-                                </div>
-                                <div className="flex gap-1">
-                                    <button onClick={() => { setPlanForm(p); setEditMode(true); }} className="p-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200"><Edit2 className="w-4 h-4" /></button>
-                                    <button onClick={() => deletePlan(p.id)} className="p-2 bg-red-50 rounded-lg text-red-600 hover:bg-red-100"><Trash2 className="w-4 h-4" /></button>
-                                </div>
-                            </div>
-                        )) : <div className="col-span-2 text-center text-slate-400 py-10">No Plans Configured</div>}
-                    </div>
-                </div>
-            )}
-
-            {view === 'transactions' && (
-                <div className="space-y-4">
-                     <div className="bg-white p-4 rounded-[2rem] border border-slate-100 flex gap-4 shrink-0 items-center">
-                        <Search className="w-5 h-5 text-slate-400" />
-                        <input className="flex-1 outline-none font-bold" placeholder="Search by reference or phone..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-                        <div className="flex gap-2 ml-auto items-center">
-                            <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="p-2 rounded-lg border border-slate-200 text-sm" />
-                            <button onClick={() => fetchTransactions({ date: filterDate })} className="px-3 py-2 rounded-xl text-xs font-black uppercase bg-white">Fetch</button>
-                            <button onClick={() => { setViewMode('list'); }} className={cn("px-3 py-2 rounded-xl text-xs font-black uppercase", viewMode === 'list' ? 'bg-slate-900 text-white' : 'bg-white')}>List</button>
-                            <button onClick={() => { setViewMode('byDate'); }} className={cn("px-3 py-2 rounded-xl text-xs font-black uppercase", viewMode === 'byDate' ? 'bg-slate-900 text-white' : 'bg-white')}>By Date</button>
-                            <button onClick={() => { setViewMode('byStatus'); }} className={cn("px-3 py-2 rounded-xl text-xs font-black uppercase", viewMode === 'byStatus' ? 'bg-slate-900 text-white' : 'bg-white')}>By Status</button>
-                            <button onClick={() => generatePdf()} disabled={isExporting} className={cn("px-3 py-2 rounded-xl text-xs font-black uppercase", isExporting ? 'bg-slate-300 text-slate-600 cursor-not-allowed' : 'bg-slate-900 text-white')}>{isExporting ? 'Exporting...' : 'Export PDF'}</button>
-                        </div>
-                    </div>
-
-                    {viewMode === 'list' && (
-                      <div className="bg-white rounded-[2rem] border border-slate-100 overflow-auto flex-1">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase text-slate-400 tracking-widest sticky top-0">
-                                <tr><th className="p-4">Date & Time</th><th className="p-4">Ref</th><th className="p-4">Phone</th><th className="p-4">Type</th><th className="p-4">Amount</th><th className="p-4">Status</th><th className="p-4">Action</th></tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {filteredTransactions.map(tx => (
-                                    <tr key={tx.id} className="hover:bg-slate-50/50">
-                                        <td className="p-4 font-mono text-xs text-slate-600 whitespace-nowrap">{new Date(tx.createdAt).toLocaleString()}</td>
-                                        <td className="p-4 font-mono font-bold text-xs">{tx.tx_ref.slice(0, 12)}</td>
-                                        <td className="p-4 font-bold text-xs">{tx.phone}</td>
-                                        <td className="p-4 font-black uppercase text-xs">{tx.type}</td>
-                                        <td className="p-4 font-bold">{formatCurrency(tx.amount)}</td>
-                                        <td className="p-4"><span className={cn("px-2 py-1 rounded text-[9px] font-black uppercase", 
-                                            tx.status === 'delivered' ? 'bg-green-100 text-green-700' : 
-                                            tx.status === 'paid' ? 'bg-blue-100 text-blue-700' :
-                                            tx.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                            'bg-slate-100'
-                                        )}>{tx.status}</span></td>
-                                        <td className="p-4 flex gap-2">
-                                            {tx.status === 'pending' && (
-                                                <button 
-                                                    onClick={() => toggleToPaid(tx.tx_ref)}
-                                                    disabled={updatingTx === tx.tx_ref}
-                                                    className="bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded text-[9px] font-black uppercase flex items-center gap-1 hover:bg-yellow-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                                >
-                                                    {updatingTx === tx.tx_ref ? <Loader2 className="w-3 h-3 animate-spin" /> : <Banknote className="w-3 h-3" />}
-                                                    Paid
-                                                </button>
-                                            )}
-                                            <button onClick={() => generateReceipt(tx)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg flex items-center gap-1 text-[10px] font-black uppercase"><Download className="w-4 h-4" /> Receipt</button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    {viewMode === 'byDate' && (
-                      <div className="space-y-4">
-                        {Object.keys(groupedByDate).sort((a,b)=> b.localeCompare(a)).map(dateKey => (
-                          <div key={dateKey} className="bg-white rounded-[1rem] border border-slate-100 p-4">
-                            <div className="flex justify-between items-center mb-3">
-                              <h4 className="font-black">{dateKey}</h4>
-                              <span className="text-xs text-slate-400">{groupedByDate[dateKey].length} txns</span>
-                            </div>
-                            <div className="overflow-auto">
-                              <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                                  <tr><th className="p-2">Time</th><th className="p-2">Ref</th><th className="p-2">Phone</th><th className="p-2">Amount</th><th className="p-2">Status</th><th className="p-2">Action</th></tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                  {groupedByDate[dateKey].map(tx => (
-                                    <tr key={tx.id} className="hover:bg-slate-50">
-                                      <td className="p-2 font-mono text-xs text-slate-600">{new Date(tx.createdAt).toLocaleTimeString()}</td>
-                                      <td className="p-2 font-mono font-bold text-xs">{tx.tx_ref.slice(0,12)}</td>
-                                      <td className="p-2 font-bold text-xs">{tx.phone}</td>
-                                      <td className="p-2 font-bold">{formatCurrency(tx.amount)}</td>
-                                      <td className="p-2"><span className={cn("px-2 py-1 rounded text-[9px] font-black uppercase", tx.status === 'delivered' ? 'bg-green-100 text-green-700' : tx.status === 'paid' ? 'bg-blue-100 text-blue-700' : tx.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100')}>{tx.status}</span></td>
-                                      <td className="p-2"><button onClick={() => generateReceipt(tx)} className="text-blue-600 text-[10px] font-black uppercase">Receipt</button></td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {viewMode === 'byStatus' && (
-                      <div className="space-y-4">
-                        {['delivered','paid','pending','failed','unknown'].map(statusKey => (
-                          <div key={statusKey} className="bg-white rounded-[1rem] border border-slate-100 p-4">
-                            <div className="flex justify-between items-center mb-3">
-                              <h4 className="font-black uppercase">{statusKey}</h4>
-                              <span className="text-xs text-slate-400">{(groupedByStatus[statusKey] || []).length} txns</span>
-                            </div>
-                            <div className="overflow-auto">
-                              <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                                  <tr><th className="p-2">Date</th><th className="p-2">Ref</th><th className="p-2">Phone</th><th className="p-2">Amount</th><th className="p-2">Action</th></tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                  {(groupedByStatus[statusKey] || []).map(tx => (
-                                    <tr key={tx.id} className="hover:bg-slate-50">
-                                      <td className="p-2 font-mono text-xs text-slate-600 whitespace-nowrap">{new Date(tx.createdAt).toLocaleString()}</td>
-                                      <td className="p-2 font-mono font-bold text-xs">{tx.tx_ref.slice(0,12)}</td>
-                                      <td className="p-2 font-bold text-xs">{tx.phone}</td>
-                                      <td className="p-2 font-bold">{formatCurrency(tx.amount)}</td>
-                                      <td className="p-2"><button onClick={() => generateReceipt(tx)} className="text-blue-600 text-[10px] font-black uppercase">Receipt</button></td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                </div>
-            )}
-
-            {view === 'communication' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* BROADCAST SECTION */}
-                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 text-center">
-                        <Megaphone className="w-10 h-10 text-slate-900 mx-auto mb-4" />
-                        <h3 className="text-xl font-black uppercase mb-2">App Ticker</h3>
-                        <p className="text-xs text-slate-400 mb-4">Scrolling message on Home Screen</p>
-                        
-                        <textarea className="w-full p-4 bg-slate-50 rounded-2xl mb-4 text-sm" rows={3} value={broadcastForm.content} onChange={e => setBroadcastForm({...broadcastForm, content: e.target.value})} />
-                        <div className="flex justify-center gap-2 mb-4">
-                            {['info', 'warning', 'alert'].map(t => (
-                                <button key={t} onClick={() => setBroadcastForm({...broadcastForm, type: t})} className={cn("px-3 py-1 rounded text-[10px] font-black uppercase border", broadcastForm.type === t ? "bg-slate-900 text-white" : "bg-white")}>{t}</button>
-                            ))}
-                        </div>
-                        <button onClick={updateBroadcast} className="w-full bg-slate-900 text-white p-3 rounded-xl font-black uppercase text-xs">Update Ticker</button>
-                    </div>
-                    
-                    {/* PUSH NOTIFICATION SECTION */}
-                    <div className="bg-gradient-to-br from-white to-blue-50 p-8 rounded-[2.5rem] border border-blue-200 shadow-elevation-4 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-2 bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-bl-xl">Urgent Alerts</div>
-                        <Bell className="w-10 h-10 text-blue-600 mx-auto mb-4" />
-                        <h3 className="text-xl font-black uppercase mb-1 text-primary-900">Mobile Push</h3>
-                        <p className="text-xs text-primary-500 mb-6">Targeted pop-up alerts on user devices</p>
-
-                        {/* STOP/CANCEL ACTIVE BLAST */}
-                        <div className="mb-6 p-4 bg-red-50 rounded-2xl border border-red-200">
-                            <div className="flex items-center gap-3 mb-3">
-                                <Ban className="w-5 h-5 text-red-600" />
-                                <p className="text-xs font-black uppercase text-red-600 tracking-wide">Stop Active Blast</p>
-                            </div>
-                            <button 
-                              onClick={async () => {
-                                setLoading(true);
-                                try {
-                                  await fetch('/api/admin/broadcast', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ content: '', type: 'info', isActive: false, password })
-                                  });
-                                  setBroadcastForm({ content: '', type: 'info', isActive: false });
-                                  toast.success('All active notifications stopped');
-                                } catch (e) {
-                                  toast.error('Failed to stop notifications');
-                                }
-                                setLoading(false);
-                              }}
-                              className="w-full bg-red-600 hover:bg-red-700 text-white p-3 rounded-xl font-black uppercase text-xs transition-all active:scale-95 flex items-center justify-center gap-2"
-                            >
-                              <Ban className="w-4 h-4" />
-                              Stop All Blasts
-                            </button>
-                          </div>
-
-                        {/* TARGET SELECTION */}
-                        <div className="mb-6 p-4 bg-white rounded-2xl border border-blue-100">
-                            <p className="text-xs font-black uppercase text-primary-600 mb-3 tracking-wide">Send To:</p>
-                            <div className="grid grid-cols-3 gap-2">
-                                {[
-                                    { value: 'all', label: 'All Users', icon: '👥' },
-                                    { value: 'agents', label: 'Agents Only', icon: '🤝' },
-                                    { value: 'users', label: 'Customers Only', icon: '🛍️' }
-                                ].map(opt => (
-                                    <button
-                                        key={opt.value}
-                                        onClick={() => setPushForm({...pushForm, targetType: opt.value as any})}
-                                        className={cn(
-                                            "p-3 rounded-xl border-2 transition-all font-black uppercase text-[10px] text-center",
-                                            pushForm.targetType === opt.value 
-                                                ? "bg-blue-600 border-blue-600 text-white shadow-lg" 
-                                                : "bg-white border-primary-200 text-primary-600 hover:bg-primary-50"
-                                        )}
-                                    >
-                                        <div className="text-lg mb-1">{opt.icon}</div>
-                                        {opt.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <input className="w-full p-3 bg-slate-50 rounded-xl mb-3 text-sm font-bold border border-primary-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition-all" placeholder="Notification Title" value={pushForm.title} onChange={e => setPushForm({...pushForm, title: e.target.value})} />
-                        <textarea className="w-full p-4 bg-slate-50 rounded-2xl mb-4 text-sm border border-primary-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition-all" rows={2} placeholder="Message Body" value={pushForm.body} onChange={e => setPushForm({...pushForm, body: e.target.value})} />
-                        <button onClick={sendPushNotification} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl font-black uppercase text-xs transition-all active:scale-95 shadow-elevation-4">
-                            <Bell className="w-4 h-4 inline mr-2" />
-                            Send Blast
-                        </button>
-                    </div>
-                </div>
-            )}
-            
-            {/* AGENTS WITH DRILLDOWN SIDE PANEL */}
-            {view === 'agents' && (
-                <div className="flex h-full gap-4">
-                    <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto content-start flex-1 transition-all duration-300", selectedAgent ? "md:w-1/2 hidden md:grid" : "w-full")}>
-                        {agents?.map(agent => (
-                            <div key={agent.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group">
-                                {!agent.isActive && <div className="absolute inset-0 bg-red-50/50 backdrop-blur-[1px] flex items-center justify-center z-10"><span className="bg-red-600 text-white px-4 py-2 rounded-xl font-black uppercase">Suspended</span></div>}
-                                
-                                <div className="flex justify-between items-start mb-6">
-                                    <div>
-                                        <h4 className="font-black text-slate-900 uppercase text-lg">{agent.firstName} {agent.lastName}</h4>
-                                        <p className="text-xs text-slate-500 font-bold">{agent.phone}</p>
-                                    </div>
-                                    <span className="bg-slate-100 px-3 py-1 rounded-lg text-[10px] font-black uppercase">{agent._count?.transactions || 0} Txns</span>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4 mb-6">
-                                    <div className="bg-slate-50 p-4 rounded-xl">
-                                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Main Wallet</p>
-                                        <p className="text-lg font-black text-slate-900">{formatCurrency(agent.balance)}</p>
-                                    </div>
-                                    <div className="bg-green-50 p-4 rounded-xl border border-green-200">
-                                        <p className="text-[9px] text-green-600 font-black uppercase tracking-widest mb-1">Cashback</p>
-                                        <p className="text-lg font-black text-green-700">{formatCurrency(agent.cashbackBalance || 0)}</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-2 relative z-20">
-                                    <button onClick={() => fundAgent(agent.id, 'credit')} className="flex-1 bg-green-600 text-white p-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 hover:bg-green-700"><ArrowUpCircle className="w-4 h-4" /> Credit</button>
-                                    <button onClick={() => fundAgent(agent.id, 'debit')} className="flex-1 bg-slate-900 text-white p-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 hover:bg-slate-800"><ArrowDownCircle className="w-4 h-4" /> Debit</button>
-                                    <button onClick={() => toggleAgent(agent.id)} className={cn("p-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2", agent.isActive ? "bg-red-100 text-red-600 hover:bg-red-200" : "bg-green-100 text-green-600 hover:bg-green-200")}>
-                                        <Ban className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={() => openAgentDetails(agent)} className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100"><ChevronRight className="w-4 h-4" /></button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* SLIDE-OVER DETAIL PANEL */}
-                    {selectedAgent && (
-                        <div className="w-full md:w-1/2 bg-white rounded-[2rem] border border-slate-200 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
-                            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                                <div>
-                                    <h3 className="font-black text-lg uppercase">{selectedAgent.firstName}'s History</h3>
-                                    <p className="text-xs text-slate-500 font-mono">ID: {selectedAgent.id.slice(0,8)}</p>
-                                </div>
-                                <button onClick={() => setSelectedAgent(null)} className="p-2 hover:bg-slate-200 rounded-full"><X className="w-5 h-5" /></button>
-                            </div>
-                            <div className="flex-1 overflow-y-auto p-4">
-                                {loadingHistory ? <div className="text-center py-10"><Loader2 className="animate-spin mx-auto text-slate-300" /></div> : (
-                                    <table className="w-full text-left text-xs">
-                                        <thead className="text-slate-400 uppercase font-black border-b border-slate-100">
-                                            <tr><th className="py-2">Type</th><th>Amount</th><th>Status</th><th>Receipt</th></tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-50">
-                                            {agentHistory.map(tx => (
-                                                <tr key={tx.id} className="hover:bg-slate-50">
-                                                    <td className="py-3 font-bold uppercase">{tx.type}</td>
-                                                    <td className="py-3">{formatCurrency(tx.amount)}</td>
-                                                    <td className="py-3"><span className={cn("px-2 py-0.5 rounded text-[9px] font-black uppercase", tx.status === 'delivered' ? "bg-green-100 text-green-700" : "bg-slate-100")}>{tx.status}</span></td>
-                                                    <td className="py-3"><button onClick={() => generateReceipt(tx)} className="text-blue-500"><Download className="w-4 h-4"/></button></td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-            
-            {view === 'webhooks' && (
-                <div className="space-y-4">
-                    <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden">
-                        {webhooks.length === 0 ? (
-                            <div className="p-10 text-center text-slate-400 font-bold uppercase">No Webhook Logs Yet</div>
-                        ) : (
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                                    <tr><th className="p-4">Timestamp</th><th className="p-4">Source</th><th className="p-4">Status</th><th className="p-4">Payload</th></tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50 max-h-[600px] overflow-y-auto">
-                                    {webhooks.map(log => (
-                                        <tr key={log.id} className="hover:bg-slate-50/50">
-                                            <td className="p-4 text-xs text-slate-500 font-mono">{new Date(log.createdAt).toLocaleString()}</td>
-                                            <td className="p-4 font-bold uppercase text-xs"><span className="bg-orange-100 text-orange-700 px-2 py-1 rounded">{log.source}</span></td>
-                                            <td className="p-4"><span className="bg-green-100 text-green-700 px-2 py-1 rounded text-[9px] font-black uppercase">Received</span></td>
-                                            <td className="p-4"><button onClick={() => alert(JSON.stringify(log.payload, null, 2))} className="text-blue-600 hover:underline text-xs font-bold">View</button></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
-                    </div>
-                    <div className="text-xs text-slate-500 text-center font-mono">Total: {webhooks.length} logs</div>
-                </div>
-            )}
-            {view === 'console' && (
-                <div className="bg-slate-900 rounded-[2rem] p-6 text-white min-h-[500px] flex flex-col">
-                    <div className="flex gap-4 mb-6">
-                        <button onClick={() => setConsoleType('amigo')} className={cn("px-4 py-2 rounded-lg text-xs font-black uppercase", consoleType === 'amigo' ? "bg-blue-600" : "bg-white/10")}>Amigo</button>
-                        <button onClick={() => setConsoleType('flutterwave')} className={cn("px-4 py-2 rounded-lg text-xs font-black uppercase", consoleType === 'flutterwave' ? "bg-orange-600" : "bg-white/10")}>Flutterwave</button>
-                        <div className="ml-auto flex gap-2">
-                            <button onClick={() => applyTemplate('amigo_data')} className="px-3 py-1 bg-white/5 rounded text-[10px] uppercase font-bold hover:bg-white/20">Template: Data</button>
-                            <button onClick={() => applyTemplate('flw_verify')} className="px-3 py-1 bg-white/5 rounded text-[10px] uppercase font-bold hover:bg-white/20">Template: Verify</button>
-                        </div>
-                    </div>
-                    <div className="flex gap-2 mb-4">
-                        <select value={consoleMethod} onChange={e => setConsoleMethod(e.target.value)} className="bg-black/30 p-3 rounded-xl text-xs font-bold"><option>GET</option><option>POST</option></select>
-                        <input className="flex-1 bg-black/30 p-3 rounded-xl text-xs font-mono" value={consoleEndpoint} onChange={e => setConsoleEndpoint(e.target.value)} placeholder="/endpoint" />
-                        <button onClick={executeConsole} className="bg-green-600 px-6 rounded-xl font-black uppercase text-xs">Send</button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 flex-1">
-                        <textarea className="bg-black/30 p-4 rounded-xl font-mono text-xs text-green-400 resize-none" value={consolePayload} onChange={e => setConsolePayload(e.target.value)} />
-                        <div className="bg-black/50 p-4 rounded-xl font-mono text-xs overflow-auto"><pre>{consoleOutput ? JSON.stringify(consoleOutput, null, 2) : '// Response...'}</pre></div>
-                    </div>
-                </div>
-            )}
-             {view === 'support' && (
-                <div className="space-y-4">
-                    {tickets && tickets.length > 0 && tickets.some(t => t.status !== 'resolved') && (
-                        <div className="bg-red-50 border-2 border-red-500 rounded-2xl p-4 flex items-start gap-3 animate-pulse">
-                            <div className="w-3 h-3 bg-red-500 rounded-full mt-1.5 flex-shrink-0 animate-ping"></div>
-                            <div>
-                                <p className="text-sm font-black text-red-700 uppercase">New Unresolved Tickets</p>
-                                <p className="text-xs text-red-600">{tickets.filter(t => t.status !== 'resolved').length} ticket(s) need attention</p>
-                            </div>
-                        </div>
-                    )}
-                    {tickets?.map(t => (
-                        <div key={t.id} className={cn("bg-white p-5 rounded-2xl border-2 transition-all", t.status === 'resolved' ? "border-green-200 bg-green-50" : "border-slate-100 hover:shadow-lg")}>
-                            <div className="flex justify-between items-start mb-3">
-                                <span className="font-black text-slate-900">{t.phone}</span>
-                                <div className="flex gap-2">
-                                    <span className={cn("text-[10px] px-3 py-1 rounded-lg uppercase font-bold", t.status === 'resolved' ? "bg-green-500 text-white" : "bg-orange-500 text-white")}>{t.status}</span>
-                                    {t.status !== 'resolved' && (
-                                        <button onClick={async () => {
-                                            try {
-                                                await fetch('/api/admin/support/resolve', {
-                                                    method: 'POST',
-                                                    body: JSON.stringify({ ticketId: t.id, password })
-                                                });
-                                                fetchTickets();
-                                                toast.success("Ticket marked as resolved");
-                                            } catch (e) {
-                                                toast.error("Failed to resolve");
-                                            }
-                                        }} className="text-[10px] px-2 py-1 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 uppercase">
-                                            <CheckCircle2 className="w-3 h-3 inline mr-1" />
-                                            Mark Resolved
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                            <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-xl">{t.message}</p>
-                            <p className="text-[10px] text-slate-400 mt-2 text-right">{new Date(t.createdAt).toLocaleString()}</p>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            </div>
+        {/* Main content */}
+        <main style={{ flex: 1, overflow: 'auto', padding: '32px 28px', maxWidth: 'calc(100vw - 60px)' }}>
+          {renderTab()}
         </main>
-    </DesktopWrapper>
+      </div>
+    </>
   );
 }

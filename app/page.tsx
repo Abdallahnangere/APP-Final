@@ -1,683 +1,446 @@
 'use client';
+import { useState, useEffect, useRef } from 'react';
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Menu, X, ArrowRight, Zap, Smartphone, Wallet, Users, Shield, TrendingUp, Globe } from 'lucide-react';
+// ── Types ──────────────────────────────────────────────────────────────────
+type Plan = { id: string; network: string; data: string; validity: string; price: number };
 
-// ============ ANIMATIONS ============
-const fadeInUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (delay = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.8, delay, ease: [0.32, 0.72, 0, 1] },
-  }),
-};
+// ── Inline styles + font import ────────────────────────────────────────────
+const GlobalStyle = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Playfair+Display:wght@700;900&display=swap');
 
-const stagger = {
-  visible: {
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
-};
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --blue:#007AFF;--green:#34C759;--red:#FF3B30;--orange:#FF9500;
+      --gold:#D4AF37;--bg:#F2F2F7;--card:#fff;--text:#1C1C1E;
+      --sub:#6C6C70;--border:#E5E5EA;
+    }
+    html{scroll-behavior:smooth}
+    body{font-family:'DM Sans',system-ui,sans-serif;background:#fff;color:var(--text);-webkit-font-smoothing:antialiased}
+    ::-webkit-scrollbar{width:4px}
+    ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:2px}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .fade-up{opacity:0;animation:fadeUp .6s cubic-bezier(.32,.72,0,1) both}
+    .float{animation:float 4s ease-in-out infinite}
+    a{text-decoration:none;color:inherit}
+    button{border:none;cursor:pointer;font-family:inherit}
+    img{max-width:100%;display:block}
+  `}</style>
+);
 
-// ============ NAVIGATION ============
-function Navigation() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
+// ── Components ─────────────────────────────────────────────────────────────
+function Nav() {
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const h = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', h);
+    return () => window.removeEventListener('scroll', h);
   }, []);
 
   return (
-    <motion.nav
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        isScrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-white/50 backdrop-blur-sm'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 relative">
-            <Image src="/logo.png" alt="SaukiMart" fill className="object-contain" />
-          </div>
-          <span className="font-bold text-xl text-gray-900 hidden sm:inline">SaukiMart</span>
-        </Link>
+    <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, transition: 'all .3s', background: scrolled ? 'rgba(255,255,255,.88)' : 'transparent', backdropFilter: scrolled ? 'blur(20px)' : 'none', borderBottom: scrolled ? '1px solid rgba(0,0,0,.06)' : 'none' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#007AFF,#0040FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>⚡</div>
+          <span style={{ fontWeight: 800, fontSize: 18, color: '#1C1C1E', letterSpacing: -0.4 }}>SaukiMart</span>
+        </a>
+        <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+          {['Data Plans','Store','Agents','Support'].map(l => (
+            <a key={l} href={`#${l.toLowerCase().replace(' ','-')}`} style={{ fontSize: 14, fontWeight: 500, color: '#3C3C43', transition: 'color .15s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#007AFF')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#3C3C43')}
+            >{l}</a>
+          ))}
+          <a href="/app" style={{ background: '#007AFF', color: '#fff', borderRadius: 22, padding: '9px 20px', fontSize: 14, fontWeight: 600, transition: 'all .15s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#0056D6'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#007AFF'; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
+          >Open App →</a>
+        </div>
+      </div>
+    </nav>
+  );
+}
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-12">
-          {['Shop', 'Agents', 'Support', 'About'].map((item) => (
-            <a
-              key={item}
-              href={item === 'Shop' ? '/app' : '#'}
-              className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              {item}
-            </a>
+function Ticker() {
+  const items = ['⚡ Instant Data Delivery', '✅ MTN · Airtel · Glo', '🎁 2% Cashback for Agents', '🔒 SMEDAN Certified', '💳 Bank Transfer Payments', '⚡ 10,000+ Happy Customers', '📦 Quality Devices & SIMs'];
+  const doubled = [...items, ...items];
+  return (
+    <div style={{ background: '#007AFF', overflow: 'hidden', height: 36, display: 'flex', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 60, whiteSpace: 'nowrap', animation: 'ticker 28s linear infinite' }}>
+        {doubled.map((item, i) => (
+          <span key={i} style={{ fontSize: 13, fontWeight: 600, color: '#fff', letterSpacing: 0.3 }}>{item}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Hero({ plans }: { plans: Plan[] }) {
+  return (
+    <section style={{ paddingTop: 120, paddingBottom: 80, background: 'linear-gradient(160deg,#F0F7FF 0%,#fff 60%)', overflow: 'hidden' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+        {/* Left */}
+        <div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(0,122,255,.08)', border: '1px solid rgba(0,122,255,.15)', borderRadius: 20, padding: '5px 14px', marginBottom: 20 }}>
+            <span style={{ fontSize: 12 }}>✅</span>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: '#007AFF' }}>SMEDAN Certified Business</span>
+          </div>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 54, fontWeight: 900, lineHeight: 1.1, color: '#1C1C1E', letterSpacing: -1.5, marginBottom: 20 }}>
+            Fast Data,<br /><span style={{ color: '#007AFF' }}>Better Prices</span>
+          </h1>
+          <p style={{ fontSize: 17, color: '#6C6C70', lineHeight: 1.7, maxWidth: 420, marginBottom: 32 }}>
+            Buy MTN, Airtel & Glo data bundles instantly. No delays, no hassle. Register as an agent and earn 2% cashback on every purchase.
+          </p>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 40 }}>
+            <a href="/app" style={{ background: '#007AFF', color: '#fff', borderRadius: 14, padding: '14px 28px', fontSize: 16, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'all .2s', boxShadow: '0 4px 20px rgba(0,122,255,.35)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 30px rgba(0,122,255,.45)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,122,255,.35)'; }}
+            >Buy Data Now <span style={{ fontSize: 20 }}>→</span></a>
+            <a href="#agents" style={{ background: '#fff', color: '#1C1C1E', borderRadius: 14, padding: '14px 28px', fontSize: 16, fontWeight: 600, border: '1.5px solid #E5E5EA', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'all .2s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#007AFF'; (e.currentTarget as HTMLElement).style.color = '#007AFF'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#E5E5EA'; (e.currentTarget as HTMLElement).style.color = '#1C1C1E'; }}
+            >Become an Agent</a>
+          </div>
+          <div style={{ display: 'flex', gap: 32 }}>
+            {[['10K+','Happy Users'],['₦50M+','Processed'],['< 3s','Avg Delivery']].map(([v, l]) => (
+              <div key={l}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#1C1C1E', letterSpacing: -0.5 }}>{v}</div>
+                <div style={{ fontSize: 12.5, color: '#8E8E93', marginTop: 2 }}>{l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right — Phone mockup */}
+        <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
+          <div className="float" style={{ width: 280, background: '#1C1C1E', borderRadius: 44, padding: '12px', boxShadow: '0 40px 80px rgba(0,0,0,.25)', position: 'relative' }}>
+            {/* Screen */}
+            <div style={{ background: '#000', borderRadius: 34, overflow: 'hidden', height: 560 }}>
+              {/* Status bar */}
+              <div style={{ background: '#000', padding: '14px 20px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}>9:41</span>
+                <div style={{ width: 80, height: 22, background: '#1C1C1E', borderRadius: 12 }} />
+                <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                  <span style={{ color: '#fff', fontSize: 10 }}>████</span>
+                  <span style={{ color: '#fff', fontSize: 10 }}>📶</span>
+                </div>
+              </div>
+              {/* App content */}
+              <div style={{ background: 'linear-gradient(160deg,#0040FF,#007AFF)', padding: '20px 18px 24px' }}>
+                <p style={{ color: 'rgba(255,255,255,.7)', fontSize: 11, fontWeight: 500, marginBottom: 4 }}>Welcome back, Abubakar!</p>
+                <p style={{ color: '#fff', fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>₦ 24,500.00</p>
+                <p style={{ color: 'rgba(255,255,255,.6)', fontSize: 11, marginTop: 4 }}>Wallet Balance</p>
+                <div style={{ background: 'rgba(255,255,255,.12)', borderRadius: 10, padding: '10px 12px', marginTop: 14 }}>
+                  <p style={{ color: 'rgba(255,255,255,.7)', fontSize: 10 }}>Account Number</p>
+                  <p style={{ color: '#fff', fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>3080 2098 92</p>
+                  <p style={{ color: 'rgba(255,255,255,.6)', fontSize: 10, marginTop: 2 }}>Access Bank</p>
+                </div>
+              </div>
+              <div style={{ background: '#F2F2F7', padding: '16px', flex: 1 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: '#8E8E93', marginBottom: 12 }}>QUICK SERVICES</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {[{icon:'📱',label:'Buy Data',color:'#E8F0FE'},{icon:'📦',label:'Store',color:'#E8FAE8'},{icon:'💰',label:'Earnings',color:'#FFF3E0'},{icon:'👤',label:'Profile',color:'#FBE9E7'}].map(s => (
+                    <div key={s.label} style={{ background: s.color, borderRadius: 14, padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <span style={{ fontSize: 20 }}>{s.icon}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#1C1C1E' }}>{s.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 14 }}>
+                  {[{n:'MTN 2GB',p:'₦500',s:'delivered'},{n:'Airtel 5GB',p:'₦1,000',s:'delivered'}].map((tx,i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < 1 ? '1px solid rgba(0,0,0,.06)' : 'none' }}>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 10, background: '#E8F0FE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>📱</div>
+                        <div>
+                          <p style={{ fontSize: 12, fontWeight: 600, color: '#1C1C1E' }}>{tx.n}</p>
+                          <p style={{ fontSize: 10, color: '#8E8E93' }}>✓ {tx.s}</p>
+                        </div>
+                      </div>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#34C759' }}>{tx.p}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Floating badges */}
+          {[
+            { top: '10%', right: '-24%', bg: '#E8FAE8', icon: '✅', label: 'Instant Delivery' },
+            { top: '55%', right: '-20%', bg: '#FFF3E0', icon: '🎁', label: '2% Cashback' },
+            { top: '80%', left: '-22%', bg: '#E8F0FE', icon: '🔒', label: '100% Secure' },
+          ].map((b,i) => (
+            <div key={i} style={{ position: 'absolute', ...b, display: 'flex', alignItems: 'center', gap: 8, background: b.bg, borderRadius: 50, padding: '8px 14px', boxShadow: '0 4px 16px rgba(0,0,0,.1)', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 16 }}>{b.icon}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#1C1C1E' }}>{b.label}</span>
+            </div>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
 
-        {/* Desktop CTA */}
-        <div className="hidden md:flex items-center gap-3">
-          <Link
-            href="/app"
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-full font-semibold text-sm hover:bg-blue-700 transition-colors"
-          >
-            Enter App
-          </Link>
-          <a
-            href="https://play.google.com/store/apps/details?id=online.saukimart.twa"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-6 py-2.5 border border-gray-300 text-gray-900 rounded-full font-semibold text-sm hover:border-gray-400 transition-colors"
-          >
-            Download
-          </a>
+function Plans({ plans }: { plans: Plan[] }) {
+  const [net, setNet] = useState('MTN');
+  const filtered = plans.filter(p => p.network === net);
+  const nets = [{ id: 'MTN', color: '#FFCC00', emoji: '🟡' }, { id: 'AIRTEL', color: '#E40000', emoji: '🔴' }, { id: 'GLO', color: '#00892C', emoji: '🟢' }];
+
+  return (
+    <section id="data-plans" style={{ padding: '80px 24px', background: '#F2F2F7' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 42, fontWeight: 900, color: '#1C1C1E', letterSpacing: -1 }}>Data Plans</h2>
+          <p style={{ color: '#6C6C70', fontSize: 17, marginTop: 10 }}>Cheapest data bundles — delivered instantly</p>
+          {/* Network tabs */}
+          <div style={{ display: 'inline-flex', gap: 8, marginTop: 28, background: '#fff', borderRadius: 16, padding: 6, boxShadow: '0 2px 12px rgba(0,0,0,.06)' }}>
+            {nets.map(n => (
+              <button key={n.id} onClick={() => setNet(n.id)} style={{ padding: '10px 24px', borderRadius: 11, border: 'none', fontWeight: 700, fontSize: 14, transition: 'all .2s', background: net === n.id ? '#007AFF' : 'transparent', color: net === n.id ? '#fff' : '#6C6C70' }}>
+                {n.emoji} {n.id}
+              </button>
+            ))}
+          </div>
         </div>
-
-        {/* Mobile Menu */}
-        <button onClick={() => setIsOpen(!isOpen)} className="md:hidden p-2">
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-
-        {isOpen && (
-          <div className="absolute top-full left-0 right-0 bg-white border-b border-gray-200 md:hidden">
-            <div className="flex flex-col gap-4 p-6">
-              <Link href="/app" className="font-semibold text-gray-900">
-                Shop
-              </Link>
-              <Link href="/app" className="px-6 py-2.5 bg-blue-600 text-white rounded-full font-semibold text-center">
-                Enter App
-              </Link>
-            </div>
+        {filtered.length === 0 ? (
+          <p style={{ textAlign: 'center', color: '#8E8E93', padding: '40px 0' }}>No plans available — check back soon.</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+            {filtered.map(p => (
+              <a href="/app" key={p.id} style={{ background: '#fff', borderRadius: 20, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,.06)', border: '1.5px solid transparent', transition: 'all .2s', display: 'block' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#007AFF'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 28px rgba(0,122,255,.15)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,.06)'; }}
+              >
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: '#F0F7FF', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, fontSize: 22 }}>📱</div>
+                <div style={{ fontSize: 26, fontWeight: 900, color: '#1C1C1E', letterSpacing: -0.8 }}>{p.data}</div>
+                <div style={{ fontSize: 13, color: '#8E8E93', marginTop: 2 }}>Valid {p.validity}</div>
+                <div style={{ marginTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: '#007AFF' }}>₦{p.price.toLocaleString()}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#34C759', background: '#E8FAE8', padding: '3px 9px', borderRadius: 20 }}>Buy →</span>
+                </div>
+              </a>
+            ))}
           </div>
         )}
       </div>
-    </motion.nav>
+    </section>
   );
 }
 
-// ============ HERO SECTION ============
-function HeroSection() {
+function Features() {
+  const features = [
+    { icon: '⚡', title: 'Instant Delivery', desc: 'Data delivered in under 3 seconds on average. No waiting, no delays.', color: '#FFF3E0' },
+    { icon: '🔒', title: 'Bank-Grade Security', desc: 'All transactions secured with SHA-256 encryption and Flutterwave.', color: '#E8F0FE' },
+    { icon: '🎁', title: '2% Cashback', desc: 'Agents earn 2% cashback on every purchase redeemable to wallet.', color: '#E8FAE8' },
+    { icon: '🏦', title: 'Virtual Account', desc: 'Get a personal virtual account for easy wallet funding at registration.', color: '#FBE9E7' },
+    { icon: '📦', title: 'Device Store', desc: 'Buy quality devices, SIM cards, and data bundles in one place.', color: '#F3E8FF' },
+    { icon: '💬', title: '24/7 Support', desc: 'WhatsApp and email support available around the clock.', color: '#E8FAE8' },
+  ];
   return (
-    <section className="pt-32 pb-16 md:pt-40 md:pb-32 px-6 bg-gradient-to-br from-blue-50 via-white to-gray-50">
-      <div className="max-w-6xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          {/* Left Content */}
-          <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="space-y-8">
-            <motion.h1
-              variants={fadeInUp}
-              custom={0}
-              className="text-5xl md:text-6xl font-bold text-gray-900 leading-tight"
+    <section style={{ padding: '80px 24px', background: '#fff' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 52 }}>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 42, fontWeight: 900, color: '#1C1C1E', letterSpacing: -1 }}>Why SaukiMart?</h2>
+          <p style={{ color: '#6C6C70', fontSize: 17, marginTop: 10 }}>Everything you need in one platform</p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 20 }}>
+          {features.map(f => (
+            <div key={f.title} style={{ background: f.color, borderRadius: 24, padding: 28, transition: 'transform .2s' }}
+              onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-4px)')}
+              onMouseLeave={e => (e.currentTarget.style.transform = 'none')}
             >
-              Nigeria's Trusted Digital Marketplace
-            </motion.h1>
-
-            <motion.p
-              variants={fadeInUp}
-              custom={0.1}
-              className="text-xl text-gray-600 leading-relaxed max-w-lg"
-            >
-              Buy instant data, premium devices, and manage your finances securely. Trusted by thousands across Nigeria.
-            </motion.p>
-
-            <motion.div variants={fadeInUp} custom={0.2} className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Link
-                href="/app"
-                className="inline-flex items-center justify-center px-8 py-4 bg-blue-600 text-white rounded-full font-bold text-lg hover:bg-blue-700 transition-colors group"
-              >
-                Get Started
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <a
-                href="https://play.google.com/store/apps/details?id=online.saukimart.twa"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center px-8 py-4 border-2 border-gray-300 text-gray-900 rounded-full font-bold text-lg hover:border-gray-400 transition-colors"
-              >
-                Download App
-              </a>
-            </motion.div>
-
-            {/* Trust Badges */}
-            <motion.div variants={fadeInUp} custom={0.3} className="flex flex-wrap gap-6 pt-8 border-t border-gray-200">
-              {[
-                { label: '10,000+', desc: 'Active Users' },
-                { label: 'Instant', desc: 'Delivery' },
-                { label: '24/7', desc: 'Support' },
-              ].map((item, i) => (
-                <div key={i}>
-                  <p className="text-2xl font-bold text-gray-900">{item.label}</p>
-                  <p className="text-sm text-gray-600">{item.desc}</p>
-                </div>
-              ))}
-            </motion.div>
-          </motion.div>
-
-          {/* Right Side - Feature Cards */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={stagger}
-            className="space-y-4"
-          >
-            {[
-              { icon: Zap, title: 'Instant Data', desc: 'MTN, Airtel, Glo in seconds' },
-              { icon: Smartphone, title: 'Premium Devices', desc: 'Curated electronics & gadgets' },
-              { icon: Wallet, title: 'Secure Wallet', desc: 'PCI-DSS compliant payments' },
-            ].map((item, i) => (
-              <motion.div
-                key={i}
-                variants={fadeInUp}
-                custom={0.1 + i * 0.1}
-                className="p-6 rounded-2xl bg-white border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all"
-              >
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0">
-                    <item.icon className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900">{item.title}</h3>
-                    <p className="text-sm text-gray-600 mt-1">{item.desc}</p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
+              <div style={{ fontSize: 36, marginBottom: 16 }}>{f.icon}</div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1C1C1E', marginBottom: 8 }}>{f.title}</h3>
+              <p style={{ fontSize: 14, color: '#3C3C43', lineHeight: 1.6 }}>{f.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
-// ============ FEATURES DETAILED ============
-function FeaturesSection() {
-  const features = [
-    {
-      title: 'Instant Data & Airtime',
-      desc: 'Buy from MTN, Airtel, and Glo data plans instantly. Direct delivery to your phone number within seconds.',
-      icon: Zap,
-      color: 'bg-blue-100',
-    },
-    {
-      title: 'Premium Gadget Store',
-      desc: 'Carefully curated electronics and accessories with professional descriptions, images, and secure checkout.',
-      icon: Smartphone,
-      color: 'bg-purple-100',
-    },
-    {
-      title: 'Secure Wallet System',
-      desc: 'Pre-load funds for quick purchases. PCI-DSS Level 1 compliant with Flutterwave integration.',
-      icon: Wallet,
-      color: 'bg-green-100',
-    },
-    {
-      title: 'Agent Network',
-      desc: 'Become an agent and earn 5-10% commissions. Access dashboard, analytics, and weekly payouts.',
-      icon: Users,
-      color: 'bg-orange-100',
-    },
-    {
-      title: 'Transaction Tracking',
-      desc: 'View complete history, search transactions, download receipts, and verify payment status anytime.',
-      icon: TrendingUp,
-      color: 'bg-pink-100',
-    },
-    {
-      title: '24/7 Support',
-      desc: 'Live support team available via WhatsApp, email, and in-app chat. Quick issue resolution guaranteed.',
-      icon: Globe,
-      color: 'bg-cyan-100',
-    },
-  ];
-
+function AgentsSection() {
   return (
-    <section className="py-24 md:py-32 px-6 bg-white">
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeInUp}
-          className="text-center mb-16"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Everything You Need in One Platform
-          </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Whether you're a customer or an agent, SaukiMart provides all the tools you need to succeed.
+    <section id="agents" style={{ padding: '80px 24px', background: 'linear-gradient(135deg,#1C1C1E 0%,#000 100%)' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+        <div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(255,204,0,.1)', border: '1px solid rgba(255,204,0,.2)', borderRadius: 20, padding: '5px 14px', marginBottom: 20 }}>
+            <span style={{ fontSize: 12 }}>⭐</span>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: '#FFCC00' }}>Agent Program</span>
+          </div>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 44, fontWeight: 900, color: '#fff', lineHeight: 1.1, letterSpacing: -1, marginBottom: 20 }}>Earn Money<br />Reselling Data</h2>
+          <p style={{ color: 'rgba(255,255,255,.6)', fontSize: 16, lineHeight: 1.8, marginBottom: 32 }}>
+            Register as a SaukiMart agent, fund your wallet, and start reselling data bundles to customers. Earn 2% cashback on every purchase.
           </p>
-        </motion.div>
+          {['Free registration — no startup cost', '2% cashback on every transaction', 'Personal virtual bank account for funding', 'Real-time balance and transaction tracking', 'Priority customer support 24/7'].map(b => (
+            <div key={b} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 22, height: 22, borderRadius: 11, background: '#34C759', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, color: '#fff' }}>✓</div>
+              <span style={{ color: 'rgba(255,255,255,.8)', fontSize: 15 }}>{b}</span>
+            </div>
+          ))}
+          <a href="/app" style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: '#FFCC00', color: '#000', borderRadius: 14, padding: '14px 28px', fontSize: 15, fontWeight: 800, marginTop: 28, transition: 'all .2s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 28px rgba(255,204,0,.4)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
+          >Register as Agent →</a>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {[
+            { label: 'Active Agents', value: '1,200+', icon: '👥', bg: 'rgba(255,255,255,.05)' },
+            { label: 'Avg Monthly Earnings', value: '₦12K+', icon: '💰', bg: 'rgba(52,199,89,.08)' },
+            { label: 'Data Plans', value: '50+', icon: '📱', bg: 'rgba(0,122,255,.08)' },
+            { label: 'Cashback Paid', value: '₦2M+', icon: '🎁', bg: 'rgba(255,204,0,.08)' },
+          ].map(s => (
+            <div key={s.label} style={{ background: s.bg, border: '1px solid rgba(255,255,255,.08)', borderRadius: 20, padding: '24px 20px' }}>
+              <span style={{ fontSize: 28 }}>{s.icon}</span>
+              <p style={{ fontSize: 26, fontWeight: 900, color: '#fff', marginTop: 12, letterSpacing: -0.8 }}>{s.value}</p>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,.4)', marginTop: 4 }}>{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={stagger}
-          className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
-        >
-          {features.map((feature, i) => (
-            <motion.div
-              key={i}
-              variants={fadeInUp}
-              custom={i * 0.05}
-              className="group p-8 rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-xl transition-all"
+function Testimonials() {
+  const reviews = [
+    { name: 'Abubakar M.', loc: 'Kano', rating: 5, text: "SaukiMart has changed my hustle completely. I make over ₦15k monthly just reselling data bundles. The cashback is real!" },
+    { name: 'Fatima A.', loc: 'Lagos', rating: 5, text: "Fastest data delivery I've ever experienced. Bought 2GB for my friend and it arrived in seconds. Highly recommend." },
+    { name: 'Ibrahim K.', loc: 'Abuja', rating: 5, text: "The virtual account feature is genius. I just tell customers to send money there and I purchase instantly. Super convenient." },
+    { name: 'Halima B.', loc: 'Kaduna', rating: 5, text: "Best prices for Glo data in Nigeria. I've compared many platforms and SaukiMart consistently beats them all." },
+  ];
+  return (
+    <section style={{ padding: '80px 24px', background: '#F2F2F7' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 42, fontWeight: 900, color: '#1C1C1E', letterSpacing: -1 }}>Loved by Nigerians</h2>
+          <p style={{ color: '#6C6C70', fontSize: 17, marginTop: 10 }}>10,000+ customers trust SaukiMart every day</p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
+          {reviews.map(r => (
+            <div key={r.name} style={{ background: '#fff', borderRadius: 20, padding: 24, boxShadow: '0 2px 12px rgba(0,0,0,.05)', transition: 'transform .2s' }}
+              onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-3px)')}
+              onMouseLeave={e => (e.currentTarget.style.transform = 'none')}
             >
-              <div className={`${feature.color} w-16 h-16 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                <feature.icon className="w-8 h-8 text-gray-900" />
+              <div style={{ display: 'flex', gap: 2, marginBottom: 14 }}>
+                {'★★★★★'.split('').map((s, i) => <span key={i} style={{ color: '#FFCC00', fontSize: 16 }}>{s}</span>)}
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-              <p className="text-gray-600">{feature.desc}</p>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-// ============ SECURITY & TRUST SECTION ============
-function SecuritySection() {
-  const badges = [
-    { icon: '✓', label: 'SMEDAN Certified' },
-    { icon: '🔐', label: 'PCI-DSS Level 1' },
-    { icon: '🛡️', label: 'Flutterwave Partner' },
-    { icon: '📱', label: 'Firebase Verified' },
-  ];
-
-  return (
-    <section className="py-24 md:py-32 px-6 bg-gradient-to-r from-gray-50 to-blue-50">
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeInUp}
-          className="text-center mb-16"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Secure & Trustworthy
-          </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Your data and payments are protected with industry-leading security standards.
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={stagger}
-          className="grid md:grid-cols-2 lg:grid-cols-4 gap-6"
-        >
-          {badges.map((badge, i) => (
-            <motion.div
-              key={i}
-              variants={fadeInUp}
-              custom={i * 0.1}
-              className="text-center p-6 rounded-2xl bg-white border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all"
-            >
-              <div className="text-4xl mb-4">{badge.icon}</div>
-              <p className="font-semibold text-gray-900">{badge.label}</p>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeInUp}
-          custom={0.5}
-          className="mt-16 p-8 rounded-2xl bg-white border border-gray-200"
-        >
-          <Shield className="w-12 h-12 text-blue-600 mb-4" />
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">Your Privacy Matters</h3>
-          <p className="text-gray-600 mb-6">
-            We employ industry-standard encryption, secure payment gateways, fraud detection systems, and transparent data practices. No data selling policy. Easy account deletion anytime.
-          </p>
-          <Link href="/privacy" className="text-blue-600 font-semibold hover:text-blue-700">
-            Read our Privacy Policy →
-          </Link>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-// ============ PAYMENT METHODS ============
-function PaymentSection() {
-  const methods = [
-    { icon: '💳', title: 'Debit Cards', desc: 'Visa, Mastercard' },
-    { icon: '🏦', title: 'Bank Transfers', desc: 'Direct bank payments' },
-    { icon: '👛', title: 'Wallet', desc: 'Pre-load funds' },
-    { icon: '📱', title: 'Agent Wallet', desc: 'Through agents' },
-  ];
-
-  return (
-    <section className="py-24 md:py-32 px-6 bg-white">
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeInUp}
-          className="text-center mb-16"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Flexible Payment Options
-          </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Multiple ways to pay, whatever works best for you.
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={stagger}
-          className="grid md:grid-cols-2 lg:grid-cols-4 gap-6"
-        >
-          {methods.map((method, i) => (
-            <motion.div
-              key={i}
-              variants={fadeInUp}
-              custom={i * 0.1}
-              className="text-center p-8 rounded-2xl bg-gray-50 border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all"
-            >
-              <div className="text-5xl mb-4">{method.icon}</div>
-              <h3 className="font-bold text-gray-900 mb-2">{method.title}</h3>
-              <p className="text-sm text-gray-600">{method.desc}</p>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-// ============ AGENT SECTION ============
-function AgentSection() {
-  const steps = [
-    { num: '1', title: 'Apply', desc: 'Fill the registration form with your business details' },
-    { num: '2', title: 'Get Approved', desc: 'Approved within 24-48 hours with dashboard access' },
-    { num: '3', title: 'Start Selling', desc: 'Earn 5-10% commissions on every sale' },
-    { num: '4', title: 'Grow', desc: 'Monitor analytics, optimize pricing, scale sales' },
-  ];
-
-  return (
-    <section className="py-24 md:py-32 px-6 bg-gradient-to-br from-blue-50 via-white to-gray-50">
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeInUp}
-          className="text-center mb-16"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Become a SaukiMart Agent
-          </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Start your own business and earn competitive commissions. Join our growing agent network.
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={stagger}
-          className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12"
-        >
-          {steps.map((step, i) => (
-            <motion.div key={i} variants={fadeInUp} custom={i * 0.1}>
-              <div className="flex flex-col h-full">
-                <div className="w-12 h-12 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xl mb-4">
-                  {step.num}
+              <p style={{ fontSize: 14, color: '#3C3C43', lineHeight: 1.7, marginBottom: 16 }}>"{r.text}"</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 18, background: 'linear-gradient(135deg,#007AFF,#0040FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 14 }}>
+                  {r.name.charAt(0)}
                 </div>
-                <h3 className="font-bold text-gray-900 mb-2">{step.title}</h3>
-                <p className="text-gray-600 text-sm">{step.desc}</p>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: '#1C1C1E' }}>{r.name}</p>
+                  <p style={{ fontSize: 12, color: '#8E8E93' }}>{r.loc}</p>
+                </div>
               </div>
-              {i < steps.length - 1 && <div className="hidden lg:block h-12 border-r-2 border-gray-200 mt-4 -ml-6"></div>}
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
-
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeInUp}
-          custom={0.5}
-          className="text-center pt-8 border-t border-gray-200"
-        >
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">Agent Benefits</h3>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
-            {[
-              'Real-time balance management',
-              'Detailed analytics & metrics',
-              'Weekly payouts to account',
-              'Cashback wallet system',
-              'Customer management tools',
-              'Goal tracking & insights',
-            ].map((benefit, i) => (
-              <div key={i} className="p-4 rounded-lg bg-blue-50 text-left">
-                <p className="font-semibold text-gray-900">✓ {benefit}</p>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );
 }
 
-// ============ CTA SECTION ============
-function CTASection() {
-  return (
-    <section className="py-24 md:py-32 px-6 bg-gradient-to-r from-blue-600 to-blue-700">
-      <div className="max-w-4xl mx-auto text-center">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeInUp}
-          className="space-y-8"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold text-white">
-            Ready to Get Started?
-          </h2>
-          <p className="text-xl text-blue-100">
-            Join thousands of customers and agents already using SaukiMart. Download the app or access the web app today.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/app"
-              className="inline-flex items-center justify-center px-8 py-4 bg-white text-blue-600 rounded-full font-bold text-lg hover:bg-blue-50 transition-colors group"
-            >
-              Enter Web App
-              <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <a
-              href="https://play.google.com/store/apps/details?id=online.saukimart.twa"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center px-8 py-4 border-2 border-white text-white rounded-full font-bold text-lg hover:bg-blue-700 transition-colors"
-            >
-              Download Android App
-            </a>
-          </div>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-// ============ SUPPORT SECTION ============
 function SupportSection() {
   return (
-    <section className="py-24 md:py-32 px-6 bg-gray-50">
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeInUp}
-          className="text-center mb-16"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            24/7 Customer Support
-          </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Our support team is always available to help. Choose your preferred contact method.
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={stagger}
-          className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
-        >
-          {[
-            { title: 'Email', value: 'saukidatalinks@gmail.com', href: 'mailto:saukidatalinks@gmail.com' },
-            { title: 'WhatsApp', value: '+234 806 193 4056', href: 'https://wa.me/2348061934056' },
-            { title: 'WhatsApp Alt', value: '+234 704 464 7081', href: 'https://wa.me/2347044647081' },
-          ].map((contact, i) => (
-            <motion.a
-              key={i}
-              href={contact.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              variants={fadeInUp}
-              custom={i * 0.1}
-              className="p-8 rounded-2xl bg-white border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all text-center"
-            >
-              <h3 className="font-bold text-gray-900 mb-2 text-lg">{contact.title}</h3>
-              <p className="text-blue-600 font-semibold hover:underline">{contact.value}</p>
-            </motion.a>
-          ))}
-        </motion.div>
-
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeInUp}
-          custom={0.5}
-          className="mt-16 p-8 rounded-2xl bg-blue-50 border border-blue-200 text-center"
-        >
-          <h3 className="text-2xl font-bold text-gray-900 mb-3">Quick Responses Guaranteed</h3>
-          <p className="text-gray-700 mb-6">
-            WhatsApp is our fastest contact method. File complaints, report issues, or get support anytime. Our team follows up within 24 hours.
-          </p>
-          <a
-            href="https://wa.me/2348061934056"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-full font-semibold hover:bg-green-600 transition-colors"
-          >
-            💬 Chat on WhatsApp
-          </a>
-        </motion.div>
+    <section id="support" style={{ padding: '80px 24px', background: '#fff' }}>
+      <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 42, fontWeight: 900, color: '#1C1C1E', letterSpacing: -1, marginBottom: 14 }}>Need Help?</h2>
+        <p style={{ color: '#6C6C70', fontSize: 17, lineHeight: 1.7, marginBottom: 40 }}>
+          Our team is available 24/7 to help you with any issues. Reach us via WhatsApp or email.
+        </p>
+        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <a href="https://wa.me/234XXXXXXXXXX" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#25D366', color: '#fff', borderRadius: 14, padding: '16px 28px', fontWeight: 700, fontSize: 15, textDecoration: 'none', transition: 'all .2s' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = 'none'}
+          ><span style={{ fontSize: 24 }}>💬</span> WhatsApp Us</a>
+          <a href="mailto:support@saukimart.online" style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F2F2F7', color: '#1C1C1E', borderRadius: 14, padding: '16px 28px', fontWeight: 700, fontSize: 15, textDecoration: 'none', transition: 'all .2s', border: '1.5px solid #E5E5EA' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = 'none'}
+          ><span style={{ fontSize: 24 }}>📧</span> Email Support</a>
+        </div>
+        <p style={{ color: '#8E8E93', fontSize: 13, marginTop: 24 }}>Average response time under 30 minutes</p>
       </div>
     </section>
   );
 }
 
-// ============ FOOTER ============
 function Footer() {
-  const year = new Date().getFullYear();
-
   return (
-    <footer className="bg-gray-900 text-gray-300 py-16 px-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="grid md:grid-cols-4 gap-12 mb-12">
+    <footer style={{ background: '#1C1C1E', color: 'rgba(255,255,255,.6)', padding: '60px 24px 32px' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 48, marginBottom: 48 }}>
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 relative">
-                <Image src="/logo.png" alt="SaukiMart" fill className="object-contain" />
-              </div>
-              <span className="font-bold text-white">SaukiMart</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#007AFF,#0040FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>⚡</div>
+              <span style={{ fontWeight: 800, fontSize: 18, color: '#fff' }}>SaukiMart</span>
             </div>
-            <p className="text-gray-400 text-sm">Nigeria's trusted digital marketplace for instant data, devices, and secure payments.</p>
+            <p style={{ fontSize: 13.5, lineHeight: 1.8, maxWidth: 260 }}>
+              Nigeria's fastest data reseller platform. Instant delivery, best prices, and 2% cashback for agents.
+            </p>
+            <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
+              {['SMEDAN Certified','Flutterwave Partner','PCI-DSS Compliant'].map(b => (
+                <span key={b} style={{ fontSize: 10.5, fontWeight: 600, color: '#8E8E93', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 20, padding: '4px 10px' }}>{b}</span>
+              ))}
+            </div>
           </div>
-
-          <div>
-            <h3 className="font-bold text-white mb-4">Product</h3>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/app" className="hover:text-white transition-colors">Web App</Link></li>
-              <li><a href="https://play.google.com/store/apps/details?id=online.saukimart.twa" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Android App</a></li>
-              <li><Link href="/giveaway" className="hover:text-white transition-colors">Giveaway</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="font-bold text-white mb-4">Company</h3>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-              <li><a href="https://wa.me/2348061934056" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp</a></li>
-              <li><a href="mailto:saukidatalinks@gmail.com" className="hover:text-white transition-colors">Email</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="font-bold text-white mb-4">Certifications</h3>
-            <ul className="space-y-2 text-sm">
-              <li>✅ SMEDAN Certified</li>
-              <li>🔐 PCI-DSS Level 1</li>
-              <li>🛡️ Flutterwave Partner</li>
-              <li>📱 Firebase Verified</li>
-            </ul>
-          </div>
+          {[
+            { title: 'Services', links: ['Buy Data','Store','Track Order','Agent Program'] },
+            { title: 'Company', links: ['About Us','Privacy Policy','Terms of Service','Contact'] },
+            { title: 'Support', links: ['WhatsApp','Email Us','FAQ','Report Issue'] },
+          ].map(col => (
+            <div key={col.title}>
+              <h4 style={{ color: '#fff', fontWeight: 700, fontSize: 14, marginBottom: 16 }}>{col.title}</h4>
+              {col.links.map(l => (
+                <a key={l} href="#" style={{ display: 'block', fontSize: 13.5, color: 'rgba(255,255,255,.5)', marginBottom: 10, transition: 'color .15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#007AFF')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,.5)')}
+                >{l}</a>
+              ))}
+            </div>
+          ))}
         </div>
-
-        <div className="border-t border-gray-800 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-gray-400 text-sm">© {year} Sauki Mart. All rights reserved. SMEDAN Certified Business.</p>
-            <div className="flex gap-6">
-              <a href="https://wa.me/2348061934056" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white text-sm transition-colors">WhatsApp</a>
-              <a href="mailto:saukidatalinks@gmail.com" className="text-gray-400 hover:text-white text-sm transition-colors">Email</a>
-            </div>
-          </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+          <p style={{ fontSize: 13 }}>© {new Date().getFullYear()} SaukiMart. All rights reserved.</p>
+          <p style={{ fontSize: 13 }}>Built with ❤️ for Nigerians</p>
         </div>
       </div>
     </footer>
   );
 }
 
-// ============ MAIN PAGE ============
+// ── Main Page ───────────────────────────────────────────────────────────────
 export default function HomePage() {
+  const [plans, setPlans] = useState<Plan[]>([]);
+
   useEffect(() => {
-    document.documentElement.style.scrollBehavior = 'smooth';
-    return () => {
-      document.documentElement.style.scrollBehavior = 'auto';
-    };
+    fetch('/api/data-plans')
+      .then(r => r.json())
+      .then(d => setPlans(Array.isArray(d) ? d : []))
+      .catch(() => {});
   }, []);
 
   return (
-    <main className="bg-white text-gray-900 overflow-x-hidden">
-      <Navigation />
-      <HeroSection />
-      <FeaturesSection />
-      <SecuritySection />
-      <PaymentSection />
-      <AgentSection />
-      <SupportSection />
-      <CTASection />
+    <>
+      <GlobalStyle />
+      <Ticker />
+      <Nav />
+      <main>
+        <Hero plans={plans} />
+        <Plans plans={plans} />
+        <Features />
+        <AgentsSection />
+        <Testimonials />
+        <SupportSection />
+      </main>
       <Footer />
-    </main>
+    </>
   );
 }

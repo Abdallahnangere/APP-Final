@@ -1,26 +1,25 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '../../../../lib/prisma';
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-export const dynamic = 'force-dynamic';
+export async function GET(req: NextRequest) {
+  const tx_ref = req.nextUrl.searchParams.get('tx_ref');
+  const phone  = req.nextUrl.searchParams.get('phone');
+  if (!tx_ref && !phone) return NextResponse.json({ message: 'tx_ref or phone required' }, { status: 400 });
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const phone = searchParams.get('phone');
-
-  if (!phone) return NextResponse.json({ error: 'Phone required' }, { status: 400 });
-
-  try {
-    const transactions = await prisma.transaction.findMany({
-      where: { phone },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-      include: {
-        product: true,
-        dataPlan: true
-      }
+  if (tx_ref) {
+    const tx = await prisma.transaction.findUnique({
+      where: { tx_ref },
+      include: { dataPlan: true, product: true },
     });
-    return NextResponse.json({ transactions });
-  } catch (error) {
-    return NextResponse.json({ error: 'Fetch failed' }, { status: 500 });
+    if (!tx) return NextResponse.json({ message: 'Transaction not found' }, { status: 404 });
+    return NextResponse.json(tx);
   }
+
+  const transactions = await prisma.transaction.findMany({
+    where: { phone: phone! },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    include: { dataPlan: true, product: true },
+  });
+  return NextResponse.json({ transactions });
 }

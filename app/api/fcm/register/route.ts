@@ -1,26 +1,21 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '../../../../lib/prisma';
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 
-export async function POST(req: Request) {
-  try {
-    const { token, phone } = await req.json();
+const Schema = z.object({
+  endpoint: z.string().url(),
+  p256dh: z.string(),
+  auth: z.string(),
+  phone: z.string().optional(),
+});
 
-    if (!token) {
-      return NextResponse.json({ error: 'No token provided' }, { status: 400 });
-    }
-
-    // Re-use PushSubscription table to store FCM tokens with endpoint prefix
-    const endpoint = `fcm:${token}`;
-
-    const pushSub = await prisma.pushSubscription.upsert({
-      where: { endpoint },
-      update: { p256dh: '', auth: '', phone: phone || null },
-      create: { endpoint, p256dh: '', auth: '', phone: phone || null }
-    });
-
-    return NextResponse.json({ success: true, message: 'FCM token saved', id: pushSub.id });
-  } catch (e: any) {
-    console.error('FCM register error:', e);
-    return NextResponse.json({ error: 'Failed', details: e.message }, { status: 500 });
-  }
+export async function POST(req: NextRequest) {
+  const parsed = Schema.safeParse(await req.json());
+  if (!parsed.success) return NextResponse.json({ message: 'Invalid' }, { status: 400 });
+  const sub = await prisma.pushSubscription.upsert({
+    where: { endpoint: parsed.data.endpoint },
+    update: { p256dh: parsed.data.p256dh, auth: parsed.data.auth, phone: parsed.data.phone },
+    create: parsed.data,
+  });
+  return NextResponse.json({ success: true, id: sub.id });
 }

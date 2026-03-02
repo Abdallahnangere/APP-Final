@@ -1,87 +1,42 @@
-/* eslint-disable no-undef */
-importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js');
+// Firebase Cloud Messaging Service Worker
+// Place this file at /public/firebase-messaging-sw.js
 
-// Initialize the Firebase app in the service worker by passing in
-// your app's Firebase config. Replace values via build-time envs if needed.
-const firebaseConfig = {
-  apiKey: "AIzaSyDzQrdnbhabk7_4cDHb1I-Ohbg3bKYCysI",
-  authDomain: "sauki-mart.firebaseapp.com",
-  projectId: "sauki-mart",
-  storageBucket: "sauki-mart.firebasestorage.app",
-  messagingSenderId: "228994084382",
-  appId: "1:228994084382:web:b1079dd1898bb1da40880f"
-};
+importScripts('https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.11.0/firebase-messaging-compat.js');
 
-try {
-  firebase.initializeApp(firebaseConfig);
-  const messaging = firebase.messaging();
-
-  // Handle background messages
-  messaging.onBackgroundMessage(function(payload) {
-    try {
-      // FCM web push structure: notification details are in payload.data for web
-      const notificationTitle = payload.data?.title || payload.notification?.title || 'Notification';
-      const notificationOptions = {
-        body: payload.data?.body || payload.notification?.body || '',
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-192x192.png',
-        tag: 'sauki-notification',
-        requireInteraction: true,
-        vibrate: [200, 100, 200],
-        data: {
-          url: payload.data?.url || payload.fcmOptions?.link || '/',
-          timestamp: payload.data?.timestamp || new Date().toISOString()
-        },
-        actions: [
-          {
-            action: 'open',
-            title: 'Open'
-          },
-          {
-            action: 'close',
-            title: 'Dismiss'
-          }
-        ]
-      };
-
-      self.registration.showNotification(notificationTitle, notificationOptions);
-    } catch (e) {
-      console.error('FCM background message error', e);
-    }
-  });
-} catch (e) {
-  console.warn('Firebase messaging SW init error', e);
-}
-
-// Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  
-  if (event.action === 'close') {
-    return;
-  }
-
-  const urlToOpen = event.notification.data?.url || '/';
-  
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if there's already a window open with the URL
-      for (let i = 0; i < clientList.length; i++) {
-        const client = clientList[i];
-        if (client.url === urlToOpen && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      // If not, open a new window
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
-    })
-  );
+firebase.initializeApp({
+  apiKey: 'AIzaSyDzQrdnbhabk7_4cDHb1I-Ohbg3bKYCysI',
+  authDomain: 'sauki-mart.firebaseapp.com',
+  projectId: 'sauki-mart',
+  storageBucket: 'sauki-mart.firebasestorage.app',
+  messagingSenderId: '228994084382',
+  appId: '1:228994084382:web:b1079dd1898bb1da40880f',
 });
 
-// Handle notification close
-self.addEventListener('notificationclose', (event) => {
-  // Analytics or cleanup can go here
+const messaging = firebase.messaging();
+
+// Handle background messages
+messaging.onBackgroundMessage((payload) => {
+  console.log('[SW] Background message:', payload);
+  const { title, body, icon } = payload.notification || {};
+  self.registration.showNotification(title || 'SaukiMart', {
+    body: body || '',
+    icon: icon || '/icon-192.png',
+    badge: '/icon-192.png',
+    data: payload.data || {},
+    actions: [{ action: 'open', title: 'Open App' }],
+  });
+});
+
+// Handle notification click
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes('/app') && 'focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow('/app');
+    })
+  );
 });

@@ -1,110 +1,75 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '../../../../lib/prisma';
-import { v4 as uuidv4 } from 'uuid';
+// app/api/agent/redeem-cashback/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { verifyPin, generateTxRef } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
-export const dynamic = 'force-dynamic';
+const Schema = z.object({
+  agentPhone: z.string().regex(/^[0-9]{10,11}$/),
+  pin: z.string().regex(/^[0-9]{4}$/),
+  amount: z.number().positive(),
+});
 
-/**
- * Cashback Redemption API
- * - Transfers cashback balance to main wallet
- * - Creates transaction record
- * - Prevents double redemption with database constraints
- * - Returns updated agent balance
- */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { agentId, amount } = body;
+    const parsed = Schema.safeParse(body);
+    if (!parsed.success) return NextResponse.json({ message: 'Invalid request' }, { status: 400 });
 
-    if (!agentId || !amount || amount <= 0) {
-      return NextResponse.json(
-        { error: 'Invalid agent ID or amount' },
-        { status: 400 }
-      );
+    const { agentPhone, pin, amount } = parsed.data;
+
+    const agent = await prisma.agent.findUnique({ where: { phone: agentPhone } });
+    if (!agent) return NextResponse.json({ message: 'Agent not found' }, { status: 404 });
+
+    const pinValid = await verifyPin(pin, agent.pin);
+    if (!pinValid) return NextResponse.json({ message: 'Invalid PIN' }, { status: 401 });
+
+    if (agent.cashbackBalance < amount) {
+      return NextResponse.json({ message: `Insufficient cashback. Available: ₦${agent.cashbackBalance.toFixed(2)}` }, { status: 400 });
     }
 
-    // Fetch agent with current balances
-    const agent = await prisma.agent.findUnique({
-      where: { id: agentId },
-    });
+    const tx_ref = generateTxRef('WALLET');
 
-    if (!agent) {
-      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
-    }
-
-    // Verify sufficient cashback balance
-    const currentCashback = agent.cashbackBalance || 0;
-    if (amount > currentCashback) {
-      return NextResponse.json(
-        { error: 'Insufficient cashback balance', available: currentCashback },
-        { status: 402 }
-      );
-    }
-
-    // Transaction: Update balances atomically
-    const result = await prisma.$transaction(async (tx) => {
-      // Update agent balances
-      const updatedAgent = await tx.agent.update({
-        where: { id: agentId },
+    await prisma.$transaction([
+      prisma.agent.update({
+        where: { id: agent.id },
         data: {
-          balance: { increment: amount },
           cashbackBalance: { decrement: amount },
+          balance: { increment: amount },
           cashbackRedeemed: { increment: amount },
         },
-      });
-
-      // Create transaction record for audit trail
-      const redemptionTx = await tx.transaction.create({
+      }),
+      prisma.cashbackEntry.create({
         data: {
-          tx_ref: `REDEEM-${Date.now()}-${uuidv4()}`,
-          type: 'cashback_redemption',
-          status: 'paid',
-          amount,
-          agentId,
-          customerName: `${agent.firstName} ${agent.lastName}`,
-          phone: agent.phone,
-          deliveryState: 'Wallet Transfer',
-          idempotencyKey: uuidv4(),
-          deliveryData: {
-            method: 'Instant Wallet Transfer',
-            manifest: `Cashback redeemed: ${amount}`,
-            description: `Cashback redemption to main wallet`,
-            previousCashbackBalance: currentCashback,
-            newCashbackBalance: currentCashback - amount,
-            newMainBalance: (agent.balance || 0) + amount,
-          },
-        },
-      });
-
-      // Log cashback entry
-      await tx.cashbackEntry.create({
-        data: {
-          agentId,
+          agentId: agent.id,
           type: 'redeemed',
           amount,
-          transactionId: redemptionTx.id,
-          description: `Redeemed ₦${amount} to main wallet`,
+          description: `Redeemed to wallet — ${tx_ref}`,
         },
-      });
+      }),
+      prisma.transaction.create({
+        data: {
+          tx_ref,
+          type: 'wallet_funding',
+          status: 'delivered',
+          phone: agentPhone,
+          amount,
+          agentId: agent.id,
+          cashbackProcessed: true,
+        },
+      }),
+    ]);
 
-      return updatedAgent;
+    logger.info('CASHBACK', 'REDEEMED', { phone: agentPhone, amount });
+
+    const updated = await prisma.agent.findUnique({
+      where: { id: agent.id },
+      select: { balance: true, cashbackBalance: true, cashbackRedeemed: true },
     });
 
-    return NextResponse.json({
-      success: true,
-      message: `₦${amount} redeemed successfully`,
-      agent: {
-        id: result.id,
-        balance: result.balance,
-        cashbackBalance: result.cashbackBalance,
-        cashbackRedeemed: result.cashbackRedeemed,
-      },
-    });
-  } catch (error: any) {
-    console.error('Cashback Redemption Error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Redemption failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true, agent: updated, amountRedeemed: amount });
+  } catch (err: any) {
+    return NextResponse.json({ message: 'Redemption failed', error: err.message }, { status: 500 });
   }
 }

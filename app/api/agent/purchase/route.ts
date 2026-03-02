@@ -1,171 +1,213 @@
+// app/api/agent/purchase/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { verifyPin, generateTxRef, generateIdempotencyKey } from '@/lib/auth';
+import { deliverData } from '@/lib/amigo';
+import { sendPushNotification } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger';
 
-import { NextResponse } from 'next/server';
-import { prisma } from '../../../../lib/prisma';
-import { v4 as uuidv4 } from 'uuid';
-import { callAmigoAPI, AMIGO_NETWORKS } from '../../../../lib/amigo';
-import { verifyPin } from '../../../../lib/security';
-import { AgentPurchaseSchema, validateRequestBody } from '../../../../lib/validation';
+const PurchaseSchema = z.object({
+  agentPhone: z.string().regex(/^[0-9]{10,11}$/),
+  pin: z.string().regex(/^[0-9]{4}$/),
+  type: z.enum(['data', 'ecommerce']),
+  // For data
+  planId: z.string().optional(),
+  phone: z.string().optional(),
+  // For ecommerce
+  productId: z.string().optional(),
+  deliveryState: z.string().optional(),
+  customerName: z.string().optional(),
+});
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const start = Date.now();
   try {
     const body = await req.json();
+    const parsed = PurchaseSchema.safeParse(body);
 
-    // Validate request body against schema
-    const validation = await validateRequestBody(body, AgentPurchaseSchema);
-    if (!validation.valid) {
-      const errors = validation.errors.errors.map(e => `${e.path.join('.')}: ${e.message}`);
-      return NextResponse.json({ error: 'Validation failed', details: errors }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json({ message: 'Invalid request', errors: parsed.error.errors }, { status: 400 });
     }
 
-    const { agentId, agentPin, type, payload } = validation.data;
+    const { agentPhone, pin, type, planId, phone, productId, deliveryState, customerName } = parsed.data;
 
-    // 1. Verify Agent & PIN
-    const agent = await prisma.agent.findUnique({ where: { id: agentId } });
-    if (!agent) {
-        return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+    // Find agent
+    const agent = await prisma.agent.findUnique({ where: { phone: agentPhone } });
+    if (!agent) return NextResponse.json({ message: 'Agent not found' }, { status: 404 });
+    if (!agent.isActive) return NextResponse.json({ message: 'Account suspended' }, { status: 403 });
+
+    // Verify PIN
+    const pinValid = await verifyPin(pin, agent.pin);
+    if (!pinValid) {
+      logger.warn('PURCHASE', 'AUTHENTICATION_FAILED', { phone: agentPhone });
+      return NextResponse.json({ message: 'Invalid PIN' }, { status: 401 });
     }
-
-    // Verify PIN against hash
-    const isPinValid = await verifyPin(agentPin, agent.pin);
-    if (!isPinValid) {
-        console.error(`[PIN VERIFICATION FAILED] Agent: ${agentId}, Input PIN length: ${agentPin.length}, Stored hash length: ${agent.pin.length}`);
-        return NextResponse.json({ error: 'Invalid PIN. Please check and try again.' }, { status: 401 });
-    }
-
-    if (!agent.isActive) return NextResponse.json({ error: 'Agent Account Suspended' }, { status: 403 });
 
     let amount = 0;
-    let description = '';
-    let productDetails: any = {};
-
-    // 2. Calculate Amount
-    if (type === 'data' && payload?.planId) {
-        const plan = await prisma.dataPlan.findUnique({ where: { id: payload.planId } });
-        if (!plan) return NextResponse.json({ error: 'Invalid Plan' }, { status: 400 });
-        amount = plan.price;
-        description = `Data: ${plan.network} ${plan.data}`;
-        productDetails = { planId: plan.id };
-    } else if (type === 'ecommerce' && payload?.productId) {
-        const product = await prisma.product.findUnique({ where: { id: payload.productId } });
-        if (!product) return NextResponse.json({ error: 'Invalid Product' }, { status: 400 });
-        amount = product.price;
-        description = product.name;
-        productDetails = { productId: product.id };
-        
-        if (payload.simId) {
-            const sim = await prisma.product.findUnique({ where: { id: payload.simId } });
-            if (sim) {
-                amount += sim.price;
-                description += ` + ${sim.name}`;
-            }
-        }
-    }
-
-    // 3. Check Main Balance
-    if (agent.balance < amount) {
-        return NextResponse.json({ error: 'Insufficient Wallet Balance' }, { status: 402 });
-    }
-
-    // Calculate 2% cashback
-    const cashbackAmount = amount * 0.02;
-
-    const tx_ref = `AGENT-${type?.toUpperCase() || 'TX'}-${Date.now()}`;
-
-    // 4. PRE-VERIFY API (For Data) BEFORE Deducting Wallet
-    let amigoVerified = true;
-    let amigoResponse: any = null;
+    let dataPlan: any = null;
+    let product: any = null;
+    let txType = type;
 
     if (type === 'data') {
-        const plan = await prisma.dataPlan.findUnique({ where: { id: payload.planId } });
-        if (plan) {
-            try {
-                const networkId = AMIGO_NETWORKS[plan.network];
-                const amigoPayload = {
-                    network: networkId,
-                    mobile_number: payload.phone,
-                    plan: Number(plan.planId),
-                    Ported_number: true
-                };
+      if (!planId || !phone) return NextResponse.json({ message: 'planId and phone required for data' }, { status: 400 });
 
-                const amigoRes = await callAmigoAPI('/data/', amigoPayload, tx_ref);
-                amigoVerified = amigoRes.success && (
-                    amigoRes.data.success === true || 
-                    amigoRes.data.Status === 'successful' || 
-                    amigoRes.data.status === 'delivered' ||
-                    amigoRes.data.status === 'successful'
-                );
-                amigoResponse = amigoRes.data;
+      dataPlan = await prisma.dataPlan.findUnique({ where: { id: planId } });
+      if (!dataPlan) return NextResponse.json({ message: 'Data plan not found' }, { status: 404 });
 
-                if (!amigoVerified) {
-                    return NextResponse.json({ 
-                        error: 'Network provider failed to process request. Wallet NOT deducted.', 
-                        details: amigoResponse 
-                    }, { status: 400 });
-                }
-            } catch (apiError: any) {
-                return NextResponse.json({ 
-                    error: 'Network provider API error. Wallet NOT deducted. Please try again.', 
-                    details: apiError.message 
-                }, { status: 500 });
-            }
-        }
+      amount = dataPlan.price;
+
+      // Validate recipient phone
+      if (!/^[0-9]{10,11}$/.test(phone)) {
+        return NextResponse.json({ message: 'Invalid recipient phone number' }, { status: 400 });
+      }
+    } else {
+      if (!productId) return NextResponse.json({ message: 'productId required for ecommerce' }, { status: 400 });
+
+      product = await prisma.product.findUnique({ where: { id: productId } });
+      if (!product) return NextResponse.json({ message: 'Product not found' }, { status: 404 });
+      if (!product.inStock) return NextResponse.json({ message: 'Product out of stock' }, { status: 400 });
+
+      amount = product.price;
     }
 
-    // 5. NOW Debit Wallet, Credit Cashback & Create Record (ONLY if API verified)
-    const result = await prisma.$transaction(async (prisma) => {
-        // Debit Main Balance and Credit Cashback
-        await prisma.agent.update({
-            where: { id: agent.id },
-            data: { 
-                balance: { decrement: amount },
-                cashbackBalance: { increment: cashbackAmount },
-                totalCashbackEarned: { increment: cashbackAmount }
-            }
-        });
+    // Check balance
+    if (agent.balance < amount) {
+      return NextResponse.json({ message: `Insufficient balance. Need ₦${amount}, have ₦${agent.balance.toFixed(2)}` }, { status: 400 });
+    }
 
-        // Create Record with Cashback Info
-        const transaction = await prisma.transaction.create({
-            data: {
-                tx_ref,
-                type: type,
-                status: type === 'data' ? 'delivered' : 'paid',
-                phone: payload.phone,
-                amount,
-                agentCashbackAmount: cashbackAmount,
-                cashbackProcessed: true,
-                agentId: agent.id,
-                customerName: payload.name || agent.firstName,
-                deliveryState: payload.state || 'Agent Direct',
-                idempotencyKey: uuidv4(),
-                ...productDetails,
-                deliveryData: {
-                    method: 'Agent Wallet',
-                    manifest: description,
-                    cashbackEarned: cashbackAmount,
-                    ...(amigoResponse && { amigo_response: amigoResponse })
-                }
-            }
-        });
+    // Generate refs
+    const tx_ref = generateTxRef(type === 'data' ? 'DATA' : 'ECOM');
+    const idempotencyKey = generateIdempotencyKey();
+    const cashbackAmount = parseFloat((amount * 0.02).toFixed(2));
 
-        // Log Cashback Entry
-        await prisma.cashbackEntry.create({
-            data: {
-                agentId: agent.id,
-                type: 'earned',
-                amount: cashbackAmount,
-                transactionId: transaction.id,
-                description: `2% cashback on ${description}`
-            }
-        });
+    // Deduct balance & add cashback atomically
+    await prisma.$transaction([
+      prisma.agent.update({
+        where: { id: agent.id },
+        data: {
+          balance: { decrement: amount },
+          cashbackBalance: { increment: cashbackAmount },
+          totalCashbackEarned: { increment: cashbackAmount },
+        },
+      }),
+    ]);
 
-        return transaction;
+    // Create transaction record
+    const transaction = await prisma.transaction.create({
+      data: {
+        tx_ref,
+        type: txType,
+        status: 'paid',
+        phone: phone || agentPhone,
+        amount,
+        agentCashbackAmount: cashbackAmount,
+        idempotencyKey,
+        agentId: agent.id,
+        planId: dataPlan?.id,
+        productId: product?.id,
+        deliveryState,
+        customerName,
+      },
     });
 
-    const finalTx = await prisma.transaction.findUnique({ where: { id: result.id }, include: { product: true, dataPlan: true } });
-    return NextResponse.json({ success: true, transaction: finalTx });
+    // Create cashback entry
+    await prisma.cashbackEntry.create({
+      data: {
+        agentId: agent.id,
+        type: 'earned',
+        amount: cashbackAmount,
+        transactionId: transaction.id,
+        description: `Earned on ${tx_ref}`,
+      },
+    });
 
-  } catch (error: any) {
-    console.error('Agent Purchase Error:', error);
-    return NextResponse.json({ error: error.message || 'Transaction failed' }, { status: 500 });
+    logger.info('PURCHASE', 'PAYMENT_INITIATED', { tx_ref, amount, agentPhone });
+
+    // Deliver data if type === data
+    if (type === 'data' && dataPlan) {
+      const delivery = await deliverData({
+        network: dataPlan.network,
+        phone: phone!,
+        planId: dataPlan.planId,
+        idempotencyKey,
+      });
+
+      const newStatus = delivery.success ? 'delivered' : 'failed';
+
+      await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: newStatus,
+          cashbackProcessed: true,
+          deliveryData: delivery.data || { error: delivery.error },
+        },
+      });
+
+      if (delivery.success) {
+        logger.info('PURCHASE', 'DELIVERY_COMPLETE', { tx_ref, phone });
+        // Send push notification (best effort)
+        try {
+          await sendPushNotification({
+            topic: 'all',
+            title: '✅ Data Delivered!',
+            body: `${dataPlan.data} sent to ${phone}`,
+            data: { tx_ref, type: 'data_delivered' },
+          });
+        } catch {}
+      } else {
+        // Refund on delivery failure
+        await prisma.agent.update({
+          where: { id: agent.id },
+          data: {
+            balance: { increment: amount },
+            cashbackBalance: { decrement: cashbackAmount },
+            totalCashbackEarned: { decrement: cashbackAmount },
+          },
+        });
+        await prisma.cashbackEntry.deleteMany({ where: { transactionId: transaction.id } });
+        logger.error('PURCHASE', 'DELIVERY_FAILED', { tx_ref, error: delivery.error });
+        return NextResponse.json({ message: `Data delivery failed: ${delivery.error}` }, { status: 500 });
+      }
+
+      const finalTx = await prisma.transaction.findUnique({
+        where: { id: transaction.id },
+        include: { dataPlan: true },
+      });
+
+      const updatedAgent = await prisma.agent.findUnique({
+        where: { id: agent.id },
+        select: { balance: true, cashbackBalance: true },
+      });
+
+      return NextResponse.json({
+        success: true,
+        transaction: finalTx,
+        agent: updatedAgent,
+        cashbackEarned: cashbackAmount,
+        duration: Date.now() - start,
+      });
+    }
+
+    // Ecommerce — mark as delivered (physical delivery handled separately)
+    await prisma.transaction.update({
+      where: { id: transaction.id },
+      data: { status: 'delivered', cashbackProcessed: true },
+    });
+
+    const updatedAgent = await prisma.agent.findUnique({
+      where: { id: agent.id },
+      select: { balance: true, cashbackBalance: true },
+    });
+
+    return NextResponse.json({
+      success: true,
+      transaction,
+      agent: updatedAgent,
+      cashbackEarned: cashbackAmount,
+    });
+  } catch (err: any) {
+    logger.error('PURCHASE', 'PURCHASE_ERROR', { error: err.message });
+    return NextResponse.json({ message: 'Purchase failed', error: err.message }, { status: 500 });
   }
 }

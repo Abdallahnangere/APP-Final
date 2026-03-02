@@ -1,55 +1,39 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '../../../../lib/prisma';
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-export const dynamic = 'force-dynamic';
+export async function GET(req: NextRequest) {
+  const sp      = req.nextUrl.searchParams;
+  const limit   = Math.min(parseInt(sp.get('limit') || '50'), 500);
+  const status  = sp.get('status');
+  const type    = sp.get('type');
+  const phone   = sp.get('phone');
+  const agentId = sp.get('agentId');
+  const from    = sp.get('from');
+  const to      = sp.get('to');
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+  const where: any = {};
+  if (status) where.status = status;
+  if (type)   where.type   = type;
+  if (phone)  where.phone  = phone;
+  if (agentId) where.agentId = agentId;
+  if (from || to) {
+    where.createdAt = {};
+    if (from) where.createdAt.gte = new Date(from);
+    if (to)   where.createdAt.lte = new Date(to);
+  }
 
-function isAuthorized(req: Request) {
-  const header = req.headers.get('x-admin-password') || req.headers.get('authorization')?.replace('Bearer ', '') || '';
-  return ADMIN_PASSWORD && header && header === ADMIN_PASSWORD;
-}
-
-export async function OPTIONS() {
-  return NextResponse.json(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-ADMIN-PASSWORD, Authorization'
-    }
-  });
-}
-
-export async function GET(req: Request) {
-  try {
-    if (!isAuthorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { searchParams } = new URL(req.url);
-    const status = searchParams.get('status');
-    const date = searchParams.get('date');
-
-    const where: any = {};
-
-    if (status) {
-      where.status = { in: status.split(',') };
-    }
-
-    if (date) {
-      const start = new Date(date + 'T00:00:00.000Z');
-      const end = new Date(date + 'T23:59:59.999Z');
-      where.createdAt = { gte: start, lte: end };
-    }
-
-    const transactions = await prisma.transaction.findMany({
+  const [transactions, total] = await Promise.all([
+    prisma.transaction.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      take: 200,
-      include: { product: true, dataPlan: true, agent: true }
-    });
-    return NextResponse.json(transactions, { headers: { 'Access-Control-Allow-Origin': '*' } });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Fetch failed' }, { status: 500 });
-  }
+      take: limit,
+      include: {
+        dataPlan: { select: { network: true, data: true, validity: true } },
+        product:  { select: { name: true } },
+        agent:    { select: { firstName: true, lastName: true } },
+      },
+    }),
+    prisma.transaction.count({ where }),
+  ]);
+  return NextResponse.json({ transactions, total });
 }
