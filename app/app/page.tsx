@@ -249,6 +249,36 @@ export default function AppPage() {
     }, 1800);
   }, []);
 
+  // Dev bypass availability (only when running on localhost)
+  const isDevBypass = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '::1');
+
+  const handleDevBypass = () => {
+    const phone = loginPhone && loginPhone.length === 11 ? loginPhone : '08000000000';
+    const devUser: User = {
+      id: `dev-${Date.now()}`,
+      firstName: 'Dev',
+      lastName: 'User',
+      phone,
+      walletBalance: 10000,
+      cashbackBalance: 0,
+      referralBonus: 0,
+      accountNumber: '0000000000',
+      bankName: 'DevBank',
+      theme: 'light',
+      notificationsEnabled: true,
+      hapticsEnabled: true,
+      createdAt: new Date().toISOString(),
+    };
+    setUser(devUser);
+    const devToken = 'dev-token';
+    setToken(devToken);
+    localStorage.setItem('sm_user', JSON.stringify(devUser));
+    localStorage.setItem('sm_token', devToken);
+    setDark(false);
+    showToast('Developer bypass enabled — opened app');
+    setScreen('home');
+  };
+
   // Load home data
   const loadHomeData = useCallback(async () => {
     if (!token) return;
@@ -474,6 +504,9 @@ export default function AppPage() {
             Continue with PIN →
           </button>
           <button onClick={()=>setScreen('register')} style={{ marginTop:20,color:BLUE,fontSize:15,fontWeight:600 }}>Don't have an account? Register</button>
+          {isDevBypass && (
+            <button onClick={handleDevBypass} style={{ marginTop:12,width:'100%',padding:'12px',borderRadius:14,background:GOLD,color:'#fff',fontSize:15,fontWeight:800 }}>Dev: Open App (local only)</button>
+          )}
         </div>
         <p style={{ textAlign:'center',fontSize:12,color:'var(--sub)',padding:'0 0 32px' }}>
           <a href="/privacy" style={{ color:BLUE }}>Privacy Policy</a> · <a href="/privacy" style={{ color:BLUE }}>Terms of Service</a>
