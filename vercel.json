@@ -3,7 +3,7 @@
   "devCommand": "next dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["laf1"],
+  "regions": ["iad1"],
   "headers": [
     {
       "source": "/api/(.*)",
