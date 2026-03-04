@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initDB } from '@/lib/db';
 import { verifyAdminToken } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const auth = req.headers.get('authorization');
   if (!auth?.startsWith('Bearer ') || !(await verifyAdminToken(auth.slice(7)))) {

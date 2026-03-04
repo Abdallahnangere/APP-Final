@@ -3,6 +3,8 @@ import sql from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { hashPin, verifyPin } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 async function getUser(req: NextRequest) {
   const auth = req.headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) return null;

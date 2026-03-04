@@ -3,6 +3,8 @@ import sql from '@/lib/db';
 import { verifyPin } from '@/lib/utils';
 import { signToken } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const { phone, pin } = await req.json();

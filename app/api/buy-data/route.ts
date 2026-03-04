@@ -4,6 +4,8 @@ import { verifyToken } from '@/lib/auth';
 import { verifyPin, generateIdempotencyKey, generateReceiptRef } from '@/lib/utils';
 import { purchaseData } from '@/lib/amigo';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const auth = req.headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

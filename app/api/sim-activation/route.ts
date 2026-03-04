@@ -3,6 +3,8 @@ import sql from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { verifyPin, generateReceiptRef } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
