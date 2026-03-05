@@ -25,10 +25,15 @@ export async function POST(req: NextRequest) {
   if (!payload?.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const { pin, serialNumber, frontImageUrl, backImageUrl } = await req.json();
+    const fd = await req.formData();
+    const pin = fd.get('pin') as string;
+    const serialNumber = fd.get('serialNumber') as string;
+    const frontImageUrl = fd.get('frontImageUrl') as string || null;
+    const backImageUrl = fd.get('backImageUrl') as string || null;
     const ACTIVATION_COST = 5000;
 
     if (!/^\d{6}$/.test(pin)) return NextResponse.json({ error: 'Invalid PIN' }, { status: 400 });
+    if (!serialNumber?.trim()) return NextResponse.json({ error: 'Serial number required' }, { status: 400 });
 
     const [user] = await sql`SELECT id, pin_hash, wallet_balance, first_name, last_name FROM users WHERE id = ${payload.userId as string}`;
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -42,8 +47,8 @@ export async function POST(req: NextRequest) {
     await sql`UPDATE users SET wallet_balance = wallet_balance - ${ACTIVATION_COST}, updated_at = NOW() WHERE id = ${user.id}`;
     const [activation] = await sql`
       INSERT INTO sim_activations (user_id, serial_number, front_image_url, back_image_url, amount, status)
-      VALUES (${user.id}, ${serialNumber}, ${frontImageUrl || null}, ${backImageUrl || null}, ${ACTIVATION_COST}, 'under_review')
-      RETURNING id
+      VALUES (${user.id}, ${serialNumber.trim()}, ${frontImageUrl || null}, ${backImageUrl || null}, ${ACTIVATION_COST}, 'under_review')
+      RETURNING id, serial_number, front_image_url, back_image_url, status, amount, created_at
     `;
     const ref = generateReceiptRef();
     await sql`
@@ -53,9 +58,9 @@ export async function POST(req: NextRequest) {
     `;
 
     const [updated] = await sql`SELECT wallet_balance FROM users WHERE id = ${user.id}`;
-    return NextResponse.json({ success: true, activationId: activation.id, newBalance: parseFloat(updated.wallet_balance) });
+    return NextResponse.json({ success: true, activation, newBalance: parseFloat(updated.wallet_balance) });
   } catch (err) {
-    console.error(err);
+    console.error('SIM activation error:', err);
     return NextResponse.json({ error: 'Activation request failed' }, { status: 500 });
   }
 }

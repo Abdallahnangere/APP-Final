@@ -74,7 +74,13 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 6-digit PIN', su
     if (pin.length >= 6) return;
     const np = pin + d;
     setPin(np);
-    if (np.length === 6) setTimeout(() => onComplete(np), 120);
+    if (np.length === 6) {
+      if (typeof document !== 'undefined') {
+        const active = document.activeElement as HTMLElement;
+        active?.blur();
+      }
+      setTimeout(() => onComplete(np), 150);
+    }
   };
   const del = () => setPin(p => p.slice(0, -1));
 
@@ -306,7 +312,9 @@ export default function AppPage() {
 
   useEffect(() => {
     if (screen === 'home') { loadHomeData(); refreshUser(); }
-  }, [screen, loadHomeData, refreshUser]);
+    if (screen === 'store') { loadProducts(); }
+    if (screen === 'data-plans' && selectedNetwork) { loadPlans(selectedNetwork.name); }
+  }, [screen, loadHomeData, refreshUser, selectedNetwork]);
 
   /* ── REGISTER ── */
   const handleRegister = async () => {
@@ -385,13 +393,15 @@ export default function AppPage() {
       const fd = new FormData();
       fd.append('pin', pin);
       fd.append('serialNumber', simSerial);
-      if (simFront) fd.append('frontImage', simFront);
-      if (simBack) fd.append('backImage', simBack);
+      if (simFront) fd.append('frontImageUrl', simFront.startsWith('data:') ? simFront : simFront);
+      if (simBack) fd.append('backImageUrl', simBack.startsWith('data:') ? simBack : simBack);
+      
       const res = await fetch('/api/sim-activation', { method:'POST', headers:{ Authorization:`Bearer ${token}` }, body: fd });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error || 'Submission failed');
+      
       showToast('✅ SIM activation request submitted!');
-      setSimActivations(prev => [data.activation, ...prev]);
+      setSimActivations(prev => [data.activation || { id: data.activationId, status: 'under_review', serialNumber: simSerial, createdAt: new Date().toISOString(), amount: 5000 }, ...prev]);
       setSimSerial(''); setSimFront(null); setSimBack(null);
       await refreshUser();
     } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Failed to submit'); }

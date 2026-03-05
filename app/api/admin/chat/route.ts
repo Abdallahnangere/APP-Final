@@ -20,15 +20,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(msgs);
   }
 
-  // List all users with unread counts
-  const users = await sql`
-    SELECT u.id, u.first_name, u.last_name, u.phone,
-      COUNT(c.id) FILTER (WHERE c.sender='user' AND c.is_read=FALSE) as unread,
-      MAX(c.created_at) as last_message
-    FROM users u LEFT JOIN chats c ON c.user_id=u.id
-    GROUP BY u.id ORDER BY last_message DESC NULLS LAST
+  // Return all chat messages with user names joined
+  const msgs = await sql`
+    SELECT c.*, u.first_name, u.last_name, u.phone,
+      (u.first_name || ' ' || u.last_name) as user_name
+    FROM chats c
+    LEFT JOIN users u ON c.user_id=u.id
+    ORDER BY c.created_at DESC
   `;
-  return NextResponse.json(users);
+  return NextResponse.json(msgs);
 }
 
 export async function POST(req: NextRequest) {
