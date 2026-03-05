@@ -75,7 +75,7 @@ export default function AdminPage() {
   const [selectedUserId, setSelectedUserId] = useState<string|null>(null);
 
   // Forms
-  const [planForm, setPlanForm] = useState({ network:'MTN', network_id:'1', plan_id:'', data_size:'', validity:'30 days', selling_price:'', cost_price:'', editId:'' });
+  const [planForm, setPlanForm] = useState({ network:'MTN', network_id:'1', plan_id:'', data_size:'', validity:'30 days', selling_price:'', cost_price:'', is_active: true, editId:'' });
   const [productForm, setProductForm] = useState({ name:'', description:'', price:'', cost_price:'', category:'', shipping_terms:'', pickup_terms:'', in_stock:true, image_url:'', editId:'' });
   const [broadcastForm, setBroadcastForm] = useState({ message:'', editId:'' });
   const [walletForm, setWalletForm] = useState({ amount:'', note:'' });
@@ -377,18 +377,22 @@ export default function AdminPage() {
                     <Input label="Selling Price (₦)" value={planForm.selling_price} onChange={v=>setPlanForm(p=>({...p,selling_price:v}))} placeholder="429" />
                     <Input label="Cost Price (₦) 🔒" value={planForm.cost_price} onChange={v=>setPlanForm(p=>({...p,cost_price:v}))} placeholder="380" />
                   </div>
+                  <div style={{ marginBottom:16,display:'flex',alignItems:'center',gap:8 }}>
+                    <input type="checkbox" checked={planForm.is_active} onChange={e=>setPlanForm(p=>({...p,is_active:e.target.checked}))} style={{ width:18,height:18,cursor:'pointer' }} />
+                    <label style={{ fontWeight:600,color:'#1C1C1E',cursor:'pointer' }}>Active (visible to users)</label>
+                  </div>
                   <div style={{ display:'flex',gap:8 }}>
                     <Btn onClick={async()=>{
                       try {
-                        const body = { ...planForm, network_id: parseInt(planForm.network_id), plan_id: parseInt(planForm.plan_id), selling_price: parseFloat(planForm.selling_price), cost_price: parseFloat(planForm.cost_price) };
+                        const body = { ...planForm, network_id: parseInt(planForm.network_id), plan_id: parseInt(planForm.plan_id), selling_price: parseFloat(planForm.selling_price), cost_price: parseFloat(planForm.cost_price), is_active: planForm.is_active };
                         if (planForm.editId) await api(`plans?id=${planForm.editId}`, 'PATCH', body);
                         else await api('plans', 'POST', body);
                         showToast('✅ Plan saved!');
-                        setPlanForm({ network:'MTN',network_id:'1',plan_id:'',data_size:'',validity:'30 days',selling_price:'',cost_price:'',editId:'' });
+                        setPlanForm({ network:'MTN',network_id:'1',plan_id:'',data_size:'',validity:'30 days',selling_price:'',cost_price:'',is_active:true,editId:'' });
                         load('plans').then(d=>setPlans(Array.isArray(d)?d:[]));
                       } catch(e:unknown){ showError(e instanceof Error?e.message:'Failed'); }
                     }}>{planForm.editId?'Update Plan':'Add Plan'}</Btn>
-                    {planForm.editId && <Btn variant="ghost" onClick={()=>setPlanForm({ network:'MTN',network_id:'1',plan_id:'',data_size:'',validity:'30 days',selling_price:'',cost_price:'',editId:'' })}>Cancel</Btn>}
+                    {planForm.editId && <Btn variant="ghost" onClick={()=>setPlanForm({ network:'MTN',network_id:'1',plan_id:'',data_size:'',validity:'30 days',selling_price:'',cost_price:'',is_active:true,editId:'' })}>Cancel</Btn>}
                   </div>
                 </Card>
                 <Card>
@@ -406,7 +410,8 @@ export default function AdminPage() {
                           <td style={{ padding:'10px 8px' }}><span style={{ fontSize:12,color:p.is_active?GREEN:RED }}>{p.is_active?'✓':'✗'}</span></td>
                           <td style={{ padding:'10px 8px' }}>
                             <div style={{ display:'flex',gap:4 }}>
-                              <Btn size="sm" variant="ghost" onClick={()=>setPlanForm({ network:p.network,network_id:String(p.network_id),plan_id:String(p.plan_id),data_size:p.data_size,validity:p.validity,selling_price:String(p.selling_price),cost_price:String(p.cost_price),editId:p.id })}>Edit</Btn>
+                              <Btn size="sm" variant="ghost" onClick={()=>setPlanForm({ network:p.network,network_id:String(p.network_id),plan_id:String(p.plan_id),data_size:p.data_size,validity:p.validity,selling_price:String(p.selling_price),cost_price:String(p.cost_price),is_active:p.is_active,editId:p.id })}>Edit</Btn>
+                              <Btn size="sm" variant={p.is_active?'success':'danger'} onClick={async()=>{ try{ await api(`plans?id=${p.id}`,'PATCH',{is_active:!p.is_active}); showToast(p.is_active?'Plan deactivated':'Plan activated'); load('plans').then(d=>setPlans(Array.isArray(d)?d:[])); }catch(e:unknown){showError(e instanceof Error?e.message:'Failed');} }}>{p.is_active?'Deactivate':'Activate'}</Btn>
                               <Btn size="sm" variant="danger" onClick={async()=>{ try{ await api(`plans?id=${p.id}`,'DELETE'); showToast('Deleted'); load('plans').then(d=>setPlans(Array.isArray(d)?d:[])); }catch(e:unknown){showError(e instanceof Error?e.message:'Failed');} }}>Del</Btn>
                             </div>
                           </td>
