@@ -761,12 +761,12 @@ export default function AppPage() {
         {/* SIM Activation Card */}
         <div style={{ margin:'12px 16px 0' }}>
           <button onClick={()=>{ fetch('/api/sim-activation',{headers:authHeader()}).then(r=>r.json()).then(d=>setSimActivations(Array.isArray(d)?d:[])); setScreen('sim-activation'); }}
-            style={{ width:'100%',background:'linear-gradient(135deg,#E40000,#FF6B6B)',borderRadius:16,padding:'16px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',boxShadow:'0 4px 16px rgba(228,0,0,.2)' }}>
+            style={{ width:'100%',background:'linear-gradient(135deg,#FF6B6B,#FF3B3B)',borderRadius:16,padding:'16px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',boxShadow:'0 4px 16px rgba(228,0,0,.2)' }}>
             <div style={{ display:'flex',alignItems:'center',gap:12 }}>
-              <div style={{ width:40,height:40,borderRadius:12,background:'rgba(255,255,255,.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20 }}>📡</div>
+              <div style={{ width:40,height:40,borderRadius:12,background:'rgba(255,255,255,.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,fontWeight:'bold' }}>⓵</div>
               <div style={{ textAlign:'left' }}>
-                <p style={{ color:'#fff',fontWeight:800,fontSize:15 }}>Airtel SIM Remote Activation</p>
-                <p style={{ color:'rgba(255,255,255,.7)',fontSize:12 }}>30GB/month · ₦5,000 · &lt;1 hour</p>
+                <p style={{ color:'#fff',fontWeight:800,fontSize:15 }}>SIM Activation</p>
+                <p style={{ color:'rgba(255,255,255,.7)',fontSize:12 }}>₦5,000 · 30GB · &lt;1 hour</p>
               </div>
             </div>
             <span style={{ color:'rgba(255,255,255,.8)',fontSize:18 }}>›</span>
@@ -776,19 +776,19 @@ export default function AppPage() {
         {/* Quick Cards */}
         <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,margin:'12px 16px 0' }}>
           <button onClick={()=>setScreen('data-networks')}
-            style={{ background:'var(--card)',borderRadius:18,padding:'18px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:10,border:'1.5px solid var(--border)',boxShadow:'0 2px 12px rgba(0,0,0,.04)' }}>
-            <div style={{ width:44,height:44,borderRadius:14,background:'rgba(0,122,255,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22 }}>📶</div>
+            style={{ background:'var(--card)',borderRadius:18,padding:'18px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:10,border:'1.5px solid var(--border)',boxShadow:'0 2px 12px rgba(0,0,0,.04)',transition:'all .2s' }}>
+            <div style={{ width:44,height:44,borderRadius:14,background:'rgba(0,122,255,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,fontWeight:'bold' }}>⬇</div>
             <div style={{ textAlign:'left' }}>
               <p style={{ fontWeight:800,fontSize:16,color:'var(--text)' }}>Buy Data</p>
-              <p style={{ fontSize:12,color:'var(--sub)',marginTop:2 }}>MTN · Airtel · Glo</p>
+              <p style={{ fontSize:12,color:'var(--sub)',marginTop:2 }}>Quick & Easy</p>
             </div>
           </button>
           <button onClick={()=>{ loadProducts(); setScreen('store'); }}
-            style={{ background:'var(--card)',borderRadius:18,padding:'18px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:10,border:'1.5px solid var(--border)',boxShadow:'0 2px 12px rgba(0,0,0,.04)' }}>
-            <div style={{ width:44,height:44,borderRadius:14,background:'rgba(52,199,89,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22 }}>🏪</div>
+            style={{ background:'var(--card)',borderRadius:18,padding:'18px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:10,border:'1.5px solid var(--border)',boxShadow:'0 2px 12px rgba(0,0,0,.04)',transition:'all .2s' }}>
+            <div style={{ width:44,height:44,borderRadius:14,background:'rgba(52,199,89,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,fontWeight:'bold' }}>🛍️</div>
             <div style={{ textAlign:'left' }}>
               <p style={{ fontWeight:800,fontSize:16,color:'var(--text)' }}>Store</p>
-              <p style={{ fontSize:12,color:'var(--sub)',marginTop:2 }}>Devices & Accessories</p>
+              <p style={{ fontSize:12,color:'var(--sub)',marginTop:2 }}>Shop Now</p>
             </div>
           </button>
         </div>
@@ -806,8 +806,8 @@ export default function AppPage() {
             <div style={{ background:'var(--card)',borderRadius:18,overflow:'hidden' }}>
               {transactions.slice(0,20).map((tx,i) => (
                 <div key={tx.id} style={{ display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom: i<transactions.length-1?'1px solid var(--border)':undefined }}>
-                  <div style={{ width:40,height:40,borderRadius:12,background:'rgba(0,122,255,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0 }}>
-                    {tx.type==='data'?'📶':tx.type==='product'?'📦':'💸'}
+                  <div style={{ width:40,height:40,borderRadius:12,background: tx.type==='data'?'rgba(0,122,255,.1)':tx.type==='product'?'rgba(52,199,89,.1)':'rgba(255,149,0,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0,fontWeight:'bold' }}>
+                    {tx.type==='data'?'⬇':tx.type==='product'?'🛍':tx.status==='success'?'✓':'◼'}
                   </div>
                   <div style={{ flex:1,minWidth:0 }}>
                     <p style={{ fontWeight:600,fontSize:14,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{tx.description}</p>
@@ -871,20 +871,26 @@ export default function AppPage() {
         </div>
         <div style={{ flex:1,overflowY:'auto',padding:'0 16px 40px' }}>
           {plans.length === 0 ? (
-            <p style={{ textAlign:'center',color:'var(--sub)',padding:40 }}>No plans available</p>
+            <div style={{ textAlign:'center',padding:'40px 20px' }}>
+              <p style={{ fontSize:48,marginBottom:12 }}>⬇️</p>
+              <p style={{ color:'var(--text)',fontWeight:700,fontSize:16,marginBottom:4 }}>No plans available</p>
+              <p style={{ color:'var(--sub)',fontSize:14 }}>Check back soon for {selectedNetwork?.name} data plans</p>
+            </div>
           ) : (
-            <div style={{ display:'grid',gap:10 }}>
+            <div style={{ display:'flex',flexDirection:'column',gap:12 }}>
               {plans.map(plan => (
                 <button key={plan.id} onClick={()=>{ if(buyPhone.length!==11){showError('Enter 11-digit phone number');return;} setSelectedPlan(plan); setPinAction('buy-data'); setShowPin(true); }}
-                  style={{ background:'var(--card)',borderRadius:16,padding:'16px',display:'flex',justifyContent:'space-between',alignItems:'center',border:'1.5px solid var(--border)',width:'100%' }}>
+                  style={{ background:'var(--card)',borderRadius:18,padding:'18px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',border:'1.5px solid var(--border)',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=BLUE;e.currentTarget.style.boxShadow='0 4px 16px rgba(0,122,255,.15)';}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.04)';}}>
                   <div style={{ textAlign:'left' }}>
-                    <p style={{ fontWeight:800,fontSize:17,color:'var(--text)' }}>{plan.dataSize}</p>
-                    <p style={{ color:'var(--sub)',fontSize:13,marginTop:2 }}>Valid {plan.validity}</p>
+                    <p style={{ fontWeight:800,fontSize:18,color:'var(--text)' }}>{plan.dataSize}</p>
+                    <p style={{ color:'var(--sub)',fontSize:13,marginTop:4 }}>Valid {plan.validity}</p>
                   </div>
-                  <div style={{ textAlign:'right' }}>
+                  <div style={{ textAlign:'right',display:'flex',flexDirection:'column',alignItems:'flex-end',gap:8 }}>
                     <p style={{ fontSize:20,fontWeight:900,color:BLUE }}>₦{plan.price.toLocaleString()}</p>
-                    <div style={{ background:BLUE,borderRadius:20,padding:'4px 12px',marginTop:6 }}>
-                      <p style={{ color:'#fff',fontSize:12,fontWeight:700 }}>Buy →</p>
+                    <div style={{ background:BLUE,borderRadius:20,padding:'6px 14px' }}>
+                      <p style={{ color:'#fff',fontSize:12,fontWeight:700 }}>Buy</p>
                     </div>
                   </div>
                 </button>
@@ -916,7 +922,7 @@ export default function AppPage() {
         <div style={{ flex:1,overflowY:'auto',padding:'0 16px 40px' }}>
           {products.length === 0 ? (
             <div style={{ textAlign:'center',padding:'60px 20px' }}>
-              <div style={{ fontSize:50,marginBottom:16 }}>🏪</div>
+              <div style={{ fontSize:50,marginBottom:16,fontWeight:'bold' }}>📪</div>
               <p style={{ fontSize:18,fontWeight:700,color:'var(--text)' }}>Coming Soon</p>
               <p style={{ color:'var(--sub)',marginTop:8 }}>New products are being added</p>
             </div>
@@ -926,7 +932,7 @@ export default function AppPage() {
                 <button key={p.id} onClick={()=>{ setSelectedProduct(p); setScreen('product'); }}
                   style={{ background:'var(--card)',borderRadius:18,overflow:'hidden',textAlign:'left',border:'1.5px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.05)' }}>
                   <div style={{ height:140,background:'var(--card2)',position:'relative',overflow:'hidden' }}>
-                    {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:40 }}>📦</div>}
+                    {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:40,fontWeight:'bold' }}>🛍</div>}
                     <div style={{ position:'absolute',top:8,right:8,background:p.inStock?GREEN:RED,borderRadius:20,padding:'3px 8px' }}>
                       <p style={{ color:'#fff',fontSize:10,fontWeight:700 }}>{p.inStock?'In Stock':'Out'}</p>
                     </div>
