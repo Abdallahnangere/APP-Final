@@ -77,9 +77,15 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 6-digit PIN', su
     if (np.length === 6) {
       if (typeof document !== 'undefined') {
         const active = document.activeElement as HTMLElement;
-        active?.blur();
+        if (active) {
+          active.blur();
+          (active as HTMLInputElement).blur();
+          // Ensure virtual keyboard is hidden
+          window.scrollTo(0, 0);
+        }
       }
-      setTimeout(() => onComplete(np), 150);
+      // Small delay to ensure keyboard is dismissed
+      setTimeout(() => onComplete(np), 300);
     }
   };
   const del = () => setPin(p => p.slice(0, -1));
@@ -312,9 +318,23 @@ export default function AppPage() {
 
   useEffect(() => {
     if (screen === 'home') { loadHomeData(); refreshUser(); }
-    if (screen === 'store') { loadProducts(); }
-    if (screen === 'data-plans' && selectedNetwork) { loadPlans(selectedNetwork.name); }
+    if (screen === 'store') { loadProducts().catch(e => showError('Failed to load products')); }
+    if (screen === 'data-plans' && selectedNetwork) { loadPlans(selectedNetwork.name).catch(e => showError('Failed to load plans')); }
+    if (screen === 'sim-activation') { 
+      fetch('/api/sim-activation', { headers: authHeader() })
+        .then(r => r.json())
+        .then(d => setSimActivations(Array.isArray(d) ? d : []))
+        .catch(() => setSimActivations([]));
+    }
   }, [screen, loadHomeData, refreshUser, selectedNetwork]);
+
+  // Auto-refresh chat messages every 2 seconds when on chat screen
+  useEffect(() => {
+    if (screen !== 'chat') return;
+    loadChats();
+    const interval = setInterval(loadChats, 2000);
+    return () => clearInterval(interval);
+  }, [screen, token]);
 
   /* ── REGISTER ── */
   const handleRegister = async () => {
@@ -390,20 +410,42 @@ export default function AppPage() {
   const handleSimPay = async (pin: string) => {
     setLoading(true);
     try {
+      // Validate inputs
+      if (!simSerial && !simFront) {
+        throw new Error('Enter serial number or upload SIM pack photo');
+      }
+      
       const fd = new FormData();
       fd.append('pin', pin);
-      fd.append('serialNumber', simSerial);
-      if (simFront) fd.append('frontImageUrl', simFront.startsWith('data:') ? simFront : simFront);
-      if (simBack) fd.append('backImageUrl', simBack.startsWith('data:') ? simBack : simBack);
+      fd.append('serialNumber', simSerial.trim());
+      
+      // Handle image uploads if present and are data URLs
+      if (simFront && simFront.startsWith('data:')) {
+        // Convert data URL to blob
+        const frontBlob = await fetch(simFront).then(r => r.blob());
+        fd.append('frontImageUrl', frontBlob, 'front.jpg');
+      } else if (simFront && simFront) {
+        fd.append('frontImageUrl', simFront);
+      }
+      
+      if (simBack && simBack.startsWith('data:')) {
+        const backBlob = await fetch(simBack).then(r => r.blob());
+        fd.append('backImageUrl', backBlob, 'back.jpg');
+      } else if (simBack && simBack) {
+        fd.append('backImageUrl', simBack);
+      }
       
       const res = await fetch('/api/sim-activation', { method:'POST', headers:{ Authorization:`Bearer ${token}` }, body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Submission failed');
       
       showToast('✅ SIM activation request submitted!');
-      setSimActivations(prev => [data.activation || { id: data.activationId, status: 'under_review', serialNumber: simSerial, createdAt: new Date().toISOString(), amount: 5000 }, ...prev]);
+      setSimActivations(prev => [data.activation || { id: data.activationId, status: 'under_review', serialNumber: simSerial, createdAt: new Date().toISOString() }, ...prev]);
       setSimSerial(''); setSimFront(null); setSimBack(null);
       await refreshUser();
+      // Refresh SIM activations
+      const activations = await fetch('/api/sim-activation', { headers: authHeader() }).then(r => r.json());
+      setSimActivations(Array.isArray(activations) ? activations : []);
     } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Failed to submit'); }
     finally { setLoading(false); }
   };
@@ -417,34 +459,61 @@ export default function AppPage() {
 
   /* ── LOAD PLANS ── */
   const loadPlans = async (network: string) => {
-    const res = await fetch(`/api/data-plans?network=${network}`);
-    const data = await res.json();
-    setPlans(Array.isArray(data) ? data : []);
+    try {
+      const res = await fetch(`/api/data-plans?network=${encodeURIComponent(network)}`, { headers: authHeader() });
+      if (!res.ok) throw new Error('Failed to fetch plans');
+      const data = await res.json();
+      setPlans(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('Load plans error:', e);
+      setPlans([]);
+      showError('Failed to load plans for ' + network);
+    }
   };
 
   /* ── LOAD PRODUCTS ── */
   const loadProducts = async () => {
-    const res = await fetch('/api/products');
-    const data = await res.json();
-    setProducts(Array.isArray(data) ? data : []);
+    try {
+      const res = await fetch('/api/products', { headers: authHeader() });
+      if (!res.ok) throw new Error('Failed to fetch products');
+      const data = await res.json();
+      setProducts(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('Load products error:', e);
+      setProducts([]);
+    }
   };
 
   /* ── LOAD CHATS ── */
   const loadChats = async () => {
     if (!token) return;
-    const res = await fetch('/api/chat', { headers: authHeader() });
-    const data = await res.json();
-    setChats(Array.isArray(data) ? data : []);
+    try {
+      const res = await fetch('/api/chat', { headers: authHeader() });
+      if (!res.ok) throw new Error('Failed to fetch chats');
+      const data = await res.json();
+      setChats(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('Load chats error:', e);
+      setChats([]);
+    }
   };
 
   /* ── SEND CHAT ── */
   const sendChat = async () => {
     if (!chatInput.trim()) return;
+    const msg = chatInput.trim();
+    setChatInput('');
     try {
-      await fetch('/api/chat', { method:'POST', headers: authHeader(), body: JSON.stringify({ message: chatInput.trim() }) });
-      setChatInput('');
-      loadChats();
-    } catch { /* silent */ }
+      const res = await fetch('/api/chat', { method:'POST', headers: authHeader(), body: JSON.stringify({ message: msg }) });
+      if (res.ok) {
+        // Reload chats to get the latest messages
+        loadChats();
+      }
+    } catch (e) {
+      console.error('Send chat error:', e);
+      showError('Failed to send message');
+      setChatInput(msg); // Restore input on error
+    }
   };
 
   /* ── CHANGE PIN ── */
@@ -1202,12 +1271,13 @@ export default function AppPage() {
       <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
         <div style={{ padding:'60px 20px 14px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:12 }}>
           <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
-          <div>
+          <div style={{ flex:1 }}>
             <p style={{ fontSize:16,fontWeight:700,color:'var(--text)' }}>Support Chat</p>
-            <p style={{ fontSize:12,color:GREEN }}>● Online</p>
+            <p style={{ fontSize:11,color:GREEN,display:'flex',alignItems:'center',gap:4 }}>● Online</p>
           </div>
+          <div style={{ width:30,height:30,borderRadius:8,background:'rgba(0,122,255,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:BLUE,animation:'pulse 2s infinite' }}>↻</div>
         </div>
-        <div style={{ flex:1,overflowY:'auto',padding:'16px',display:'flex',flexDirection:'column',gap:10 }}>
+        <div style={{ flex:1,overflowY:'auto',padding:'16px',display:'flex',flexDirection:'column',gap:10,justifyContent:chats.length===0?'center':'flex-start' }}>
           {chats.length === 0 && (
             <div style={{ textAlign:'center',padding:'40px 20px' }}>
               <div style={{ fontSize:40,marginBottom:12 }}>💬</div>
@@ -1215,21 +1285,22 @@ export default function AppPage() {
             </div>
           )}
           {chats.map(msg => (
-            <div key={msg.id} style={{ display:'flex',justifyContent: msg.sender==='user'?'flex-end':'flex-start' }}>
-              <div style={{ maxWidth:'80%',padding:'10px 14px',borderRadius: msg.sender==='user'?'18px 18px 4px 18px':'18px 18px 18px 4px', background: msg.sender==='user'?BLUE:'var(--card)',color: msg.sender==='user'?'#fff':'var(--text)',fontSize:15,lineHeight:1.5,border: msg.sender!=='user'?'1.5px solid var(--border)':undefined }}>
+            <div key={msg.id} style={{ display:'flex',justifyContent: msg.sender==='user'?'flex-end':'flex-start',animation:'fadeIn .2s ease-out' }}>
+              <div style={{ maxWidth:'80%',padding:'12px 16px',borderRadius: msg.sender==='user'?'20px 20px 4px 20px':'20px 20px 20px 4px', background: msg.sender==='user'?BLUE:'var(--card)',color: msg.sender==='user'?'#fff':'var(--text)',fontSize:15,lineHeight:1.6,border: msg.sender!=='user'?'1px solid var(--border)':undefined,boxShadow: msg.sender==='user'?'0 4px 12px rgba(0,122,255,.2)':'none' }}>
                 {msg.message}
-                <p style={{ fontSize:10,opacity:.6,marginTop:4,textAlign:'right' }}>{new Date(msg.createdAt).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</p>
+                <p style={{ fontSize:11,opacity:.7,marginTop:6 }}>{new Date(msg.createdAt).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</p>
               </div>
             </div>
           ))}
+          {chats.length > 0 && <div style={{ height:16 }} />}
         </div>
-        <div style={{ padding:'12px 16px',borderTop:'1px solid var(--border)',display:'flex',gap:10,background:'var(--card)' }}>
+        <div style={{ padding:'14px 16px',borderTop:'1px solid var(--border)',display:'flex',gap:10,background:'var(--card)',alignItems:'flex-end' }}>
           <input value={chatInput} onChange={e=>setChatInput(e.target.value)}
-            onKeyDown={e=>{ if(e.key==='Enter') sendChat(); }}
+            onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendChat(); } }}
             placeholder="Type your message…"
-            style={{ flex:1,padding:'12px 16px',borderRadius:24,background:'var(--card2)',border:'1.5px solid var(--border)',color:'var(--text)',fontSize:15 }} />
-          <button onClick={sendChat} style={{ width:44,height:44,borderRadius:22,background:BLUE,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
-            <span style={{ color:'#fff',fontSize:18 }}>➤</span>
+            style={{ flex:1,padding:'12px 16px',borderRadius:24,background:'var(--card2)',border:'1.5px solid var(--border)',color:'var(--text)',fontSize:15,resize:'none',maxHeight:100,fontFamily:'inherit' }} />
+          <button onClick={sendChat} disabled={!chatInput.trim()} style={{ width:44,height:44,borderRadius:22,background:chatInput.trim()?BLUE:'rgba(0,122,255,.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all .2s',color:'#fff',fontSize:20 }}>
+            ➤
           </button>
         </div>
       </div>
