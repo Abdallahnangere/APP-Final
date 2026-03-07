@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { generateIdempotencyKey } from '@/lib/utils';
 
 /* ─────────────── TYPES ─────────────── */
 type User = {
@@ -56,6 +57,7 @@ const Icons = {
   mapPin: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
   globe: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
   download: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  messageSquare: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
 };
 
 /* ─────────────── HELPER FUNCTIONS ─────────────── */
@@ -348,6 +350,7 @@ export default function AppPage() {
   const [simSerial, setSimSerial] = useState('');
   const [simFront, setSimFront] = useState<string|null>(null);
   const [simBack, setSimBack] = useState<string|null>(null);
+  const [purchaseIdempotencyKey, setPurchaseIdempotencyKey] = useState<string|null>(null);
   const [newPin, setNewPin] = useState('');
   const [confirmNewPin, setConfirmNewPin] = useState('');
 
@@ -440,15 +443,20 @@ export default function AppPage() {
     if (!selectedPlan || !buyPhone) return;
     setLoading(true);
     try {
+      // Generate idempotency key on first attempt, reuse on retry
+      const idempKey = purchaseIdempotencyKey || generateIdempotencyKey();
+      if (!purchaseIdempotencyKey) setPurchaseIdempotencyKey(idempKey);
+      
       const res = await fetch('/api/buy-data', {
         method:'POST', headers: authHeader(),
-        body: JSON.stringify({ pin, planId: selectedPlan.planId, phoneNumber: buyPhone, network: selectedPlan.network, networkId: selectedPlan.networkId, dataSize: selectedPlan.dataSize, validity: selectedPlan.validity, price: selectedPlan.price }),
+        body: JSON.stringify({ pin, planId: selectedPlan.planId, phoneNumber: buyPhone, network: selectedPlan.network, networkId: selectedPlan.networkId, dataSize: selectedPlan.dataSize, validity: selectedPlan.validity, price: selectedPlan.price, idempotencyKey: idempKey }),
       });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || `Server error (${res.status})`);
       }
       setReceipt({ ...data.receipt, type:'data' });
+      setPurchaseIdempotencyKey(null); // Clear for next purchase
       await refreshUser();
       await loadHomeData();
       showToast('✅ Data purchase successful!');
@@ -465,13 +473,18 @@ export default function AppPage() {
     if (!selectedProduct) return;
     setLoading(true);
     try {
+      // Generate idempotency key on first attempt, reuse on retry
+      const idempKey = purchaseIdempotencyKey || generateIdempotencyKey();
+      if (!purchaseIdempotencyKey) setPurchaseIdempotencyKey(idempKey);
+      
       const res = await fetch('/api/purchase-product', {
         method:'POST', headers: authHeader(),
-        body: JSON.stringify({ pin, productId: selectedProduct.id }),
+        body: JSON.stringify({ pin, productId: selectedProduct.id, idempotencyKey: idempKey }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setReceipt({ ...data.receipt, type:'product' });
+      setPurchaseIdempotencyKey(null); // Clear for next purchase
       await refreshUser();
       showToast('🎉 Purchase successful!');
     } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Purchase failed'); }
@@ -690,7 +703,7 @@ export default function AppPage() {
 
   const Header = () => (
     <div style={{ padding:'20px 20px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--bg)',borderBottom:'1px solid var(--border)',position:'fixed',top:0,left:0,right:0,zIndex:100,backdropFilter:'blur(10px)',backgroundImage: dark ? 'radial-gradient(ellipse at 50% 100%, rgba(0,113,227,0.05) 0%, transparent 80%)' : 'none' }}>
-      <p style={{ fontSize:18,fontWeight:800,color:'var(--text)',letterSpacing:-0.3 }}>SaukiMart</p>
+      <p style={{ fontSize:18,fontWeight:800,color:'var(--text)',letterSpacing:-0.3,fontFamily:'Georgia, serif',fontStyle:'italic' }}>SaukiMart</p>
       <div style={{ display:'flex',alignItems:'center',gap:10 }}>
         <button onClick={()=>updatePref('theme', dark?'light':'dark')} style={{ width:40,height:40,borderRadius:12,background:'var(--card2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,border:'1px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
           onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'}}
@@ -713,10 +726,10 @@ export default function AppPage() {
       {[
         { id:'home', label:'Home', icon: Icons.bolt(BLUE, 24) },
         { id:'transactions', label:'Activity', icon: Icons.arrowDown(BLUE, 24) },
-        { id:'deposits', label:'Wallet', icon: Icons.wallet(BLUE, 24) },
+        { id:'deposits', label:'Chat', icon: Icons.messageSquare(BLUE, 24) },
         { id:'profile', label:'Account', icon: Icons.user(BLUE, 24) },
       ].map(item => (
-        <button key={item.id} onClick={()=>setScreen(item.id as typeof screen)}
+        <button key={item.id} onClick={()=>item.id==='deposits'?setScreen('profile'):setScreen(item.id as typeof screen)}
           style={{ padding:'12px 0 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,background:'none',borderTop: active===item.id ? `3px solid ${BLUE}` : 'none',paddingTop: active===item.id ? '9px' : '12px',transition:'all .2s',opacity: active===item.id ? 1 : 0.65,cursor:'pointer' }}
           onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}}
           onMouseLeave={e=>{e.currentTarget.style.opacity = active===item.id ? '1' : '0.65'}}>
@@ -748,7 +761,7 @@ export default function AppPage() {
                 <p style={{ color:'var(--text-secondary)',fontSize:13,fontWeight:600,letterSpacing:.5,marginBottom:8 }}>AVAILABLE BALANCE</p>
                 <div style={{ display:'flex',alignItems:'flex-start',gap:'4px' }}>
                   <span style={{ fontSize:'28px',opacity:.7,marginTop:'4px' }}>₦</span>
-                  <span style={{ fontSize:'52px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>{(user.walletBalance/1).toLocaleString('en-NG',{maximumFractionDigits:0})}</span>
+                  <span style={{ fontSize:'52px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>{(user.walletBalance/1).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                 </div>
               </div>
               <IconBox icon={Icons.wallet(BLUE, 28)} bg={'rgba(0,113,227,.10)'} />
@@ -756,11 +769,11 @@ export default function AppPage() {
             <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16 }}>
               <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'14px 16px',border:'1px solid var(--border)' }}>
                 <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:600 }}>CASHBACK</p>
-                <p style={{ color:GREEN,fontWeight:700,fontSize:18,marginTop:4 }}>₦{user.cashbackBalance.toLocaleString()}</p>
+                <p style={{ color:GREEN,fontWeight:700,fontSize:18,marginTop:4 }}>₦{user.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
               </div>
               <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'14px 16px',border:'1px solid var(--border)' }}>
                 <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:600 }}>REFERRAL BONUS</p>
-                <p style={{ color:PURPLE,fontWeight:700,fontSize:18,marginTop:4 }}>₦{user.referralBonus.toLocaleString()}</p>
+                <p style={{ color:PURPLE,fontWeight:700,fontSize:18,marginTop:4 }}>₦{user.referralBonus.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
               </div>
             </div>
             {user.accountNumber && (
@@ -1058,25 +1071,26 @@ export default function AppPage() {
             </div>
           ) : (
             <div style={{ display:'grid',gap:10 }}>
-              {transactions.map(tx => {
+              {transactions.filter(tx => tx.status !== 'pending').map(tx => {
                 const isDeposit = tx.type === 'deposit';
                 const isData = tx.type === 'data';
-                const color = isDeposit ? GREEN : tx.type === 'cashback' ? PURPLE : RED;
-                const icon = isData ? Icons.arrowDown(color, 20) : tx.type === 'product' ? Icons.download(color, 20) : Icons.arrowUp(color, 20);
-                const bgColor = isData ? 'rgba(0,113,227,.08)' : isDeposit ? 'rgba(48,209,88,.08)' : 'rgba(255,59,48,.08)';
+                const isFailed = tx.status === 'failed';
+                const color = isFailed ? RED : isDeposit ? GREEN : RED;
+                const icon = isFailed ? Icons.alertCircle(RED, 20) : isDeposit ? Icons.arrowUp(GREEN, 20) : Icons.arrowDown(RED, 20);
+                const bgColor = isFailed ? 'rgba(255,59,48,.08)' : isDeposit ? 'rgba(48,209,88,.08)' : 'rgba(255,59,48,.08)';
                 return (
                   <button key={tx.id} onClick={()=>{ if(tx.receiptData) { setReceipt(tx.receiptData as Record<string,unknown>); } }}
-                    style={{ background:'var(--card)',borderRadius:14,padding:'16px 16px',display:'flex',alignItems:'center',gap:14,border:'1px solid var(--border)',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
+                    style={{ background:'var(--card)',borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,border:'1px solid var(--border)',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
                     onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)';e.currentTarget.style.transform='translateY(-1px)'}}
                     onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.04)';e.currentTarget.style.transform='translateY(0)'}}>
                     <IconBox icon={icon} bg={bgColor} />
                     <div style={{ flex:1,textAlign:'left' }}>
-                      <p style={{ fontWeight:600,fontSize:15,color:'var(--text)' }}>{tx.description}</p>
-                      <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'medium',timeStyle:'short'})}</p>
+                      <p style={{ fontWeight:600,fontSize:14,color:'var(--text)' }}>{tx.description}</p>
+                      <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:3 }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</p>
                     </div>
                     <div style={{ textAlign:'right',flexShrink:0 }}>
-                      <p style={{ fontWeight:700,fontSize:15,color: isDeposit?GREEN:RED }}>{isDeposit?'+':'-'}₦{Number(tx.amount).toLocaleString()}</p>
-                      <StatusPill label={tx.status} type={tx.status === 'success' ? 'success' : tx.status === 'pending' ? 'pending' : 'failed'} />
+                      <p style={{ fontWeight:700,fontSize:15,color }}>{isDeposit?'+':'-'}₦{Number(tx.amount).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                      <div style={{ fontSize:11,fontWeight:700,color,marginTop:2,textTransform:'uppercase' }}>{isFailed ? '✕ Failed' : '✓ Success'}</div>
                     </div>
                   </button>
                 );
