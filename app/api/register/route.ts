@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
     if (!/^\d{11}$/.test(phone)) {
       return NextResponse.json({ error: 'Phone must be exactly 11 digits' }, { status: 400 });
     }
-    if (!/^\d{6}$/.test(pin)) {
-      return NextResponse.json({ error: 'PIN must be exactly 6 digits' }, { status: 400 });
+    if (!/^\d{4}$/.test(pin)) {
+      return NextResponse.json({ error: 'PIN must be exactly 4 digits' }, { status: 400 });
     }
     if (pin !== confirmPin) {
       return NextResponse.json({ error: 'PINs do not match' }, { status: 400 });

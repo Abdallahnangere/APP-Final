@@ -122,16 +122,16 @@ const GlobalStyle = ({ dark }: { dark: boolean }) => (
 );
 
 /* ─────────────── PIN KEYBOARD ─────────────── */
-function PinKeyboard({ onComplete, onClose, title = 'Enter your 6-digit PIN', subtitle = '', pinAction }: {
+function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', subtitle = '', pinAction }: {
   onComplete: (pin: string) => void; onClose: () => void; title?: string; subtitle?: string; pinAction?: "buy-data" | "buy-product" | "sim-pay" | null;
 }) {
   const [pin, setPin] = useState('');
 
   const press = (d: string) => {
-    if (pin.length >= 6) return;
+    if (pin.length >= 4) return;
     const np = pin + d;
     setPin(np);
-    if (np.length === 6) setTimeout(() => onComplete(np), 120);
+    if (np.length === 4) setTimeout(() => onComplete(np), 120);
   };
   const del = () => setPin(p => p.slice(0, -1));
 
@@ -203,7 +203,7 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 6-digit PIN', su
         {subtitle && <p style={subtitleStyle}>{subtitle}</p>}
         
         <div style={dotsContainerStyle}>
-          {[0,1,2,3,4,5].map(i => (
+          {[0,1,2,3].map(i => (
             <div key={i} style={{ width:16,height:16,borderRadius:8,background: i<pin.length ? BLUE : 'var(--border)',transition:'all .15s',transform: i<pin.length ? 'scale(1.2)' : 'scale(1)' }} />
           ))}
         </div>
@@ -598,25 +598,47 @@ export default function AppPage() {
     <>
       <GlobalStyle dark={dark} />
       {showPin && <PinKeyboard title="Enter your PIN" onComplete={handleLogin} onClose={()=>setShowPin(false)} />}
-      <div style={{ height:'100dvh',display:'flex',flexDirection:'column',background:'var(--bg)' }}>
-        <div style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'0 24px' }}>
-          <h1 style={{ fontSize:32,fontWeight:800,color:'var(--text)',letterSpacing:-0.6,marginBottom:12 }}>Sign In</h1>
-          <p style={{ color:'var(--text-secondary)',fontSize:16,marginBottom:40,textAlign:'center' }}>Access your SaukiMart account</p>
-          {error && <div style={{ width:'100%',padding:'14px 16px',borderRadius:14,background:'rgba(255,59,48,.1)',border:'1px solid rgba(255,59,48,.2)',color:RED,fontSize:15,marginBottom:24 }}>{error}</div>}
-          <div style={{ width:'100%',marginBottom:20 }}>
-            <label style={{ fontSize:14,fontWeight:600,color:'var(--text-secondary)',marginBottom:8,display:'block' }}>Phone Number</label>
+      <div style={{ height:'100dvh',display:'flex',flexDirection:'column',background:`linear-gradient(135deg, ${dark?'#0a0a0a':'#fafafa'} 0%, ${dark?'#1a1a2e':'#f5f5f7'} 100%)`,position:'relative',overflow:'hidden' }}>
+        {/* Background subtle decoration */}
+        <div style={{ position:'absolute',top:'-50%',right:'-20%',width:'400px',height:'400px',borderRadius:'50%',background:`radial-gradient(circle, ${BLUE}08, transparent)`,pointerEvents:'none' }} />
+        <div style={{ position:'absolute',bottom:'-30%',left:'-10%',width:'350px',height:'350px',borderRadius:'50%',background:`radial-gradient(circle, ${PURPLE}06, transparent)`,pointerEvents:'none' }} />
+        
+        <div style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'0 24px',position:'relative',zIndex:1 }}>
+          {/* Logo/Icon */}
+          <div style={{ marginBottom:32,textAlign:'center' }}>
+            <div style={{ width:56,height:56,borderRadius:16,background:`linear-gradient(135deg, ${BLUE}, ${PURPLE})`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',boxShadow:`0 8px 24px ${BLUE}40` }}>
+              <span style={{ fontSize:28,fontWeight:900,color:'#fff' }}>₦</span>
+            </div>
+          </div>
+          
+          <h1 style={{ fontSize:32,fontWeight:800,color:'var(--text)',letterSpacing:-0.6,marginBottom:12,textAlign:'center' }}>Welcome Back</h1>
+          <p style={{ color:'var(--text-secondary)',fontSize:16,marginBottom:40,textAlign:'center',maxWidth:340 }}>Sign in to your SaukiMart account and manage your data and purchases seamlessly</p>
+          
+          {error && <div style={{ width:'100%',maxWidth:340,padding:'12px 16px',borderRadius:14,background:'rgba(255,59,48,.12)',border:`1px solid ${RED}30`,color:RED,fontSize:15,marginBottom:24,animation:'fadeUpScale .3s ease' }}>{error}</div>}
+          
+          <div style={{ width:'100%',maxWidth:340,marginBottom:20,background:'var(--card)',borderRadius:16,padding:20,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
+            <label style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',marginBottom:10,display:'block',textTransform:'uppercase',letterSpacing:.5 }}>Phone Number</label>
             <input value={loginPhone} onChange={e=>setLoginPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
               placeholder="08012345678" inputMode="numeric"
-              style={{ width:'100%',padding:'14px 16px',borderRadius:12,background:'var(--card2)',border:'1px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:600 }} />
+              style={{ width:'100%',padding:'14px 14px',borderRadius:10,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:600,transition:'all .2s',outline:'none',boxSizing:'border-box' }} 
+              onFocus={e=>{ e.currentTarget.style.borderColor = BLUE; e.currentTarget.style.background = dark?'#2a2a3e':'#fff'; }}
+              onBlur={e=>{ e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-secondary)'; }}
+            />
           </div>
+          
           <button onClick={()=>{ if(loginPhone.length===11){ setShowPin(true); } else showError('Enter 11-digit phone number'); }}
             disabled={loginPhone.length !== 11}
-            style={{ width:'100%',padding:'16px',borderRadius:12,background: loginPhone.length===11 ? BLUE : 'var(--card2)',color: loginPhone.length===11 ? '#fff' : 'var(--text-secondary)',fontSize:16,fontWeight:700,transition:'all .2s',marginBottom:20 }}>
+            style={{ width:'100%',maxWidth:340,padding:'16px',borderRadius:12,background: loginPhone.length===11 ? `linear-gradient(135deg, ${BLUE}, ${TEAL})` : 'var(--card2)',color: loginPhone.length===11 ? '#fff' : 'var(--text-secondary)',fontSize:16,fontWeight:700,transition:'all .3s cubic-bezier(.16,.1,0,1)',marginBottom:20,boxShadow: loginPhone.length===11 ? `0 12px 32px ${BLUE}40` : 'none',cursor:loginPhone.length===11?'pointer':'not-allowed',transform: loginPhone.length===11?'translateY(0)':'translateY(0)',border:'none' }}>
             Continue
           </button>
-          <button onClick={()=>setScreen('register')} style={{ color:BLUE,fontSize:15,fontWeight:600 }}>Create Account</button>
+          
+          <p style={{ fontSize:15,color:'var(--text-secondary)' }}>
+            New to SaukiMart?{' '}
+            <button onClick={()=>setScreen('register')} style={{ color:BLUE,fontWeight:600,background:'none',border:'none',cursor:'pointer',fontSize:15 }}>Create Account</button>
+          </p>
         </div>
-        <p style={{ textAlign:'center',fontSize:13,color:'var(--text-secondary)',padding:'0 24px 32px' }}>
+        
+        <p style={{ textAlign:'center',fontSize:13,color:'var(--text-secondary)',padding:'0 24px 32px',position:'relative',zIndex:1 }}>
           <a href="/privacy" style={{ color:BLUE }}>Privacy</a> · <a href="/privacy" style={{ color:BLUE }}>Terms</a>
         </p>
       </div>
@@ -627,48 +649,70 @@ export default function AppPage() {
   if (screen === 'register') return (
     <>
       <GlobalStyle dark={dark} />
-      <div style={{ height:'100dvh',overflowY:'auto',background:'var(--bg)' }}>
-        <div style={{ padding:'60px 24px 40px' }}>
-          <button onClick={()=>setScreen('login')} style={{ color:BLUE,fontSize:16,fontWeight:600,marginBottom:28 }}>← Back</button>
-          <h1 style={{ fontSize:28,fontWeight:800,color:'var(--text)',letterSpacing:-0.6,marginBottom:8 }}>Create Account</h1>
-          <p style={{ color:'var(--text-secondary)',fontSize:16,marginBottom:32 }}>Join SaukiMart today</p>
-          {error && <div style={{ padding:'12px 16px',borderRadius:12,background:'rgba(255,59,48,.1)',border:'1px solid rgba(255,59,48,.2)',color:RED,fontSize:15,marginBottom:20 }}>{error}</div>}
-          {[
+      <div style={{ height:'100dvh',overflowY:'auto',background:`linear-gradient(135deg, ${dark?'#0a0a0a':'#fafafa'} 0%, ${dark?'#1a1a2e':'#f5f5f7'} 100%)` }}>
+        {/* Background decorations */}
+        <div style={{ position:'fixed',top:'-40%',right:'-15%',width:'350px',height:'350px',borderRadius:'50%',background:`radial-gradient(circle, ${BLUE}08, transparent)`,pointerEvents:'none' }} />
+        <div style={{ position:'fixed',bottom:'-20%',left:'-10%',width:'300px',height:'300px',borderRadius:'50%',background:`radial-gradient(circle, ${GREEN}06, transparent)`,pointerEvents:'none' }} />
+        
+        <div style={{ padding:'60px 24px 40px',maxWidth:420,margin:'0 auto',position:'relative',zIndex:1 }}>
+          <button onClick={()=>setScreen('login')} style={{ color:BLUE,fontSize:16,fontWeight:600,marginBottom:28,background:'none',border:'none',cursor:'pointer' }}>← Back</button>
+          
+          {/* Header */}
+          <div style={{ marginBottom:36,textAlign:'center',animation:'fadeUpScale .5s ease' }}>
+            <div style={{ width:52,height:52,borderRadius:14,background:`linear-gradient(135deg, ${GREEN}, ${TEAL})`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',boxShadow:`0 8px 24px ${GREEN}40` }}>
+              <span style={{ fontSize:26,fontWeight:900,color:'#fff' }}>+</span>
+            </div>
+            <h1 style={{ fontSize:28,fontWeight:800,color:'var(--text)',letterSpacing:-0.6,marginBottom:8 }}>Create Account</h1>
+            <p style={{ color:'var(--text-secondary)',fontSize:16 }}>Begin your journey with SaukiMart</p>
+          </div>
+          
+          {error && <div style={{ width:'100%',padding:'12px 16px',borderRadius:14,background:'rgba(255,59,48,.12)',border:`1px solid ${RED}30`,color:RED,fontSize:15,marginBottom:20,animation:'fadeUpScale .3s ease' }}>{error}</div>}
+          
+          {/* Form */}
+          <div style={{ background:'var(--card)',borderRadius:18,padding:24,border:'1px solid var(--border)',boxShadow:'0 8px 32px rgba(0,0,0,.08)',marginBottom:24 }}>
+            {[
             { key:'firstName', label:'First Name', placeholder:'Abubakar', type:'text' },
             { key:'lastName', label:'Last Name', placeholder:'Musa', type:'text' },
             { key:'phone', label:'Phone Number (11 digits)', placeholder:'08012345678', type:'tel' },
-            { key:'pin', label:'6-Digit PIN', placeholder:'••••••', type:'password' },
-            { key:'confirmPin', label:'Confirm PIN', placeholder:'••••••', type:'password' },
-          ].map(f => (
-            <div key={f.key} style={{ marginBottom:16 }}>
-              <label style={{ fontSize:14,fontWeight:600,color:'var(--text-secondary)',marginBottom:8,display:'block' }}>{f.label}</label>
+            { key:'pin', label:'4-Digit PIN', placeholder:'••••', type:'password' },
+            { key:'confirmPin', label:'Confirm PIN', placeholder:'••••', type:'password' },
+          ].map((f,i) => (
+            <div key={f.key} style={{ marginBottom: i<4 ? 18 : 0 }}>
+              <label style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',marginBottom:10,display:'block',textTransform:'uppercase',letterSpacing:.5 }}>{f.label}</label>
               <input
                 type={f.type} value={regForm[f.key as keyof typeof regForm]} placeholder={f.placeholder}
                 inputMode={f.key==='phone'||f.key==='pin'||f.key==='confirmPin'?'numeric':undefined}
-                maxLength={f.key==='phone'?11:f.key==='pin'||f.key==='confirmPin'?6:undefined}
+                maxLength={f.key==='phone'?11:f.key==='pin'||f.key==='confirmPin'?4:undefined}
                 onChange={e => {
                   const v = (f.key==='phone'||f.key==='pin'||f.key==='confirmPin') ? e.target.value.replace(/\D/g,'') : e.target.value;
                   setRegForm(prev => ({ ...prev, [f.key]: v }));
                 }}
-                style={{ width:'100%',padding:'14px 16px',borderRadius:12,background:'var(--card2)',border:'1px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:600 }} />
+                style={{ width:'100%',padding:'14px 14px',borderRadius:10,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:600,transition:'all .2s',outline:'none',boxSizing:'border-box' }}
+                onFocus={e=>{ e.currentTarget.style.borderColor = BLUE; e.currentTarget.style.background = dark?'#2a2a3e':'#fff'; }}
+                onBlur={e=>{ e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-secondary)'; }}
+              />
             </div>
           ))}
-          {/* Terms */}
-          <div style={{ display:'flex',alignItems:'flex-start',gap:12,margin:'24px 0 28px' }}>
-            <button onClick={()=>setAgreed(!agreed)} style={{ width:24,height:24,borderRadius:6,border:`2px solid ${agreed?BLUE:'var(--border)'}`,background:agreed?BLUE:'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1 }}>
-              {agreed && <span style={{ color:'#fff',fontSize:14 }}>✓</span>}
+          </div>
+          
+          {/* Terms checkbox */}
+          <div style={{ display:'flex',alignItems:'flex-start',gap:12,margin:'24px 0 28px',padding:'16px 14px',background:'var(--bg-secondary)',borderRadius:12,border:'1px solid var(--border)' }}>
+            <button onClick={()=>setAgreed(!agreed)} style={{ width:22,height:22,borderRadius:6,border:`2px solid ${agreed?BLUE:'var(--border)'}`,background:agreed?`linear-gradient(135deg, ${BLUE}, ${TEAL})`:' transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1,transition:'all .2s',cursor:'pointer' }}>
+              {agreed && <span style={{ color:'#fff',fontSize:12,fontWeight:900 }}>✓</span>}
             </button>
-            <p style={{ fontSize:15,color:'var(--text-secondary)',lineHeight:1.6 }}>
+            <p style={{ fontSize:14,color:'var(--text-secondary)',lineHeight:1.6 }}>
               I agree to SaukiMart's{' '}
               <a href="/privacy" style={{ color:BLUE,fontWeight:600 }}>Terms</a> and{' '}
               <a href="/privacy" style={{ color:BLUE,fontWeight:600 }}>Privacy Policy</a>
             </p>
           </div>
+          
+          {/* Buttons */}
           <button onClick={handleRegister} disabled={!agreed||loading}
-            style={{ width:'100%',padding:'16px',borderRadius:12,background:agreed&&!loading?BLUE:'var(--card2)',color:agreed&&!loading?'#fff':'var(--text-secondary)',fontSize:16,fontWeight:700,transition:'all .2s',marginBottom:16 }}>
+            style={{ width:'100%',padding:'16px',borderRadius:12,background:agreed&&!loading?`linear-gradient(135deg, ${GREEN}, ${TEAL})`:'var(--card2)',color:agreed&&!loading?'#fff':'var(--text-secondary)',fontSize:16,fontWeight:700,transition:'all .3s cubic-bezier(.16,.1,0,1)',marginBottom:16,boxShadow:agreed&&!loading?`0 12px 32px ${GREEN}40`:'none',cursor:agreed&&!loading?'pointer':'not-allowed',border:'none' }}>
             {loading ? 'Creating account…' : 'Create Account'}
           </button>
-          <button onClick={()=>setScreen('login')} style={{ width:'100%',color:BLUE,fontSize:15,fontWeight:600 }}>Have an account? Sign In</button>
+          <button onClick={()=>setScreen('login')} style={{ width:'100%',color:BLUE,fontSize:15,fontWeight:600,background:'none',border:'none',cursor:'pointer' }}>Already have an account? Sign In</button>
         </div>
       </div>
     </>
@@ -726,10 +770,10 @@ export default function AppPage() {
       {[
         { id:'home', label:'Home', icon: Icons.bolt(BLUE, 24) },
         { id:'transactions', label:'Activity', icon: Icons.arrowDown(BLUE, 24) },
-        { id:'deposits', label:'Chat', icon: Icons.messageSquare(BLUE, 24) },
+        { id:'chat', label:'Chat', icon: Icons.messageSquare(BLUE, 24) },
         { id:'profile', label:'Account', icon: Icons.user(BLUE, 24) },
       ].map(item => (
-        <button key={item.id} onClick={()=>item.id==='deposits'?setScreen('profile'):setScreen(item.id as typeof screen)}
+        <button key={item.id} onClick={()=>{ if(item.id==='chat') loadChats(); setScreen(item.id as typeof screen); }}
           style={{ padding:'12px 0 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,background:'none',borderTop: active===item.id ? `3px solid ${BLUE}` : 'none',paddingTop: active===item.id ? '9px' : '12px',transition:'all .2s',opacity: active===item.id ? 1 : 0.65,cursor:'pointer' }}
           onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}}
           onMouseLeave={e=>{e.currentTarget.style.opacity = active===item.id ? '1' : '0.65'}}>
@@ -760,8 +804,8 @@ export default function AppPage() {
               <div>
                 <p style={{ color:'var(--text-secondary)',fontSize:13,fontWeight:600,letterSpacing:.5,marginBottom:8 }}>AVAILABLE BALANCE</p>
                 <div style={{ display:'flex',alignItems:'flex-start',gap:'4px' }}>
-                  <span style={{ fontSize:'28px',opacity:.7,marginTop:'4px' }}>₦</span>
-                  <span style={{ fontSize:'52px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>{(user.walletBalance/1).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                  <span style={{ fontSize:'24px',opacity:.7,marginTop:'4px' }}>₦</span>
+                  <span style={{ fontSize:'44px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>{(user.walletBalance/1).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                 </div>
               </div>
               <IconBox icon={Icons.wallet(BLUE, 28)} bg={'rgba(0,113,227,.10)'} />
@@ -1266,7 +1310,6 @@ export default function AppPage() {
           </SettingsGroup>
 
           <SettingsGroup title="Support">
-            <SettingsRow icon={Icons.info(BLUE, 20)} label="Help & Support" onPress={()=>{ loadChats(); setScreen('chat'); }} />
             <SettingsRow icon={Icons.globe(PURPLE, 20)} label="About" onPress={()=>setScreen('about')} />
             <SettingsRow icon={Icons.phone(TEAL, 20)} label="Call: +234 704 464 7081" right={
               <div style={{ display:'flex',gap:8 }}>
@@ -1308,7 +1351,7 @@ export default function AppPage() {
         </div>
         <div style={{ padding:'0 24px',flex:1,display:'flex',flexDirection:'column',justifyContent:'center' }}>
           <div style={{ marginBottom:24 }}>
-            <label style={{ fontSize:14,fontWeight:600,color:'var(--text-secondary)',marginBottom:8,display:'block' }}>New PIN (6 digits)</label>
+            <label style={{ fontSize:14,fontWeight:600,color:'var(--text-secondary)',marginBottom:8,display:'block' }}>New PIN (4 digits)</label>
             <input type="password" inputMode="numeric" maxLength={6} value={newPin} onChange={e=>setNewPin(e.target.value.replace(/\D/g,'').slice(0,6))}
               placeholder="••••••" style={{ width:'100%',padding:'14px 16px',borderRadius:12,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:20,letterSpacing:6,textAlign:'center' }} />
           </div>

@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     const { phone, pin } = await req.json();
 
-    if (!/^\d{11}$/.test(phone) || !/^\d{6}$/.test(pin)) {
+    if (!/^\d{11}$/.test(phone) || !/^\d{4}$/.test(pin)) {
       return NextResponse.json({ error: 'Invalid credentials format' }, { status: 400 });
     }
 

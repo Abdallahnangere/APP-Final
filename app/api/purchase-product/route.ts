@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const { pin, productId, idempotencyKey: clientIdempotency } = await req.json();
-    if (!/^\d{6}$/.test(pin)) return NextResponse.json({ error: 'Invalid PIN' }, { status: 400 });
+    if (!/^\d{4}$/.test(pin)) return NextResponse.json({ error: 'Invalid PIN' }, { status: 400 });
 
     const idempotencyKey = clientIdempotency || generateIdempotencyKey();
     

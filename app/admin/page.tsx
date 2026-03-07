@@ -316,7 +316,7 @@ export default function AdminPage() {
                       </Card>
                       <Card>
                         <h3 style={{ fontWeight:800,fontSize:14,marginBottom:12 }}>🔑 Change PIN</h3>
-                        <Input label="New 6-digit PIN" value={pinForm} onChange={v=>setPinForm(v.replace(/\D/g,'').slice(0,6))} placeholder="123456" />
+                        <Input label="New 4-digit PIN" value={pinForm} onChange={v=>setPinForm(v.replace(/\D/g,'').slice(0,4))} placeholder="1234" />
                         <Btn size="sm" onClick={async()=>{
                           try { await api('users', 'PATCH', { userId: selectedUser.id, action:'change-pin', newPin: pinForm }); showToast('✅ PIN updated'); setPinForm(''); } catch(e:unknown){ showError(e instanceof Error?e.message:'Failed'); }
                         }}>Update PIN</Btn>

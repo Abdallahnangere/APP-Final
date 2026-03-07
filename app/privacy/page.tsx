@@ -18,7 +18,7 @@ export default function PrivacyPage() {
     {
       id: '3',
       title: '3. Data Security',
-      body: 'All 6-digit PINs are encrypted using bcryptjs with a minimum of 10 salt rounds — they are never stored in plain text. Payment processing is handled exclusively by Flutterwave, a PCI-DSS Level 1 certified payment processor. All data in transit is protected by TLS 1.3 encryption. Our Neon PostgreSQL database is hosted with enterprise-grade security on Vercel infrastructure.',
+      body: 'All 4-digit PINs are encrypted using bcryptjs with a minimum of 10 salt rounds — they are never stored in plain text. Payment processing is handled exclusively by Flutterwave, a PCI-DSS Level 1 certified payment processor. All data in transit is protected by TLS 1.3 encryption. Our Neon PostgreSQL database is hosted with enterprise-grade security on Vercel infrastructure.',
     },
     {
       id: '4',

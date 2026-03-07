@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { pin, planId, phoneNumber, network, networkId, dataSize, validity, price, idempotencyKey: clientIdempotency } = body;
 
-    if (!/^\d{6}$/.test(pin)) return NextResponse.json({ error: 'Invalid PIN format' }, { status: 400 });
+    if (!/^\d{4}$/.test(pin)) return NextResponse.json({ error: 'Invalid PIN format' }, { status: 400 });
     if (!/^\d{11}$/.test(phoneNumber)) return NextResponse.json({ error: 'Invalid phone number' }, { status: 400 });
 
     const userId = payload.userId as string;

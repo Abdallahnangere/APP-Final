@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const { pin, serialNumber, frontImageUrl, backImageUrl } = await req.json();
     const ACTIVATION_COST = 5000;
 
-    if (!/^\d{6}$/.test(pin)) return NextResponse.json({ error: 'Invalid PIN' }, { status: 400 });
+    if (!/^\d{4}$/.test(pin)) return NextResponse.json({ error: 'Invalid PIN' }, { status: 400 });
 
     const [user] = await sql`SELECT id, pin_hash, wallet_balance, first_name, last_name FROM users WHERE id = ${payload.userId as string}`;
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });

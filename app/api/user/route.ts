@@ -48,8 +48,8 @@ export async function PATCH(req: NextRequest) {
   // Change PIN
   if (body.action === 'change-pin') {
     const { currentPin, newPin } = body;
-    if (!/^\d{6}$/.test(newPin)) {
-      return NextResponse.json({ error: 'New PIN must be 6 digits' }, { status: 400 });
+    if (!/^\d{4}$/.test(newPin)) {
+      return NextResponse.json({ error: 'New PIN must be 4 digits' }, { status: 400 });
     }
     const [full] = await sql`SELECT pin_hash FROM users WHERE id = ${user.id}`;
     const valid = await verifyPin(currentPin, full.pin_hash);
