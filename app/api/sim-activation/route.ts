@@ -38,11 +38,15 @@ export async function POST(req: NextRequest) {
     if (balance < ACTIVATION_COST) return NextResponse.json({ error: 'Insufficient balance. Need ₦5,000' }, { status: 400 });
 
     await sql`UPDATE users SET wallet_balance = wallet_balance - ${ACTIVATION_COST}, updated_at = NOW() WHERE id = ${user.id}`;
-    const [activation] = await sql`
+    const activations = await sql`
       INSERT INTO sim_activations (user_id, serial_number, front_image_url, back_image_url, amount, status)
       VALUES (${user.id}, ${serialNumber}, ${frontImageUrl || null}, ${backImageUrl || null}, ${ACTIVATION_COST}, 'under_review')
       RETURNING id
     `;
+    if (!activations || activations.length === 0) return NextResponse.json({ error: 'Failed to create activation' }, { status: 500 });
+    const activation = activations[0];
+    const activationId = activation.id || activation;
+    
     const ref = generateReceiptRef();
     await sql`
       INSERT INTO transactions (user_id, type, description, amount, status, receipt_data)
@@ -50,10 +54,14 @@ export async function POST(req: NextRequest) {
         ${JSON.stringify({ ref, serialNumber, type: 'sim_activation', date: new Date().toISOString() })})
     `;
 
-    const [updated] = await sql`SELECT wallet_balance FROM users WHERE id = ${user.id}`;
-    return NextResponse.json({ success: true, activationId: activation.id, newBalance: parseFloat(updated.wallet_balance) });
+    const updated = await sql`SELECT wallet_balance FROM users WHERE id = ${user.id}`;
+    if (!updated || updated.length === 0) return NextResponse.json({ error: 'Failed to retrieve updated balance' }, { status: 500 });
+    const userBalance = updated[0];
+    const newBalance = typeof userBalance === 'object' ? parseFloat(userBalance.wallet_balance || 0) : parseFloat(userBalance || 0);
+    
+    return NextResponse.json({ success: true, activationId, newBalance });
   } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: 'Activation request failed' }, { status: 500 });
+    console.error('SIM Activation Error:', err);
+    return NextResponse.json({ error: 'Activation request failed', details: String(err) }, { status: 500 });
   }
 }
