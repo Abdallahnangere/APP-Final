@@ -64,8 +64,8 @@ const GlobalStyle = ({ dark }: { dark: boolean }) => (
 );
 
 /* ─────────────── PIN KEYBOARD ─────────────── */
-function PinKeyboard({ onComplete, onClose, title = 'Enter your 6-digit PIN', subtitle = '' }: {
-  onComplete: (pin: string) => void; onClose: () => void; title?: string; subtitle?: string;
+function PinKeyboard({ onComplete, onClose, title = 'Enter your 6-digit PIN', subtitle = '', pinAction }: {
+  onComplete: (pin: string) => void; onClose: () => void; title?: string; subtitle?: string; pinAction?: "buy-data" | "buy-product" | "sim-pay" | null;
 }) {
   const [pin, setPin] = useState('');
   const [shake, setShake] = useState(false);
