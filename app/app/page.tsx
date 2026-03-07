@@ -938,7 +938,7 @@ export default function AppPage() {
                   onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
                   <div style={{ height:160,background:'var(--bg-secondary)',position:'relative',overflow:'hidden' }}>
                     {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : p.imageBase64 ? <img src={`data:image/jpeg;base64,${p.imageBase64}`} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',background:'var(--border)',display:'flex',alignItems:'center',justifyContent:'center' }}>
-                      <Icons.download(BLUE, 32)
+                      {Icons.download(BLUE, 32)}
                     </div>}
                     {!p.inStock && <div style={{ position:'absolute',inset:0,background:'rgba(0,0,0,.5)',display:'flex',alignItems:'center',justifyContent:'center',backdropFilter:'blur(2px)' }}>
                       <div style={{ background:'rgba(255,59,48,.95)',borderRadius:8,padding:'6px 12px' }}>
