@@ -58,7 +58,9 @@ export async function POST(req: NextRequest) {
 
     if (!amigoRes.success) {
       await sql`UPDATE transactions SET status = 'failed' WHERE id = ${txn.id}`;
-      return NextResponse.json({ error: amigoRes.message || 'Data delivery failed' }, { status: 400 });
+      const errorMsg = amigoRes.message || 'Data delivery failed';
+      console.error('Amigo API error:', { amigoRes, message: errorMsg });
+      return NextResponse.json({ error: errorMsg }, { status: 400 });
     }
 
     // Deduct balance and mark success

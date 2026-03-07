@@ -440,11 +440,18 @@ export default function AppPage() {
         body: JSON.stringify({ pin, planId: selectedPlan.planId, phoneNumber: buyPhone, network: selectedPlan.network, networkId: selectedPlan.networkId, dataSize: selectedPlan.dataSize, validity: selectedPlan.validity, price: selectedPlan.price }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) {
+        throw new Error(data.error || `Server error (${res.status})`);
+      }
       setReceipt({ ...data.receipt, type:'data' });
       await refreshUser();
       await loadHomeData();
-    } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Purchase failed'); }
+      showToast('✅ Data purchase successful!');
+    } catch(e:unknown) { 
+      const msg = e instanceof Error ? e.message : 'Purchase failed';
+      console.error('Data purchase error:', msg);
+      showError(msg); 
+    }
     finally { setLoading(false); }
   };
 
