@@ -14,10 +14,10 @@ type ChatMsg = { id: string; user_id: string; sender: string; message: string; c
 
 const GlobalStyle = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'DM Sans',system-ui,sans-serif;background:#F2F2F7;color:#1C1C1E;-webkit-font-smoothing:antialiased}
-    ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:2px}
+    body{font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,system-ui,sans-serif;background:#F5F5F7;color:#1D1D1F;-webkit-font-smoothing:antialiased}
+    ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:#D5D5D7;border-radius:4px}
     input,textarea,select{font-family:inherit;outline:none}
     button{border:none;cursor:pointer;font-family:inherit;background:none}
     @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -27,27 +27,31 @@ const GlobalStyle = () => (
 );
 
 const Card = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
-  <div style={{ background:'#fff',borderRadius:16,padding:'20px',boxShadow:'0 1px 8px rgba(0,0,0,.06)',border:'1px solid rgba(0,0,0,.05)', ...style }}>{children}</div>
+  <div style={{ background:'#FFFFFF',borderRadius:20,padding:'24px',boxShadow:'0 2px 8px rgba(0,0,0,0.08)',border:'1px solid rgba(0,0,0,0.08)', ...style }}>{children}</div>
 );
 
 const Btn = ({ children, onClick, variant='primary', size='md', style: s }: { children: React.ReactNode; onClick?: ()=>void; variant?: 'primary'|'danger'|'ghost'|'success'; size?: 'sm'|'md'; style?: React.CSSProperties }) => {
   const bg = variant==='primary'?BLUE:variant==='danger'?RED:variant==='success'?GREEN:'transparent';
   const color = variant==='ghost'?'#3C3C43':'#fff';
-  const border = variant==='ghost'?'1.5px solid #E5E5EA':'none';
-  const pad = size==='sm'?'7px 14px':'10px 20px';
+  const border = variant==='ghost'?'1px solid rgba(0,0,0,0.15)':'none';
+  const pad = size==='sm'?'8px 14px':'12px 20px';
   const font = size==='sm'?13:15;
-  return <button onClick={onClick} style={{ background:bg,color,border,borderRadius:12,padding:pad,fontSize:font,fontWeight:700,cursor:'pointer',transition:'opacity .15s', ...s }} onMouseEnter={e=>(e.currentTarget.style.opacity='.85')} onMouseLeave={e=>(e.currentTarget.style.opacity='1')}>{children}</button>;
+  return <button onClick={onClick} style={{ background:bg,color,border,borderRadius:12,padding:pad,fontSize:font,fontWeight:600,cursor:'pointer',transition:'all 0.2s cubic-bezier(0.25,0.1,0.25,1)', ...s }} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='scale(1.02)'}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform='scale(1)'}}>{children}</button>;
 };
 
 const Input = ({ value, onChange, placeholder, type='text', label, multiline=false }: { value: string; onChange: (v:string)=>void; placeholder?: string; type?: string; label?: string; multiline?: boolean; }) => (
-  <div style={{ marginBottom:14 }}>
-    {label && <label style={{ display:'block',fontSize:13,fontWeight:600,color:'#6C6C70',marginBottom:6 }}>{label}</label>}
+  <div style={{ marginBottom:16 }}>
+    {label && <label style={{ display:'block',fontSize:13,fontWeight:600,color:'#6E6E73',marginBottom:8 }}>{label}</label>}
     {multiline ? (
       <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-        style={{ width:'100%',padding:'12px 14px',borderRadius:12,border:'1.5px solid #E5E5EA',fontSize:14,color:'#1C1C1E',minHeight:90,resize:'vertical',lineHeight:1.5 }} />
+        style={{ width:'100%',padding:'12px 14px',borderRadius:12,border:'1px solid rgba(0,0,0,0.15)',fontSize:14,color:'#1D1D1F',minHeight:100,resize:'vertical',lineHeight:1.5,fontFamily:'inherit',transition:'border 0.2s' }} 
+        onFocus={e=>(e.currentTarget.style.borderColor='rgba(0,113,227,0.3)')}
+        onBlur={e=>(e.currentTarget.style.borderColor='rgba(0,0,0,0.15)')} />
     ) : (
       <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-        style={{ width:'100%',padding:'12px 14px',borderRadius:12,border:'1.5px solid #E5E5EA',fontSize:14,color:'#1C1C1E' }} />
+        style={{ width:'100%',padding:'12px 14px',borderRadius:12,border:'1px solid rgba(0,0,0,0.15)',fontSize:14,color:'#1D1D1F',fontFamily:'inherit',transition:'border 0.2s' }}
+        onFocus={e=>(e.currentTarget.style.borderColor='rgba(0,113,227,0.3)')}
+        onBlur={e=>(e.currentTarget.style.borderColor='rgba(0,0,0,0.15)')} />
     )}
   </div>
 );

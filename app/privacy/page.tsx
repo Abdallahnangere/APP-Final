@@ -58,38 +58,38 @@ export default function PrivacyPage() {
   ];
 
   return (
-    <div style={{ fontFamily: 'DM Sans, system-ui, sans-serif', color: '#1C1C1E', background: '#FAFAFA', minHeight: '100vh' }}>
+    <div style={{ fontFamily: '-apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, system-ui, sans-serif', color: '#1D1D1F', background: '#F5F5F7', minHeight: '100vh' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         a{text-decoration:none;color:inherit}
         @media(max-width:768px){.layout{grid-template-columns:1fr!important}.sidebar{display:none!important}}
       `}</style>
 
       {/* Header */}
-      <header style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,0,0,.06)', position: 'sticky', top: 0, zIndex: 50, padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <header style={{ background: 'rgba(245,245,247,0.72)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,0,0,0.08)', position: 'sticky', top: 0, zIndex: 50, padding: '0 22px', height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg,#007AFF,#0040FF)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: '#fff', fontWeight: 900, fontSize: 15 }}>S</span>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>S</span>
           </div>
-          <span style={{ fontWeight: 800, fontSize: 17, color: '#1C1C1E' }}>SaukiMart</span>
+          <span style={{ fontWeight: 600, fontSize: 16, color: '#1D1D1F' }}>SaukiMart</span>
         </a>
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#007AFF', fontSize: 14, fontWeight: 600 }}>← Back to Home</a>
+        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0071E3', fontSize: 14, fontWeight: 500 }}>← Back</a>
       </header>
 
       {/* Hero */}
-      <div style={{ background: 'linear-gradient(135deg,#007AFF 0%,#0040FF 100%)', padding: '60px 24px' }}>
+      <div style={{ background: 'linear-gradient(135deg,#0071E3 0%,#0053BE 100%)', padding: '80px 22px' }}>
         <div style={{ maxWidth: 860, margin: '0 auto' }}>
-          <span style={{ background: 'rgba(255,255,255,.15)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 20, letterSpacing: .5, display: 'inline-block', marginBottom: 16 }}>LEGAL</span>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 48, fontWeight: 900, color: '#fff', letterSpacing: -1.5, marginBottom: 14 }}>Privacy Policy</h1>
-          <p style={{ color: 'rgba(255,255,255,.75)', fontSize: 16, lineHeight: 1.7, maxWidth: 560 }}>
+          <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 20, letterSpacing: 0.05, display: 'inline-block', marginBottom: 16 }}>LEGAL</span>
+          <h1 style={{ fontFamily: '-apple-system, "SF Pro Display", BlinkMacSystemFont, system-ui, sans-serif', fontSize: 56, fontWeight: 700, color: '#fff', letterSpacing: -0.003, marginBottom: 16 }}>Privacy Policy</h1>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 18, lineHeight: 1.6, maxWidth: 560 }}>
             SaukiMart is committed to protecting your privacy. This policy explains exactly how we collect, use, and safeguard your data.
           </p>
-          <div style={{ display: 'flex', gap: 20, marginTop: 28, flexWrap: 'wrap' }}>
-            {[['📅 Last Updated', 'March 2026'], ['🔒 Standard', 'NDPC Compliant'], ['📋 Version', '2.0']].map(([k, v]) => (
-              <div key={k} style={{ background: 'rgba(255,255,255,.1)', borderRadius: 12, padding: '10px 16px' }}>
-                <p style={{ color: 'rgba(255,255,255,.6)', fontSize: 11, fontWeight: 600 }}>{k}</p>
-                <p style={{ color: '#fff', fontSize: 14, fontWeight: 700, marginTop: 2 }}>{v}</p>
+          <div style={{ display: 'flex', gap: 20, marginTop: 32, flexWrap: 'wrap' }}>
+            {[['Updated', 'March 2026'], ['Standard', 'NDPC Compliant'], ['Version', '2.0']].map(([k, v]) => (
+              <div key={k} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: '10px 16px' }}>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600 }}>{k}</p>
+                <p style={{ color: '#fff', fontSize: 14, fontWeight: 600, marginTop: 4 }}>{v}</p>
               </div>
             ))}
           </div>

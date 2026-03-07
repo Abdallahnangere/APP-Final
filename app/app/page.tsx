@@ -35,19 +35,19 @@ const NETWORKS = [
 /* ─────────────── GLOBAL STYLES ─────────────── */
 const GlobalStyle = ({ dark }: { dark: boolean }) => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
     :root{
-      --bg:${dark?'#000000':'#F2F2F7'};
-      --card:${dark?'#1C1C1E':'#FFFFFF'};
+      --bg:${dark?'#000000':'#F5F5F7'};
+      --card:${dark?'#1D1D1F':'#FFFFFF'};
       --card2:${dark?'#2C2C2E':'#F9F9F9'};
-      --text:${dark?'#FFFFFF':'#1C1C1E'};
-      --sub:${dark?'#8E8E93':'#6C6C70'};
-      --border:${dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.07)'};
+      --text:${dark?'#F5F5F7':'#1D1D1F'};
+      --sub:${dark?'#8E8E93':'#6E6E73'};
+      --border:${dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.08)'};
       --blue:${BLUE};--green:${GREEN};--red:${RED};
     }
-    html,body{height:100%;overflow:hidden;touch-action:pan-y}
-    body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+    html,body{height:100%;overflow:hidden;touch-action:pan-y;font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,system-ui,sans-serif}
+    body{background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
     input,button{font-family:inherit;outline:none}
     button{border:none;cursor:pointer;background:none}
     ::-webkit-scrollbar{display:none}
