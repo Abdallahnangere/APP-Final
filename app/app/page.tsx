@@ -223,7 +223,7 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 6-digit PIN', su
 }
 
 /* ─────────────── RECEIPT CANVAS ─────────────── */
-function Receipt({ data, onDownload, onClose, dark }: { data: Record<string,unknown>; onDownload: ()=>void; onClose: ()=>void; dark: boolean }) {
+function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Record<string,unknown>; onDownload: ()=>void; onClose: ()=>void; dark: boolean; autoDownload?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
 
   const downloadPng = async () => {
@@ -235,6 +235,13 @@ function Receipt({ data, onDownload, onClose, dark }: { data: Record<string,unkn
     a.href = url; a.download = `receipt-${data.ref || Date.now()}.png`; a.click();
     if (onDownload) onDownload();
   };
+
+  useEffect(() => {
+    if (autoDownload) {
+      const timer = setTimeout(downloadPng, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [autoDownload]);
 
   const date = new Date(data.date as string).toLocaleString('en-NG', { dateStyle:'long', timeStyle:'short' });
 
@@ -495,7 +502,7 @@ export default function AppPage() {
 
   /* ── LOAD PRODUCTS ── */
   const loadProducts = async () => {
-    const res = await fetch('/api/products');
+    const res = await fetch(`/api/products?t=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
     const data = await res.json();
     setProducts(Array.isArray(data) ? data : []);
   };
@@ -718,11 +725,11 @@ export default function AppPage() {
       {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} dark={dark} />}
       {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500,whiteSpace:'nowrap' }}>{toast}</div>}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
-      <div style={{ height:'100dvh',overflowY:'auto',background:'var(--bg)',paddingBottom:100,backgroundImage: dark ? 'radial-gradient(ellipse at 50% 0%, rgba(0,113,227,0.08) 0%, transparent 50%)' : 'none',backgroundAttachment: 'fixed' }}>
+      <div style={{ height:'100dvh',overflowY:'auto',background:'var(--bg)',paddingTop:'80px',paddingBottom:100,backgroundImage: dark ? 'radial-gradient(ellipse at 50% 0%, rgba(0,113,227,0.08) 0%, transparent 50%)' : 'none',backgroundAttachment: 'fixed' }}>
         <Header />
         
         {/* Wallet Card with Enhanced Styling */}
-        <div style={{ margin:'20px auto 0',maxWidth:980 }}>
+        <div style={{ margin:'0 auto',maxWidth:980 }}>
           <div style={{ margin:'0 16px',background:'var(--card)',borderRadius:20,padding:'28px 24px',border:'1px solid var(--border)',boxShadow:'0 8px 32px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.07)',backdropFilter:'blur(20px)' }}>
             <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20 }}>
               <div>
@@ -1024,7 +1031,7 @@ export default function AppPage() {
   if (screen === 'transactions') return (
     <>
       <GlobalStyle dark={dark} />
-      {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} dark={dark} />}
+      {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} autoDownload={true} dark={dark} />}
       <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
         <div style={{ padding:'60px 20px 16px',borderBottom:'1px solid var(--border)' }}>
           <h2 style={{ fontSize:26,fontWeight:800,color:'var(--text)',letterSpacing:-0.5 }}>Activity</h2>
