@@ -20,14 +20,14 @@ export async function purchaseData(
   payload: AmigoPayload,
   idempotencyKey: string
 ): Promise<AmigoResponse> {
-  const proxyUrl = process.env.AMIGO_PROXY_URL;
-  if (!proxyUrl) throw new Error('AMIGO_PROXY_URL not set');
+  const apiKey = process.env.AMIGO_API_KEY;
+  if (!apiKey) throw new Error('AMIGO_API_KEY not set');
 
-  const res = await fetch(proxyUrl, {
+  const res = await fetch('https://amigo.ng/api/data/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-API-Key': process.env.AMIGO_API_KEY!,
+      'X-API-Key': apiKey,
       'Idempotency-Key': idempotencyKey,
     },
     body: JSON.stringify(payload),
@@ -35,7 +35,7 @@ export async function purchaseData(
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Amigo proxy error ${res.status}: ${text}`);
+    throw new Error(`Amigo API error ${res.status}: ${text}`);
   }
 
   return res.json();

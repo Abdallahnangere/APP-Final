@@ -227,18 +227,23 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
   const ref = useRef<HTMLDivElement>(null);
 
   const downloadPng = async () => {
-    if (typeof window === 'undefined') return;
-    const { toPng } = await import('html-to-image');
-    if (!ref.current) return;
-    const url = await toPng(ref.current, { quality:1, pixelRatio:2 });
-    const a = document.createElement('a');
-    a.href = url; a.download = `receipt-${data.ref || Date.now()}.png`; a.click();
-    if (onDownload) onDownload();
+    if (typeof window === 'undefined' || !ref.current) return;
+    try {
+      const { toPng } = await import('html-to-image');
+      const url = await toPng(ref.current, { quality:1, pixelRatio:2 });
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `receipt-${(data.ref as string) || Date.now()}.png`;
+      a.click();
+      if (onDownload) onDownload();
+    } catch (err) {
+      console.error('Receipt download error:', err);
+    }
   };
 
   useEffect(() => {
     if (autoDownload) {
-      const timer = setTimeout(downloadPng, 100);
+      const timer = setTimeout(downloadPng, 500);
       return () => clearTimeout(timer);
     }
   }, [autoDownload]);
@@ -1060,7 +1065,7 @@ export default function AppPage() {
                 const icon = isData ? Icons.arrowDown(color, 20) : tx.type === 'product' ? Icons.download(color, 20) : Icons.arrowUp(color, 20);
                 const bgColor = isData ? 'rgba(0,113,227,.08)' : isDeposit ? 'rgba(48,209,88,.08)' : 'rgba(255,59,48,.08)';
                 return (
-                  <button key={tx.id} onClick={()=>{ if(tx.receiptData) setReceipt(tx.receiptData as Record<string,unknown>); }}
+                  <button key={tx.id} onClick={()=>{ if(tx.receiptData) { setReceipt(tx.receiptData as Record<string,unknown>); } }}
                     style={{ background:'var(--card)',borderRadius:14,padding:'16px 16px',display:'flex',alignItems:'center',gap:14,border:'1px solid var(--border)',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
                     onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)';e.currentTarget.style.transform='translateY(-1px)'}}
                     onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.04)';e.currentTarget.style.transform='translateY(0)'}}>
