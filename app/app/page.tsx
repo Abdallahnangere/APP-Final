@@ -164,7 +164,7 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 6-digit PIN', su
           {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((k,i) => (
             <button key={i} onClick={()=>k==='⌫'?del():k?press(k):null}
               style={{ height:64,borderRadius:16,background: k===''?'transparent':'var(--card2)',fontSize: k==='⌫'?22:24,fontWeight:600,color:'var(--text)',border:'1.5px solid var(--border)',transition:'all .1s',opacity:k===''?0:1,WebkitTapHighlightColor:'rgba(0,122,255,.1)' }}
-              onTouchStart={e=>{if(k)(e.currentTarget.style.background='rgba(0,122,255,.12)';e.currentTarget.style.transform='scale(.95)')}}
+              onTouchStart={e=>{if(k){e.currentTarget.style.background='rgba(0,122,255,.12)';e.currentTarget.style.transform='scale(.95)'}}}
               onTouchEnd={e=>{e.currentTarget.style.background='var(--card2)';e.currentTarget.style.transform='scale(1)'}}>
               {k}
             </button>
@@ -193,7 +193,7 @@ function Receipt({ data, onDownload, onClose, dark }: { data: Record<string,unkn
   const date = new Date(data.date as string).toLocaleString('en-NG', { dateStyle:'long', timeStyle:'short' });
 
   return (
-    <div style={{ position:'fixed',inset:0,zIndex:300,background:'rgba(0,0,0,.6)',display:'flex',alignItems:'center',justifyContent:'center',padding:20 }}>
+    <div style={{ position:'fixed',top:0,right:0,bottom:0,left:0,zIndex:300,background:'rgba(0,0,0,.6)',display:'flex',alignItems:'center',justifyContent:'center',padding:20 }}>
       <div className="slide-up" style={{ width:'100%',maxWidth:400,background:'var(--card)',borderRadius:24,overflow:'hidden' }}>
         {/* Downloadable receipt */}
         <div ref={ref} style={{ background:'#fff',width:'100%' }}>
