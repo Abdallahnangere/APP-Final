@@ -1,3 +1,7 @@
+'use client';
+
+import React from 'react';
+
 /**
  * Icon System
  * Heroicons mappings and custom SVG icons for Apple-style interface
@@ -72,14 +76,21 @@ export const emojiToIcon: Record<string, IconName> = {
  * SVG Icon Component Library
  * Using Heroicons-compatible monoline designs (24x24 baseline)
  */
-export const HeroIcon = (props: {
+interface HeroIconProps {
   name: IconName;
   size?: number;
   strokeWidth?: number;
   color?: string;
   className?: string;
+}
+
+export const HeroIcon: React.FC<HeroIconProps> = ({ 
+  name, 
+  size = 24, 
+  strokeWidth = 1.5, 
+  color = 'currentColor', 
+  className = '' 
 }) => {
-  const { name, size = 24, strokeWidth = 1.5, color = 'currentColor', className = '' } = props;
   const viewBox = '0 0 24 24';
 
   const iconMap: Record<IconName, string> = {
