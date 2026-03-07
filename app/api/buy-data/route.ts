@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { verifyPin, generateIdempotencyKey, generateReceiptRef } from '@/lib/utils';
-import { purchaseData } from '@/lib/amigo';
 
 export async function POST(req: NextRequest) {
   const auth = req.headers.get('authorization');
@@ -48,18 +47,31 @@ export async function POST(req: NextRequest) {
       RETURNING id
     `;
 
-    // Call Amigo via proxy
-    const amigoRes = await purchaseData({
-      network: networkId,
-      mobile_number: phoneNumber,
-      plan: planId,
-      Ported_number: true,
-    }, idempotencyKey);
+    // Call Amigo API directly (same as admin console does)
+    const proxyUrl = process.env.AMIGO_PROXY_URL || 'https://amigo.ng/api';
+    const apiKey = process.env.AMIGO_API_KEY;
+    if (!apiKey) throw new Error('AMIGO_API_KEY not configured');
 
-    if (!amigoRes.success) {
+    const amigoRes = await fetch(`${proxyUrl}/data/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': apiKey,
+        'Idempotency-Key': idempotencyKey,
+      },
+      body: JSON.stringify({
+        network: networkId,
+        mobile_number: phoneNumber,
+        plan: planId,
+        Ported_number: true,
+      }),
+    });
+
+    const amigoData = await amigoRes.json();
+    if (!amigoData.success) {
       await sql`UPDATE transactions SET status = 'failed' WHERE id = ${txn.id}`;
-      const errorMsg = amigoRes.message || 'Data delivery failed';
-      console.error('Amigo API error:', { amigoRes, message: errorMsg });
+      const errorMsg = amigoData.message || 'Data delivery failed';
+      console.error('Amigo API error:', { response: amigoData, message: errorMsg });
       return NextResponse.json({ error: errorMsg }, { status: 400 });
     }
 
@@ -69,10 +81,10 @@ export async function POST(req: NextRequest) {
       WHERE id = ${user.id}
     `;
     await sql`
-      UPDATE transactions SET status = 'success', amigo_reference = ${amigoRes.reference || null},
+      UPDATE transactions SET status = 'success', amigo_reference = ${amigoData.reference || null},
         receipt_data = ${JSON.stringify({
           network, dataSize, validity, phoneNumber, price, receiptRef,
-          reference: amigoRes.reference, message: amigoRes.message,
+          reference: amigoData.reference, message: amigoData.message,
         })}
       WHERE id = ${txn.id}
     `;
@@ -81,8 +93,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: amigoRes.message || `${dataSize} ${network} data delivered to ${phoneNumber}`,
-      reference: amigoRes.reference,
+      message: amigoData.message || `${dataSize} ${network} data delivered to ${phoneNumber}`,
+      reference: amigoData.reference,
       receiptRef,
       newBalance: parseFloat(updatedUser.wallet_balance),
       receipt: {
@@ -90,13 +102,14 @@ export async function POST(req: NextRequest) {
         network, dataSize, validity, phoneNumber, price,
         status: 'success',
         date: new Date().toISOString(),
-        amigoRef: amigoRes.reference,
+        amigoRef: amigoData.reference,
         userName: `${user.first_name} ${user.last_name}`,
         userPhone: user.phone,
       },
     });
   } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Purchase failed. Try again.';
     console.error('Buy data error:', err);
-    return NextResponse.json({ error: 'Purchase failed. Try again.' }, { status: 500 });
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
