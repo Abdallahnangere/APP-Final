@@ -78,30 +78,99 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 6-digit PIN', su
   };
   const del = () => setPin(p => p.slice(0, -1));
 
+  // Style constants
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 200,
+    background: 'rgba(0,0,0,.5)',
+    display: 'flex',
+    alignItems: 'flex-end'
+  };
+
+  const modalStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'var(--card)',
+    borderRadius: '24px 24px 0 0',
+    padding: '28px 24px 40px'
+  };
+
+  const barStyle: React.CSSProperties = {
+    width: 40,
+    height: 4,
+    background: 'var(--border)',
+    borderRadius: 2,
+    margin: '0 auto 24px'
+  };
+
+  const titleStyle: React.CSSProperties = {
+    textAlign: 'center',
+    fontWeight: 700,
+    fontSize: 17,
+    color: 'var(--text)',
+    marginBottom: 6
+  };
+
+  const subtitleStyle: React.CSSProperties = {
+    textAlign: 'center',
+    fontSize: 14,
+    color: 'var(--sub)',
+    marginBottom: 20
+  };
+
+  const dotsContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    gap: 16,
+    justifyContent: 'center',
+    margin: '24px 0'
+  };
+
+  const keysGridStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3,1fr)',
+    gap: 12,
+    maxWidth: 300,
+    margin: '0 auto'
+  };
+
+  const cancelStyle: React.CSSProperties = {
+    width: '100%',
+    marginTop: 16,
+    padding: '16px',
+    borderRadius: 16,
+    background: 'transparent',
+    color: 'var(--sub)',
+    fontSize: 15,
+    fontWeight: 600
+  };
+
   return (
-    <div style={{ position:'fixed' as const,top:0,right:0,bottom:0,left:0,zIndex:200,background:'rgba(0,0,0,.5)',display:'flex',alignItems:'flex-end' } as React.CSSProperties} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} className="slide-up" style={{ width:'100%',background:'var(--card)',borderRadius:'24px 24px 0 0',padding:'28px 24px 40px' } as React.CSSProperties}>
-        <div style={{ width:40,height:4,background:'var(--border)',borderRadius:2,margin:'0 auto 24px' } as React.CSSProperties} />
-        <p style={{ textAlign:'center',fontWeight:700,fontSize:17,color:'var(--text)',marginBottom:6 } as React.CSSProperties}>{title}</p>
-        {subtitle && <p style={{ textAlign:'center',fontSize:14,color:'var(--sub)',marginBottom:20 } as React.CSSProperties}>{subtitle}</p>}
+    <div style={overlayStyle} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} className="slide-up" style={modalStyle}>
+        <div style={barStyle} />
+        <p style={titleStyle}>{title}</p>
+        {subtitle && <p style={subtitleStyle}>{subtitle}</p>}
         {/* Dots */}
-        <div style={{ display:'flex',gap:16,justifyContent:'center',margin:'24px 0' } as React.CSSProperties}>
+        <div style={dotsContainerStyle}>
           {[0,1,2,3,4,5].map(i => (
-            <div key={i} style={{ width:14,height:14,borderRadius:7,background: i<pin.length ? BLUE : 'var(--border)',transition:'all .15s',transform: i<pin.length ? 'scale(1.15)' : 'scale(1)' } as React.CSSProperties} />
+            <div key={i} style={{ width:14,height:14,borderRadius:7,background: i<pin.length ? BLUE : 'var(--border)',transition:'all .15s',transform: i<pin.length ? 'scale(1.15)' : 'scale(1)' }} />
           ))}
         </div>
         {/* Keys */}
-        <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,maxWidth:300,margin:'0 auto' } as React.CSSProperties}>
+        <div style={keysGridStyle}>
           {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((k,i) => (
             <button key={i} onClick={()=>k==='⌫'?del():k?press(k):null}
-              style={{ height:64,borderRadius:16,background: k===''?'transparent':'var(--card2)',fontSize: k==='⌫'?22:24,fontWeight:600,color:'var(--text)',border:'1.5px solid var(--border)',transition:'all .1s',opacity:k===''?0:1,WebkitTapHighlightColor:'rgba(0,122,255,.1)' } as React.CSSProperties}
+              style={{ height:64,borderRadius:16,background: k===''?'transparent':'var(--card2)',fontSize: k==='⌫'?22:24,fontWeight:600,color:'var(--text)',border:'1.5px solid var(--border)',transition:'all .1s',opacity:k===''?0:1,WebkitTapHighlightColor:'rgba(0,122,255,.1)' }}
               onTouchStart={e=>{if(k)(e.currentTarget.style.background='rgba(0,122,255,.12)';e.currentTarget.style.transform='scale(.95)')}}
               onTouchEnd={e=>{e.currentTarget.style.background='var(--card2)';e.currentTarget.style.transform='scale(1)'}}>
               {k}
             </button>
           ))}
         </div>
-        <button onClick={onClose} style={{ width:'100%',marginTop:16,padding:'16px',borderRadius:16,background:'transparent',color:'var(--sub)',fontSize:15,fontWeight:600 } as React.CSSProperties}>Cancel</button>
+        <button onClick={onClose} style={cancelStyle}>Cancel</button>
       </div>
     </div>
   );
