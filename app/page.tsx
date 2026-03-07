@@ -134,7 +134,7 @@ function Hero() {
           {[{top:'8%',right:'-20%',bg:'#E8FAE8',icon:'✅',label:'Instant'},
             {top:'52%',right:'-22%',bg:'#FFF3E0',icon:'🎁',label:'Cashback'},
             {top:'80%',left:'-18%',bg:'#E8F0FE',icon:'🔒',label:'Secure'}].map((b,i)=>(
-            <div key={i} style={{position:'absolute',...(b as Record<string,string>),display:'flex',alignItems:'center',gap:7,background:b.bg,borderRadius:40,padding:'8px 14px',boxShadow:'0 6px 20px rgba(0,0,0,.1)',whiteSpace:'nowrap'}}>
+            <div key={i} style={{position:'absolute', top:b.top, ...(b.right ? {right:b.right} : {left:b.left}), display:'flex',alignItems:'center',gap:7,background:b.bg,borderRadius:40,padding:'8px 14px',boxShadow:'0 6px 20px rgba(0,0,0,.1)',whiteSpace:'nowrap'}}>
               <span style={{fontSize:15}}>{b.icon}</span><span style={{fontSize:12,fontWeight:700,color:'#1C1C1E'}}>{b.label}</span>
             </div>
           ))}
