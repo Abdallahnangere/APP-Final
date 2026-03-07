@@ -79,7 +79,7 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 6-digit PIN', su
   const del = () => setPin(p => p.slice(0, -1));
 
   return (
-    <div style={{ position:'fixed',inset:0,zIndex:200,background:'rgba(0,0,0,.5)',display:'flex',alignItems:'flex-end' }} onClick={onClose}>
+    <div style={{ position:'fixed',top:0,right:0,bottom:0,left:0,zIndex:200,background:'rgba(0,0,0,.5)',display:'flex',alignItems:'flex-end' }} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()} className="slide-up" style={{ width:'100%',background:'var(--card)',borderRadius:'24px 24px 0 0',padding:'28px 24px 40px' }}>
         <div style={{ width:40,height:4,background:'var(--border)',borderRadius:2,margin:'0 auto 24px' }} />
         <p style={{ textAlign:'center',fontWeight:700,fontSize:17,color:'var(--text)',marginBottom:6 }}>{title}</p>
