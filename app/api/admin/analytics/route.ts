@@ -11,8 +11,8 @@ export async function GET(req: NextRequest) {
 
   const [users] = await sql`SELECT COUNT(*) as total FROM users`;
   const [activeToday] = await sql`SELECT COUNT(*) as c FROM users WHERE updated_at > NOW() - INTERVAL '1 day'`;
-  const [totalTxns] = await sql`SELECT COUNT(*) as c, COALESCE(SUM(amount),0) as vol FROM transactions WHERE status='success' AND created_at > NOW() - INTERVAL '${days} days'`;
-  const [totalDeposits] = await sql`SELECT COALESCE(SUM(amount),0) as vol FROM deposits WHERE created_at > NOW() - INTERVAL '${days} days'`;
+  const [totalTxns] = await sql`SELECT COUNT(*) as c, COALESCE(SUM(amount),0) as vol FROM transactions WHERE status='success' AND created_at > NOW() - (${days}::text || ' days')::interval`;
+  const [totalDeposits] = await sql`SELECT COALESCE(SUM(amount),0) as vol FROM deposits WHERE created_at > NOW() - (${days}::text || ' days')::interval`;
 
   // Sales calc: sum selling price and cost price for each transaction
   const salesData = await sql`
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     LEFT JOIN data_plans dp ON t.type='data' AND dp.plan_id = t.plan_id
     LEFT JOIN products p ON t.type='product' AND p.id = t.product_id
     WHERE t.status='success' AND t.type IN ('data','product','sim_activation')
-    AND t.created_at > NOW() - INTERVAL '${days} days'
+    AND t.created_at > NOW() - (${days}::text || ' days')::interval
     ORDER BY t.created_at DESC
   `;
 
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
   // Daily breakdown
   const dailyTxns = await sql`
     SELECT DATE(created_at) as day, COUNT(*) as count, SUM(amount) as revenue
-    FROM transactions WHERE status='success' AND created_at > NOW() - INTERVAL '${days} days'
+    FROM transactions WHERE status='success' AND created_at > NOW() - (${days}::text || ' days')::interval
     GROUP BY DATE(created_at) ORDER BY day DESC LIMIT ${days}
   `;
 
