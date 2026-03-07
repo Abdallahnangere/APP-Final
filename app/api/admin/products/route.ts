@@ -9,7 +9,7 @@ async function auth(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   if (!await auth(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  const products = await sql`SELECT id, name, description, price, cost_price, image_url, image_base64, category, in_stock, shipping_terms, pickup_terms, created_at, updated_at FROM products ORDER BY created_at DESC`;
+  const products = await sql`SELECT id, name, description, price, cost_price, image_url, category, in_stock, shipping_terms, pickup_terms, created_at, updated_at FROM products ORDER BY created_at DESC`;
   return NextResponse.json(products);
 }
 

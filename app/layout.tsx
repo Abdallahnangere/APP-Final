@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <head>
         <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Playfair+Display:wght@700;900&display=swap');
           
           *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
           
@@ -32,8 +32,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             --text-light:#1D1D1F;
             --text-dark:#F5F5F7;
             --text-secondary:#6E6E73;
-            --accent:#0071E3;
-            --accent-hover:#0077ED;
+            --accent:#007AFF;
+            --accent-hover:#0056D6;
             --border-light:rgba(0,0,0,0.08);
             --border-dark:rgba(255,255,255,0.08);
             --color-green:#34C759;
@@ -43,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           html{scroll-behavior:smooth}
           
           body{
-            font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,system-ui,sans-serif;
+            font-family:'DM Sans',system-ui,sans-serif;
             background:var(--bg-light);
             color:var(--text-light);
             -webkit-font-smoothing:antialiased;
