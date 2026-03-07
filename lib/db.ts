@@ -46,6 +46,7 @@ export async function initDB() {
       price NUMERIC(10,2) NOT NULL,
       cost_price NUMERIC(10,2) NOT NULL DEFAULT 0,
       image_url TEXT,
+      image_base64 TEXT,
       category TEXT DEFAULT 'General',
       in_stock BOOLEAN DEFAULT TRUE,
       shipping_terms TEXT,

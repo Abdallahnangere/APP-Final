@@ -5,7 +5,7 @@ const BLUE = '#007AFF'; const GREEN = '#34C759'; const RED = '#FF3B30'; const GO
 
 type User = { id: string; first_name: string; last_name: string; phone: string; wallet_balance: number; cashback_balance: number; is_banned: boolean; created_at: string; flw_account_number: string; };
 type Plan = { id: string; network: string; network_id: number; plan_id: number; data_size: string; validity: string; selling_price: number; cost_price: number; is_active: boolean; };
-type Product = { id: string; name: string; description: string; price: number; cost_price: number; image_url: string; in_stock: boolean; shipping_terms: string; pickup_terms: string; category: string; };
+type Product = { id: string; name: string; description: string; price: number; cost_price: number; image_url: string; image_base64?: string; in_stock: boolean; shipping_terms: string; pickup_terms: string; category: string; };
 type Transaction = { id: string; user_id: string; type: string; description: string; amount: number; status: string; created_at: string; network: string; phone_number: string; product_name: string; receipt_data: Record<string,unknown>; };
 type Broadcast = { id: string; message: string; is_active: boolean; created_at: string; };
 type Webhook = { id: string; event: string; payload: Record<string,unknown>; created_at: string; };
@@ -76,7 +76,7 @@ export default function AdminPage() {
 
   // Forms
   const [planForm, setPlanForm] = useState({ network:'MTN', network_id:'1', plan_id:'', data_size:'', validity:'30 days', selling_price:'', cost_price:'', editId:'' });
-  const [productForm, setProductForm] = useState({ name:'', description:'', price:'', cost_price:'', category:'', shipping_terms:'', pickup_terms:'', in_stock:true, image_url:'', editId:'' });
+  const [productForm, setProductForm] = useState({ name:'', description:'', price:'', cost_price:'', category:'', shipping_terms:'', pickup_terms:'', in_stock:true, image_url:'', image_base64:'', editId:'' });
   const [broadcastForm, setBroadcastForm] = useState({ message:'', editId:'' });
   const [walletForm, setWalletForm] = useState({ amount:'', note:'' });
   const [pinForm, setPinForm] = useState('');
@@ -450,7 +450,7 @@ export default function AdminPage() {
                             const fd = new FormData(); fd.append('file', file);
                             const res = await fetch('/api/upload', { method:'POST', headers:{ Authorization:`Bearer ${adminToken}` }, body: fd });
                             const data = await res.json();
-                            setProductForm(p=>({...p,image_url:data.url}));
+                            setProductForm(p=>({...p,image_url:data.url||'',image_base64:data.base64||''}));
                           } finally { setUploadingImage(false); }
                         }} />
                       </label>
@@ -470,11 +470,11 @@ export default function AdminPage() {
                         if (productForm.editId) await api(`products?id=${productForm.editId}`,'PATCH',body);
                         else await api('products','POST',body);
                         showToast('✅ Product saved!');
-                        setProductForm({ name:'',description:'',price:'',cost_price:'',category:'',shipping_terms:'',pickup_terms:'',in_stock:true,image_url:'',editId:'' });
+                        setProductForm({ name:'',description:'',price:'',cost_price:'',category:'',shipping_terms:'',pickup_terms:'',in_stock:true,image_url:'',image_base64:'',editId:'' });
                         load('products').then(d=>setProducts(Array.isArray(d)?d:[]));
                       } catch(e:unknown){ showError(e instanceof Error?e.message:'Failed'); }
                     }}>{productForm.editId?'Update Product':'Add Product'}</Btn>
-                    {productForm.editId && <Btn variant="ghost" onClick={()=>setProductForm({ name:'',description:'',price:'',cost_price:'',category:'',shipping_terms:'',pickup_terms:'',in_stock:true,image_url:'',editId:'' })}>Cancel</Btn>}
+                    {productForm.editId && <Btn variant="ghost" onClick={()=>setProductForm({ name:'',description:'',price:'',cost_price:'',category:'',shipping_terms:'',pickup_terms:'',in_stock:true,image_url:'',image_base64:'',editId:'' })}>Cancel</Btn>}
                   </div>
                 </Card>
                 <Card>
@@ -493,7 +493,7 @@ export default function AdminPage() {
                         <div style={{ display:'flex',flexDirection:'column',gap:4,alignItems:'flex-end' }}>
                           <span style={{ background:p.in_stock?'rgba(52,199,89,.1)':'rgba(255,59,48,.1)',color:p.in_stock?GREEN:RED,padding:'3px 9px',borderRadius:20,fontSize:11,fontWeight:700 }}>{p.in_stock?'In Stock':'Out'}</span>
                           <div style={{ display:'flex',gap:4 }}>
-                            <Btn size="sm" variant="ghost" onClick={()=>setProductForm({ name:p.name,description:p.description,price:String(p.price),cost_price:String(p.cost_price),category:p.category,shipping_terms:p.shipping_terms,pickup_terms:p.pickup_terms,in_stock:p.in_stock,image_url:p.image_url,editId:p.id })}>Edit</Btn>
+                            <Btn size="sm" variant="ghost" onClick={()=>setProductForm({ name:p.name,description:p.description,price:String(p.price),cost_price:String(p.cost_price),category:p.category,shipping_terms:p.shipping_terms,pickup_terms:p.pickup_terms,in_stock:p.in_stock,image_url:p.image_url,image_base64:p.image_base64||'',editId:p.id })}>Edit</Btn>
                             <Btn size="sm" variant="danger" onClick={async()=>{ try{ await api(`products?id=${p.id}`,'DELETE'); showToast('Deleted'); load('products').then(d=>setProducts(Array.isArray(d)?d:[])); }catch(e:unknown){showError(e instanceof Error?e.message:'Failed');} }}>Del</Btn>
                           </div>
                         </div>

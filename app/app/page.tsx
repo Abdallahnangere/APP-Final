@@ -15,7 +15,7 @@ type Transaction = {
 };
 type Deposit = { id: string; amount: number; senderName: string; createdAt: string; narration: string; };
 type Plan = { id: string; network: string; networkId: number; planId: number; dataSize: string; validity: string; price: number; };
-type Product = { id: string; name: string; description: string; price: number; imageUrl: string; inStock: boolean; shippingTerms: string; pickupTerms: string; category: string; };
+type Product = { id: string; name: string; description: string; price: number; imageUrl: string; imageBase64?: string; inStock: boolean; shippingTerms: string; pickupTerms: string; category: string; };
 type ChatMsg = { id: string; sender: string; message: string; createdAt: string; };
 type SimActivation = { id: string; status: string; createdAt: string; serialNumber?: string; };
 
@@ -883,7 +883,7 @@ export default function AppPage() {
                 <button key={p.id} onClick={()=>{ setSelectedProduct(p); setScreen('product'); }}
                   style={{ background:'var(--card)',borderRadius:18,overflow:'hidden',textAlign:'left',border:'1.5px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.05)' }}>
                   <div style={{ height:140,background:'var(--card2)',position:'relative',overflow:'hidden' }}>
-                    {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:40 }}>📦</div>}
+                    {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : p.imageBase64 ? <img src={`data:image/jpeg;base64,${p.imageBase64}`} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',background:'var(--border)' }} />}
                     <div style={{ position:'absolute',top:8,right:8,background:p.inStock?GREEN:RED,borderRadius:20,padding:'3px 8px' }}>
                       <p style={{ color:'#fff',fontSize:10,fontWeight:700 }}>{p.inStock?'In Stock':'Out'}</p>
                     </div>
@@ -921,7 +921,7 @@ export default function AppPage() {
         </div>
         <div style={{ flex:1,overflowY:'auto',paddingBottom:100 }}>
           <div style={{ height:260,background:'var(--card2)',overflow:'hidden' }}>
-            {selectedProduct.imageUrl ? <img src={selectedProduct.imageUrl} alt={selectedProduct.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:60 }}>📦</div>}
+            {selectedProduct.imageUrl ? <img src={selectedProduct.imageUrl} alt={selectedProduct.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : selectedProduct.imageBase64 ? <img src={`data:image/jpeg;base64,${selectedProduct.imageBase64}`} alt={selectedProduct.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',background:'var(--border)' }} />}
           </div>
           <div style={{ padding:'20px 20px 0' }}>
             <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8 }}>
