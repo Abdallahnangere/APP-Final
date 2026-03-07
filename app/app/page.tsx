@@ -21,8 +21,11 @@ type SimActivation = { id: string; status: string; createdAt: string; serialNumb
 
 /* ─────────────── CONSTANTS ─────────────── */
 const BLUE = '#0071E3';
-const GREEN = '#34C759';
+const GREEN = '#30D158';
+const ORANGE = '#FF9F0A';
 const RED = '#FF3B30';
+const PURPLE = '#BF5AF2';
+const TEAL = '#5AC8FA';
 
 const NETWORKS = [
   { name: 'MTN', id: 1 },
@@ -30,6 +33,55 @@ const NETWORKS = [
   { name: 'AIRTEL', id: 4 },
   { name: '9MOBILE', id: 9 },
 ];
+
+/* ─────────────── SVG ICONS ─────────────── */
+const Icons = {
+  wallet: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><path d="M1 10h22"/><rect x="17" y="15" width="3" height="3" rx="1" ry="1"/></svg>,
+  bolt: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  arrowDown: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>,
+  arrowUp: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>,
+  creditCard: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><path d="M1 10h22"/></svg>,
+  banknotes: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="1"/><path d="M17 11h.01M7 11h.01"/></svg>,
+  chartBar: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  bell: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+  sun: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  shieldCheck: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="16 12 12 16 8 12"/></svg>,
+  lock: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+  user: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  mail: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>,
+  phone: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
+  checkCircle: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+  alertCircle: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+  info: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>,
+  mapPin: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
+  globe: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+  globe: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+  download: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+};
+
+/* ─────────────── HELPER FUNCTIONS ─────────────── */
+const formatAmount = (amount: number) => `₦${amount.toLocaleString('en-NG', {minimumFractionDigits: 2})}`;
+
+const IconBox = ({ icon, color, bg }: { icon: React.ReactNode; color?: string; bg?: string }) => (
+  <div style={{ width: 48, height: 48, borderRadius: 12, background: bg || 'rgba(0,113,227,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+    {icon}
+  </div>
+);
+
+const StatusPill = ({ label, type }: { label: string; type: 'success' | 'pending' | 'failed' | 'verified' }) => {
+  const colors: Record<string, { bg: string; color: string }> = {
+    success: { bg: 'rgba(48,209,88,.12)', color: GREEN },
+    pending: { bg: 'rgba(255,159,10,.12)', color: ORANGE },
+    failed: { bg: 'rgba(255,59,48,.12)', color: RED },
+    verified: { bg: 'rgba(191,90,242,.12)', color: PURPLE },
+  };
+  const c = colors[type] || colors.pending;
+  return (
+    <div style={{ display: 'inline-block', borderRadius: 980, padding: '4px 10px', background: c.bg, fontSize: 12, fontWeight: 500, color: c.color }}>
+      {label}
+    </div>
+  );
+};
 
 /* ─────────────── GLOBAL STYLES ─────────────── */
 const GlobalStyle = ({ dark }: { dark: boolean }) => (
@@ -44,7 +96,7 @@ const GlobalStyle = ({ dark }: { dark: boolean }) => (
       --text-secondary:${dark?'#A1A1A6':'#6E6E73'};
       --border:${dark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)'};
       --border-subtle:${dark?'rgba(255,255,255,.04)':'rgba(0,0,0,.04)'};
-      --blue:#0071E3;--green:#34C759;--red:#FF3B30;
+      --blue:#0071E3;--green:#30D158;--orange:#FF9F0A;--red:#FF3B30;--purple:#BF5AF2;--teal:#5AC8FA;
     }
     html,body{height:100%;overflow:hidden;touch-action:pan-y;font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,sans-serif}
     body{background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
@@ -59,9 +111,12 @@ const GlobalStyle = ({ dark }: { dark: boolean }) => (
     @keyframes fadeUpScale{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
     @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+    @keyframes floatUp{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-20px);opacity:0}}
     .slide-up{animation:slideUp .32s cubic-bezier(.32,.72,0,1) both}
     .fade-in{animation:fadeIn .2s ease both}
     .fade-up-scale{animation:fadeUpScale .4s cubic-bezier(.16,.1,0,1) both}
+    .card{border-radius:16px;background:var(--card);border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.07);transition:all .3s cubic-bezier(.16,.1,0,1)}
+    .card:hover{box-shadow:0 12px 40px rgba(0,0,0,0.32),inset 0 1px 0 rgba(255,255,255,0.07);transform:translateY(-2px)}
   `}</style>
 );
 
@@ -616,13 +671,17 @@ export default function AppPage() {
   const getInitials = (u: User) => `${u.firstName[0]}${u.lastName[0]}`.toUpperCase();
 
   const Header = () => (
-    <div style={{ padding:'20px 20px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--bg)',borderBottom:'1px solid var(--border)' }}>
-      <p style={{ fontSize:16,fontWeight:700,color:'var(--text)',letterSpacing:-0.2 }}>SaukiMart</p>
-      <div style={{ display:'flex',alignItems:'center',gap:12 }}>
-        <button onClick={()=>updatePref('theme', dark?'light':'dark')} style={{ width:40,height:40,borderRadius:12,background:'var(--card2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,border:'1px solid var(--border)' }}>
-          {dark ? '○' : '●'}
+    <div style={{ padding:'20px 20px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--bg)',borderBottom:'1px solid var(--border)',position:'fixed',top:0,left:0,right:0,zIndex:100,backdropFilter:'blur(10px)',backgroundImage: dark ? 'radial-gradient(ellipse at 50% 100%, rgba(0,113,227,0.05) 0%, transparent 80%)' : 'none' }}>
+      <p style={{ fontSize:18,fontWeight:800,color:'var(--text)',letterSpacing:-0.3 }}>SaukiMart</p>
+      <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+        <button onClick={()=>updatePref('theme', dark?'light':'dark')} style={{ width:40,height:40,borderRadius:12,background:'var(--card2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,border:'1px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
+          onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'}}
+          onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.04)'}}>
+          {dark ? Icons.bell(ORANGE, 18) : Icons.sun(ORANGE, 18)}
         </button>
-        <button onClick={()=>setScreen('profile')} style={{ display:'flex',alignItems:'center' }}>
+        <button onClick={()=>setScreen('profile')} style={{ display:'flex',alignItems:'center',boxShadow:'0 2px 8px rgba(0,0,0,.08)',borderRadius:12,transition:'all .2s',cursor:'pointer' }}
+          onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.12)';e.currentTarget.style.transform='scale(1.05)'}}
+          onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.08)';e.currentTarget.style.transform='scale(1)'}}>
           <div style={{ width:40,height:40,borderRadius:12,background:BLUE,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:13 }}>
             {getInitials(user)}
           </div>
@@ -632,19 +691,21 @@ export default function AppPage() {
   );
 
   const BottomNav = ({ active }: { active: string }) => (
-    <div style={{ position:'fixed',bottom:0,left:0,right:0,background:'var(--card)',borderTop:'1px solid var(--border)',display:'grid',gridTemplateColumns:'repeat(4,1fr)',paddingBottom:'env(safe-area-inset-bottom)',zIndex:50 }}>
+    <div style={{ position:'fixed',bottom:0,left:0,right:0,background:'var(--card)',borderTop:'1px solid var(--border)',display:'grid',gridTemplateColumns:'repeat(4,1fr)',paddingBottom:'env(safe-area-inset-bottom)',zIndex:50,boxShadow:'0 -8px 24px rgba(0,0,0,.12)',backdropFilter:'blur(10px)' }}>
       {[
-        { id:'home', label:'Home' },
-        { id:'transactions', label:'Activity' },
-        { id:'deposits', label:'Wallet' },
-        { id:'profile', label:'Account' },
+        { id:'home', label:'Home', icon: Icons.bolt(BLUE, 24) },
+        { id:'transactions', label:'Activity', icon: Icons.arrowDown(BLUE, 24) },
+        { id:'deposits', label:'Wallet', icon: Icons.wallet(BLUE, 24) },
+        { id:'profile', label:'Account', icon: Icons.user(BLUE, 24) },
       ].map(item => (
         <button key={item.id} onClick={()=>setScreen(item.id as typeof screen)}
-          style={{ padding:'12px 0 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:4,background:'none',borderTop: active===item.id ? `3px solid ${BLUE}` : 'none',paddingTop: active===item.id ? '9px' : '12px' }}>
-          <span style={{ fontSize:22 }}>
-            {item.id === 'home' ? '┌' : item.id === 'transactions' ? '▬' : item.id === 'deposits' ? '◆' : '◯'}
-          </span>
-          <span style={{ fontSize:11,fontWeight: active===item.id?700:500, color: active===item.id?BLUE:'var(--text-secondary)' }}>{item.label}</span>
+          style={{ padding:'12px 0 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,background:'none',borderTop: active===item.id ? `3px solid ${BLUE}` : 'none',paddingTop: active===item.id ? '9px' : '12px',transition:'all .2s',opacity: active===item.id ? 1 : 0.65,cursor:'pointer' }}
+          onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}}
+          onMouseLeave={e=>{e.currentTarget.style.opacity = active===item.id ? '1' : '0.65'}}>
+          <div style={{ color: active===item.id?BLUE:'var(--text-secondary)',transition:'all .2s' }}>
+            {item.icon}
+          </div>
+          <span style={{ fontSize:11,fontWeight: active===item.id?700:500, color: active===item.id?BLUE:'var(--text-secondary)',transition:'all .2s' }}>{item.label}</span>
         </button>
       ))}
     </div>
@@ -658,43 +719,42 @@ export default function AppPage() {
       {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} dark={dark} />}
       {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500,whiteSpace:'nowrap' }}>{toast}</div>}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
-      <div style={{ height:'100dvh',overflowY:'auto',background:'var(--bg)',paddingBottom:100 }}>
+      <div style={{ height:'100dvh',overflowY:'auto',background:'var(--bg)',paddingBottom:100,backgroundImage: dark ? 'radial-gradient(ellipse at 50% 0%, rgba(0,113,227,0.08) 0%, transparent 50%)' : 'none',backgroundAttachment: 'fixed' }}>
         <Header />
         
-        {/* Wallet Card */}
-        <div style={{ margin:'16px auto 0',maxWidth:980 }}>
-          <div style={{ margin:'0 16px',background:'var(--card)',borderRadius:20,padding:'28px 24px',border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
-            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8 }}>
+        {/* Wallet Card with Enhanced Styling */}
+        <div style={{ margin:'20px auto 0',maxWidth:980 }}>
+          <div style={{ margin:'0 16px',background:'var(--card)',borderRadius:20,padding:'28px 24px',border:'1px solid var(--border)',boxShadow:'0 8px 32px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.07)',backdropFilter:'blur(20px)' }}>
+            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20 }}>
               <div>
-                <p style={{ color:'var(--text-secondary)',fontSize:13,fontWeight:600,letterSpacing:.5,marginBottom:4 }}>Available Balance</p>
-                <p style={{ color:'var(--text)',fontSize:32,fontWeight:800,letterSpacing:-1 }}>
-                  ₦{user.walletBalance.toLocaleString('en-NG',{minimumFractionDigits:2})}
-                </p>
+                <p style={{ color:'var(--text-secondary)',fontSize:13,fontWeight:600,letterSpacing:.5,marginBottom:8 }}>AVAILABLE BALANCE</p>
+                <div style={{ display:'flex',alignItems:'flex-start',gap:'4px' }}>
+                  <span style={{ fontSize:'28px',opacity:.7,marginTop:'4px' }}>₦</span>
+                  <span style={{ fontSize:'52px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>{(user.walletBalance/1).toLocaleString('en-NG',{maximumFractionDigits:0})}</span>
+                </div>
               </div>
-              <div style={{ width:32,height:32,borderRadius:8,background:'rgba(0,113,227,.1)',display:'flex',alignItems:'center',justifyContent:'center' }}>
-                <div style={{ width:8,height:8,borderRadius:4,background:GREEN,animation:'pulse 2s infinite' }} />
+              <IconBox icon={Icons.wallet(BLUE, 28)} bg={'rgba(0,113,227,.10)'} />
+            </div>
+            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16 }}>
+              <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'14px 16px',border:'1px solid var(--border)' }}>
+                <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:600 }}>CASHBACK</p>
+                <p style={{ color:GREEN,fontWeight:700,fontSize:18,marginTop:4 }}>₦{user.cashbackBalance.toLocaleString()}</p>
+              </div>
+              <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'14px 16px',border:'1px solid var(--border)' }}>
+                <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:600 }}>REFERRAL BONUS</p>
+                <p style={{ color:PURPLE,fontWeight:700,fontSize:18,marginTop:4 }}>₦{user.referralBonus.toLocaleString()}</p>
               </div>
             </div>
             {user.accountNumber && (
-              <div style={{ background:'var(--bg-secondary)',borderRadius:16,padding:'12px 16px',marginBottom:16,display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+              <div style={{ background:'var(--bg-secondary)',borderRadius:14,padding:'12px 16px',border:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
                 <div>
                   <p style={{ color:'var(--text-secondary)',fontSize:12 }}>{user.bankName}</p>
-                  <p style={{ color:'var(--text)',fontWeight:700,fontSize:15,letterSpacing:.3 }}>{user.accountNumber}</p>
+                  <p style={{ color:'var(--text)',fontWeight:700,fontSize:15,letterSpacing:.3,marginTop:2 }}>{user.accountNumber}</p>
                 </div>
                 <button onClick={()=>{ navigator.clipboard.writeText(user.accountNumber); showToast('Copied'); }}
-                  style={{ background:'transparent',color:BLUE,fontSize:13,fontWeight:600,padding:'6px 12px' }}>Copy</button>
+                  style={{ background:BLUE,color:'#fff',fontSize:12,fontWeight:600,padding:'6px 14px',borderRadius:8 }}>Copy</button>
               </div>
             )}
-            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12 }}>
-              <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'12px 14px' }}>
-                <p style={{ color:'var(--text-secondary)',fontSize:12 }}>Cashback</p>
-                <p style={{ color:'var(--text)',fontWeight:700,fontSize:16 }}>₦{user.cashbackBalance.toLocaleString()}</p>
-              </div>
-              <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'12px 14px' }}>
-                <p style={{ color:'var(--text-secondary)',fontSize:12 }}>Referral Bonus</p>
-                <p style={{ color:'var(--text)',fontWeight:700,fontSize:16 }}>₦{user.referralBonus.toLocaleString()}</p>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -710,20 +770,24 @@ export default function AppPage() {
         )}
 
         {/* Quick Actions */}
-        <div style={{ margin:'20px 16px 0' }}>
-          <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.5,marginBottom:12,marginLeft:4 }}>Quick Actions</p>
+        <div style={{ margin:'24px 16px 0' }}>
+          <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.5,marginBottom:14,marginLeft:4,textTransform:'uppercase' }}>Quick Actions</p>
           <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12 }}>
             <button onClick={()=>setScreen('data-networks')}
-              style={{ background:'var(--card)',borderRadius:16,padding:'18px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:10,border:'1px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.04)' }}>
-              <div style={{ width:44,height:44,borderRadius:12,background:'rgba(0,113,227,.08)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20 }}>◆</div>
+              style={{ background:'var(--card)',borderRadius:16,padding:'20px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:12,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)',transition:'all .3s',cursor:'pointer' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
+              <IconBox icon={Icons.bolt(BLUE, 24)} bg={'rgba(0,113,227,.10)'} />
               <div style={{ textAlign:'left' }}>
                 <p style={{ fontWeight:700,fontSize:15,color:'var(--text)' }}>Buy Data</p>
                 <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:2 }}>MTN, Airtel, Glo</p>
               </div>
             </button>
             <button onClick={()=>{ loadProducts(); setScreen('store'); }}
-              style={{ background:'var(--card)',borderRadius:16,padding:'18px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:10,border:'1px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.04)' }}>
-              <div style={{ width:44,height:44,borderRadius:12,background:'rgba(52,199,89,.08)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20 }}>◆</div>
+              style={{ background:'var(--card)',borderRadius:16,padding:'20px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:12,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)',transition:'all .3s',cursor:'pointer' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
+              <IconBox icon={Icons.chartBar(GREEN, 24)} bg={'rgba(48,209,88,.10)'} />
               <div style={{ textAlign:'left' }}>
                 <p style={{ fontWeight:700,fontSize:15,color:'var(--text)' }}>Store</p>
                 <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:2 }}>Devices & Accessories</p>
@@ -733,31 +797,35 @@ export default function AppPage() {
         </div>
 
         {/* Recent Activity */}
-        <div style={{ margin:'24px 16px 0' }}>
-          <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.5,marginBottom:12,marginLeft:4 }}>Recent Activity</p>
+        <div style={{ margin:'28px 16px 0' }}>
+          <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.5,marginBottom:14,marginLeft:4,textTransform:'uppercase' }}>Recent Activity</p>
           {transactions.length === 0 ? (
-            <div style={{ textAlign:'center',padding:'40px 20px',background:'var(--card)',borderRadius:16,border:'1px dashed var(--border)' }}>
+            <div style={{ textAlign:'center',padding:'48px 20px',background:'var(--card)',borderRadius:16,border:'1px dashed var(--border)' }}>
               <div style={{ fontSize:40,marginBottom:12 }}>∿</div>
               <p style={{ fontWeight:700,fontSize:15,color:'var(--text)',marginBottom:6 }}>No activity yet</p>
               <p style={{ color:'var(--text-secondary)',fontSize:13,lineHeight:1.5 }}>Buy data or shop to see transactions here</p>
             </div>
           ) : (
-            <div style={{ background:'var(--card)',borderRadius:16,overflow:'hidden' }}>
-              {transactions.slice(0,10).map((tx,i) => (
-                <div key={tx.id} style={{ display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom: i<Math.min(transactions.length,10)-1?'1px solid var(--border)':undefined }}>
-                  <div style={{ width:40,height:40,borderRadius:10,background:'var(--bg-secondary)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0,fontWeight:600 }}>
-                    {tx.type==='data'?'↓':tx.type==='product'?'◆':'✪'}
+            <div style={{ background:'var(--card)',borderRadius:16,overflow:'hidden',border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
+              {transactions.slice(0,10).map((tx,i) => {
+                const isDeposit = tx.type === 'deposit';
+                const color = isDeposit ? GREEN : RED;
+                const icon = tx.type === 'data' ? Icons.arrowDown(color, 18) : tx.type === 'product' ? Icons.download(color, 18) : Icons.arrowUp(color, 18);
+                const bgColor = tx.type === 'data' ? 'rgba(0,113,227,.08)' : isDeposit ? 'rgba(48,209,88,.08)' : 'rgba(255,59,48,.08)';
+                return (
+                  <div key={tx.id} style={{ display:'flex',alignItems:'center',gap:14,padding:'16px 16px',borderBottom: i<Math.min(transactions.length,10)-1?'1px solid var(--border)':undefined }}>
+                    <IconBox icon={icon} bg={bgColor} />
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <p style={{ fontWeight:600,fontSize:14,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{tx.description}</p>
+                      <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:3 }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</p>
+                    </div>
+                    <div style={{ textAlign:'right',flexShrink:0 }}>
+                      <p style={{ fontWeight:700,fontSize:15,color: tx.type==='deposit'||tx.type==='cashback'?GREEN:RED }}>{tx.type==='deposit'||tx.type==='cashback'?'+':'-'}₦{Number(tx.amount).toLocaleString()}</p>
+                      <StatusPill label={tx.status} type={tx.status === 'success' ? 'success' : tx.status === 'pending' ? 'pending' : 'failed'} />
+                    </div>
                   </div>
-                  <div style={{ flex:1,minWidth:0 }}>
-                    <p style={{ fontWeight:600,fontSize:14,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{tx.description}</p>
-                    <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:2 }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</p>
-                  </div>
-                  <div style={{ textAlign:'right' }}>
-                    <p style={{ fontWeight:700,fontSize:15,color:'var(--text)' }}>−₦{Number(tx.amount).toLocaleString()}</p>
-                    <p style={{ fontSize:11,color: tx.status==='success'?GREEN:'var(--text-secondary)',fontWeight:600 }}>{tx.status}</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -773,19 +841,25 @@ export default function AppPage() {
       <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
         <div style={{ padding:'60px 20px 20px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
           <button onClick={()=>setScreen('home')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
-          <h2 style={{ fontSize:20,fontWeight:800,color:'var(--text)' }}>Select Network</h2>
+          <h2 style={{ fontSize:26,fontWeight:800,color:'var(--text)',letterSpacing:-0.5 }}>Select Network</h2>
         </div>
-        <div style={{ flex:1,overflowY:'auto',padding:'0 16px 40px' }}>
-          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginTop:16 }}>
-            {NETWORKS.map(net => (
-              <button key={net.name} onClick={()=>{ setSelectedNetwork(net); loadPlans(net.name); setScreen('data-plans'); }}
-                style={{ background:'var(--card)',borderRadius:16,padding:'24px 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:12,border:'1px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.04)' }}>
-                <div style={{ width:60,height:60,borderRadius:14,background:'var(--bg-secondary)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:700,color:BLUE }}>
-                  {net.name.substring(0,2)}
-                </div>
-                <p style={{ fontWeight:700,fontSize:16,color:'var(--text)' }}>{net.name}</p>
-              </button>
-            ))}
+        <div style={{ flex:1,overflowY:'auto',padding:'16px 16px 40px' }}>
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginTop:12 }}>
+            {NETWORKS.map(net => {
+              const colors = { MTN: { bg: 'rgba(255,159,10,.10)', color: ORANGE }, GLO: { bg: 'rgba(191,90,242,.10)', color: PURPLE }, AIRTEL: { bg: 'rgba(0,113,227,.10)', color: BLUE }, '9MOBILE': { bg: 'rgba(92,200,250,.10)', color: TEAL } };
+              const c = colors[net.name as keyof typeof colors] || { bg: 'rgba(0,113,227,.10)', color: BLUE };
+              return (
+                <button key={net.name} onClick={()=>{ setSelectedNetwork(net); loadPlans(net.name); setScreen('data-plans'); }}
+                  style={{ background:'var(--card)',borderRadius:16,padding:'28px 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:14,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)',transition:'all .3s',cursor:'pointer' }}
+                  onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
+                  <div style={{ width:64,height:64,borderRadius:14,background:c.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:700,color:c.color }}>
+                    {net.name.substring(0,2)}
+                  </div>
+                  <p style={{ fontWeight:700,fontSize:16,color:'var(--text)',marginTop:4 }}>{net.name}</p>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -846,29 +920,38 @@ export default function AppPage() {
       <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
         <div style={{ padding:'60px 20px 16px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
           <button onClick={()=>setScreen('home')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
-          <h2 style={{ fontSize:20,fontWeight:800,color:'var(--text)' }}>Store</h2>
+          <h2 style={{ fontSize:26,fontWeight:800,color:'var(--text)',letterSpacing:-0.5 }}>Store</h2>
         </div>
-        <div style={{ flex:1,overflowY:'auto',padding:'0 16px 40px' }}>
+        <div style={{ flex:1,overflowY:'auto',padding:'16px 16px 40px' }}>
           {products.length === 0 ? (
             <div style={{ textAlign:'center',padding:'60px 20px' }}>
-              <div style={{ fontSize:48,marginBottom:16 }}>◆</div>
-              <p style={{ fontSize:16,fontWeight:700,color:'var(--text)' }}>Coming Soon</p>
-              <p style={{ color:'var(--text-secondary)',marginTop:8 }}>New products are being added</p>
+              <IconBox icon={Icons.download(BLUE, 44)} bg={'rgba(0,113,227,.10)'} />
+              <p style={{ fontSize:16,fontWeight:700,color:'var(--text)',marginTop:16,marginBottom:8 }}>Coming Soon</p>
+              <p style={{ color:'var(--text-secondary)',marginTop:8 }}>Amazing products are being added</p>
             </div>
           ) : (
-            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginTop:12 }}>
+            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginTop:12 }}>
               {products.map(p => (
                 <button key={p.id} onClick={()=>{ setSelectedProduct(p); setScreen('product'); }}
-                  style={{ background:'var(--card)',borderRadius:14,overflow:'hidden',textAlign:'left',border:'1px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.04)' }}>
-                  <div style={{ height:140,background:'var(--bg-secondary)',position:'relative',overflow:'hidden' }}>
-                    {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : p.imageBase64 ? <img src={`data:image/jpeg;base64,${p.imageBase64}`} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',background:'var(--border)' }} />}
-                    {!p.inStock && <div style={{ position:'absolute',inset:0,background:'rgba(0,0,0,.4)',display:'flex',alignItems:'center',justifyContent:'center' }}>
-                      <p style={{ color:'#fff',fontWeight:700,fontSize:13 }}>Out of Stock</p>
+                  style={{ background:'var(--card)',borderRadius:16,overflow:'hidden',textAlign:'left',border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)',transition:'all .3s',cursor:'pointer' }}
+                  onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
+                  <div style={{ height:160,background:'var(--bg-secondary)',position:'relative',overflow:'hidden' }}>
+                    {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : p.imageBase64 ? <img src={`data:image/jpeg;base64,${p.imageBase64}`} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',background:'var(--border)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                      <Icons.download(BLUE, 32)
+                    </div>}
+                    {!p.inStock && <div style={{ position:'absolute',inset:0,background:'rgba(0,0,0,.5)',display:'flex',alignItems:'center',justifyContent:'center',backdropFilter:'blur(2px)' }}>
+                      <div style={{ background:'rgba(255,59,48,.95)',borderRadius:8,padding:'6px 12px' }}>
+                        <p style={{ color:'#fff',fontWeight:700,fontSize:12 }}>Out of Stock</p>
+                      </div>
                     </div>}
                   </div>
-                  <div style={{ padding:'12px' }}>
-                    <p style={{ fontWeight:700,fontSize:14,color:'var(--text)',lineHeight:1.3,marginBottom:6 }}>{p.name}</p>
-                    <p style={{ fontWeight:800,fontSize:15,color:BLUE }}>₦{Number(p.price).toLocaleString()}</p>
+                  <div style={{ padding:'14px' }}>
+                    <p style={{ fontWeight:700,fontSize:14,color:'var(--text)',lineHeight:1.4,marginBottom:8,minHeight:'2.8em' }}>{p.name}</p>
+                    <div style={{ display:'flex',alignItems:'baseline',gap:2 }}>
+                      <span style={{ fontSize:'24px',fontWeight:900,color:BLUE,lineHeight:1 }}>₦</span>
+                      <span style={{ fontWeight:800,fontSize:18,color:'var(--text)' }}>{(Number(p.price)/1).toLocaleString('en-NG',{maximumFractionDigits:0})}</span>
+                    </div>
                   </div>
                 </button>
               ))}
@@ -945,33 +1028,41 @@ export default function AppPage() {
       {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} dark={dark} />}
       <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
         <div style={{ padding:'60px 20px 16px',borderBottom:'1px solid var(--border)' }}>
-          <h2 style={{ fontSize:22,fontWeight:800,color:'var(--text)' }}>Activity</h2>
-          <p style={{ color:'var(--text-secondary)',fontSize:14,marginTop:4 }}>Your transaction history</p>
+          <h2 style={{ fontSize:26,fontWeight:800,color:'var(--text)',letterSpacing:-0.5 }}>Activity</h2>
+          <p style={{ color:'var(--text-secondary)',fontSize:14,marginTop:6 }}>Your transaction history</p>
         </div>
-        <div style={{ flex:1,overflowY:'auto',padding:'0 16px 20px' }}>
+        <div style={{ flex:1,overflowY:'auto',padding:'16px 16px 20px' }}>
           {transactions.length === 0 ? (
             <div style={{ textAlign:'center',padding:60 }}>
               <div style={{ fontSize:48,marginBottom:16 }}>∿</div>
               <p style={{ fontSize:16,fontWeight:700,color:'var(--text)' }}>No activity</p>
+              <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:8 }}>Your transactions will appear here</p>
             </div>
           ) : (
-            <div style={{ display:'grid',gap:8,marginTop:12 }}>
-              {transactions.map(tx => (
-                <button key={tx.id} onClick={()=>{ if(tx.receiptData) setReceipt(tx.receiptData as Record<string,unknown>); }}
-                  style={{ background:'var(--card)',borderRadius:12,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,border:'1px solid var(--border)',width:'100%' }}>
-                  <div style={{ width:40,height:40,borderRadius:10,background:'var(--bg-secondary)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0,fontWeight:600 }}>
-                    {tx.type==='data'?'↓':tx.type==='product'?'◆':'✪'}
-                  </div>
-                  <div style={{ flex:1,textAlign:'left' }}>
-                    <p style={{ fontWeight:600,fontSize:14,color:'var(--text)' }}>{tx.description}</p>
-                    <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:2 }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'medium',timeStyle:'short'})}</p>
-                  </div>
-                  <div style={{ textAlign:'right' }}>
-                    <p style={{ fontWeight:700,fontSize:15,color:'var(--text)' }}>−₦{Number(tx.amount).toLocaleString()}</p>
-                    <p style={{ fontSize:11,fontWeight:600,color:tx.status==='success'?GREEN:'var(--text-secondary)' }}>{tx.status}</p>
-                  </div>
-                </button>
-              ))}
+            <div style={{ display:'grid',gap:10 }}>
+              {transactions.map(tx => {
+                const isDeposit = tx.type === 'deposit';
+                const isData = tx.type === 'data';
+                const color = isDeposit ? GREEN : tx.type === 'cashback' ? PURPLE : RED;
+                const icon = isData ? Icons.arrowDown(color, 20) : tx.type === 'product' ? Icons.download(color, 20) : Icons.arrowUp(color, 20);
+                const bgColor = isData ? 'rgba(0,113,227,.08)' : isDeposit ? 'rgba(48,209,88,.08)' : 'rgba(255,59,48,.08)';
+                return (
+                  <button key={tx.id} onClick={()=>{ if(tx.receiptData) setReceipt(tx.receiptData as Record<string,unknown>); }}
+                    style={{ background:'var(--card)',borderRadius:14,padding:'16px 16px',display:'flex',alignItems:'center',gap:14,border:'1px solid var(--border)',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
+                    onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)';e.currentTarget.style.transform='translateY(-1px)'}}
+                    onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.04)';e.currentTarget.style.transform='translateY(0)'}}>
+                    <IconBox icon={icon} bg={bgColor} />
+                    <div style={{ flex:1,textAlign:'left' }}>
+                      <p style={{ fontWeight:600,fontSize:15,color:'var(--text)' }}>{tx.description}</p>
+                      <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'medium',timeStyle:'short'})}</p>
+                    </div>
+                    <div style={{ textAlign:'right',flexShrink:0 }}>
+                      <p style={{ fontWeight:700,fontSize:15,color: isDeposit?GREEN:RED }}>{isDeposit?'+':'-'}₦{Number(tx.amount).toLocaleString()}</p>
+                      <StatusPill label={tx.status} type={tx.status === 'success' ? 'success' : tx.status === 'pending' ? 'pending' : 'failed'} />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -986,27 +1077,30 @@ export default function AppPage() {
       <GlobalStyle dark={dark} />
       <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
         <div style={{ padding:'60px 20px 16px',borderBottom:'1px solid var(--border)' }}>
-          <h2 style={{ fontSize:22,fontWeight:800,color:'var(--text)' }}>Wallet</h2>
-          <p style={{ color:'var(--text-secondary)',fontSize:14,marginTop:4 }}>Your deposits and credits</p>
+          <h2 style={{ fontSize:26,fontWeight:800,color:'var(--text)',letterSpacing:-0.5 }}>Wallet</h2>
+          <p style={{ color:'var(--text-secondary)',fontSize:14,marginTop:6 }}>Your deposits and credits</p>
         </div>
-        <div style={{ flex:1,overflowY:'auto',padding:'0 16px 20px' }}>
+        <div style={{ flex:1,overflowY:'auto',padding:'16px 16px 20px' }}>
           {deposits.length === 0 ? (
             <div style={{ textAlign:'center',padding:60 }}>
-              <div style={{ fontSize:48,marginBottom:16 }}>◇</div>
-              <p style={{ fontSize:16,fontWeight:700,color:'var(--text)' }}>No deposits</p>
-              <p style={{ color:'var(--text-secondary)',fontSize:13,marginTop:8,lineHeight:1.6 }}>Transfer to your virtual account ({user.accountNumber}) to fund your wallet</p>
+              <IconBox icon={Icons.arrowDown(GREEN, 44)} bg={'rgba(48,209,88,.10)'} />
+              <p style={{ fontSize:16,fontWeight:700,color:'var(--text)',marginTop:16,marginBottom:8 }}>No deposits yet</p>
+              <p style={{ color:'var(--text-secondary)',fontSize:13,lineHeight:1.6 }}>Transfer to your virtual account {user.accountNumber && `(${user.accountNumber})`} to fund your wallet</p>
             </div>
           ) : (
-            <div style={{ display:'grid',gap:8,marginTop:12 }}>
+            <div style={{ display:'grid',gap:10 }}>
               {deposits.map(dep => (
-                <div key={dep.id} style={{ background:'var(--card)',borderRadius:12,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,border:'1px solid var(--border)' }}>
-                  <div style={{ width:40,height:40,borderRadius:10,background:'rgba(52,199,89,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0 }}>◇</div>
+                <div key={dep.id} style={{ background:'var(--card)',borderRadius:14,padding:'16px 16px',display:'flex',alignItems:'center',gap:14,border:'1px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.04)' }}>
+                  <IconBox icon={Icons.banknotes(GREEN, 20)} bg={'rgba(48,209,88,.10)'} />
                   <div style={{ flex:1 }}>
-                    <p style={{ fontWeight:600,fontSize:14,color:'var(--text)' }}>{dep.senderName || 'Bank Transfer'}</p>
+                    <p style={{ fontWeight:600,fontSize:15,color:'var(--text)' }}>{dep.senderName || 'Bank Transfer'}</p>
                     <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:2 }}>{dep.narration || 'Wallet funding'}</p>
-                    <p style={{ fontSize:11,color:'var(--text-secondary)',marginTop:2 }}>{new Date(dep.createdAt).toLocaleString('en-NG',{dateStyle:'medium',timeStyle:'short'})}</p>
+                    <p style={{ fontSize:11,color:'var(--text-secondary)',marginTop:3 }}>{new Date(dep.createdAt).toLocaleString('en-NG',{dateStyle:'medium',timeStyle:'short'})}</p>
                   </div>
-                  <p style={{ fontWeight:700,fontSize:15,color:GREEN }}>+₦{Number(dep.amount).toLocaleString()}</p>
+                  <div style={{ textAlign:'right',flexShrink:0 }}>
+                    <p style={{ fontWeight:700,fontSize:15,color:GREEN }}>+₦{Number(dep.amount).toLocaleString()}</p>
+                    <StatusPill label="Completed" type="success" />
+                  </div>
                 </div>
               ))}
             </div>
@@ -1027,29 +1121,30 @@ export default function AppPage() {
       <div style={{ height:'100dvh',background:'var(--bg)',overflowY:'auto',paddingBottom:40 }}>
         <div style={{ padding:'60px 20px 20px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
           <button onClick={()=>setScreen('home')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
-          <h2 style={{ fontSize:18,fontWeight:800,color:'var(--text)' }}>SIM Activation</h2>
+          <h2 style={{ fontSize:26,fontWeight:800,color:'var(--text)',letterSpacing:-0.5 }}>SIM Activation</h2>
         </div>
         {/* Info Banner */}
-        <div style={{ margin:'16px',background:'var(--card)',borderRadius:14,padding:'20px',border:'1px solid var(--border)' }}>
-          <p style={{ color:'var(--text)',fontSize:15,fontWeight:700,marginBottom:8 }}>Airtel Data SIM</p>
-          <p style={{ color:'var(--text-secondary)',fontSize:14,lineHeight:1.7 }}>Buy an Airtel data SIM and send us the serial number. We'll activate 30GB monthly data plan for ₦5,000 in under 1 hour.</p>
+        <div style={{ margin:'16px',background:'var(--card)',borderRadius:16,padding:'24px',border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
+          <div style={{ display:'flex',gap:12,alignItems:'flex-start' }}>
+            <IconBox icon={Icons.creditCard(TEAL, 24)} bg={'rgba(92,200,250,.10)'} />
+            <div>
+              <p style={{ color:'var(--text)',fontSize:15,fontWeight:700,marginBottom:8 }}>Airtel Data SIM</p>
+              <p style={{ color:'var(--text-secondary)',fontSize:14,lineHeight:1.7 }}>Buy an Airtel data SIM and send us the serial number. We'll activate 30GB monthly data plan for ₦5,000 in under 1 hour.</p>
+            </div>
+          </div>
         </div>
         
         {/* Status */}
         {simActivations.length > 0 && (
-          <div style={{ margin:'0 16px 16px' }}>
-            <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',marginBottom:10,marginLeft:4 }}>Your Requests</p>
+          <div style={{ margin:'16px 16px 16px' }}>
+            <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',marginBottom:12,marginLeft:4,textTransform:'uppercase' }}>Your Requests</p>
             {simActivations.map(act => (
-              <div key={act.id} style={{ background:'var(--card)',borderRadius:12,padding:'14px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8,border:'1px solid var(--border)' }}>
-                <div>
-                  <p style={{ fontSize:13,fontWeight:600,color:'var(--text)' }}>{act.serialNumber || 'SIM Activation'}</p>
-                  <p style={{ fontSize:11,color:'var(--text-secondary)',marginTop:2 }}>{new Date(act.createdAt).toLocaleDateString('en-NG')}</p>
+              <div key={act.id} style={{ background:'var(--card)',borderRadius:14,padding:'16px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,border:'1px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.04)' }}>
+                <div style={{ flex:1 }}>
+                  <p style={{ fontSize:14,fontWeight:600,color:'var(--text)' }}>{act.serialNumber || 'SIM Activation'}</p>
+                  <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:3 }}>{new Date(act.createdAt).toLocaleDateString('en-NG',{dateStyle:'medium'})}</p>
                 </div>
-                <div style={{ background:act.status==='activated'?'rgba(52,199,89,.1)':'rgba(0,113,227,.1)',borderRadius:12,padding:'6px 12px' }}>
-                  <p style={{ color:act.status==='activated'?GREEN:BLUE,fontSize:12,fontWeight:600 }}>
-                    {act.status==='activated'?'Activated':'Pending'}
-                  </p>
-                </div>
+                <StatusPill label={act.status==='activated'?'Activated':'Pending'} type={act.status==='activated'?'success':'pending'} />
               </div>
             ))}
           </div>
@@ -1057,11 +1152,11 @@ export default function AppPage() {
         
         {/* Form */}
         <div style={{ padding:'0 16px 20px' }}>
-          <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',marginBottom:10,marginLeft:4 }}>New Request</p>
+          <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',marginBottom:12,marginLeft:4,textTransform:'uppercase' }}>New Request</p>
           <input value={simSerial} onChange={e=>setSimSerial(e.target.value)}
             placeholder="Enter SIM serial number"
-            style={{ width:'100%',padding:'12px 16px',borderRadius:12,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:15,marginBottom:12 }} />
-          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12 }}>
+            style={{ width:'100%',padding:'14px 16px',borderRadius:12,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:15,marginBottom:14,fontWeight:600 }} />
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14 }}>
             {[
               { label:'SIM Front', value:simFront, setter:setSimFront },
               { label:'SIM Back', value:simBack, setter:setSimBack },
@@ -1117,7 +1212,7 @@ export default function AppPage() {
         {/* Settings */}
         <div style={{ padding:'0 16px' }}>
           <SettingsGroup title="Display">
-            <SettingsRow icon="◯" label="Theme" right={
+            <SettingsRow icon={Icons.bell(BLUE, 20)} label="Theme" right={
               <button onClick={()=>updatePref('theme', dark?'light':'dark')}
                 style={{ background:dark?BLUE:'var(--bg-secondary)',borderRadius:16,padding:'6px 14px',color:dark?'#fff':'var(--text)',fontSize:13,fontWeight:600,border:'1px solid var(--border)' }}>
                 {dark?'Dark':'Light'}
@@ -1126,32 +1221,32 @@ export default function AppPage() {
           </SettingsGroup>
 
           <SettingsGroup title="Preferences">
-            <SettingsRow icon="🔔" label="Notifications" right={
+            <SettingsRow icon={Icons.bell(ORANGE, 20)} label="Notifications" right={
               <Toggle value={user.notificationsEnabled} onChange={v=>updatePref('notificationsEnabled', v)} />
             } />
-            <SettingsRow icon="📳" label="Haptics" right={
+            <SettingsRow icon={Icons.bolt(BLUE, 20)} label="Haptics" right={
               <Toggle value={user.hapticsEnabled} onChange={v=>updatePref('hapticsEnabled', v)} />
             } />
           </SettingsGroup>
 
           <SettingsGroup title="Security">
-            <SettingsRow icon="🔑" label="Change PIN" onPress={()=>setScreen('change-pin')} />
+            <SettingsRow icon={Icons.lock(RED, 20)} label="Change PIN" onPress={()=>setScreen('change-pin')} />
           </SettingsGroup>
 
           <SettingsGroup title="Support">
-            <SettingsRow icon="◄" label="Help & Support" onPress={()=>{ loadChats(); setScreen('chat'); }} />
-            <SettingsRow icon="ℹ" label="About" onPress={()=>setScreen('about')} />
-            <SettingsRow icon="◎" label="Call: +234 704 464 7081" right={
+            <SettingsRow icon={Icons.info(BLUE, 20)} label="Help & Support" onPress={()=>{ loadChats(); setScreen('chat'); }} />
+            <SettingsRow icon={Icons.globe(PURPLE, 20)} label="About" onPress={()=>setScreen('about')} />
+            <SettingsRow icon={Icons.phone(TEAL, 20)} label="Call: +234 704 464 7081" right={
               <div style={{ display:'flex',gap:8 }}>
                 <a href="tel:+2347044647081" style={{ background:'rgba(0,113,227,.1)',borderRadius:8,padding:'4px 10px',color:BLUE,fontSize:12,fontWeight:600 }}>Call</a>
               </div>
             } />
-            <SettingsRow icon="◎" label="Call: +234 806 193 4056" right={
+            <SettingsRow icon={Icons.phone(TEAL, 20)} label="Call: +234 806 193 4056" right={
               <div style={{ display:'flex',gap:8 }}>
                 <a href="tel:+2348061934056" style={{ background:'rgba(0,113,227,.1)',borderRadius:8,padding:'4px 10px',color:BLUE,fontSize:12,fontWeight:600 }}>Call</a>
               </div>
             } />
-            <SettingsRow icon="☐" label="Email: support@saukimart.online" right={
+            <SettingsRow icon={Icons.mail(BLUE, 20)} label="Email: support@saukimart.online" right={
               <a href="mailto:support@saukimart.online" style={{ background:'rgba(0,113,227,.1)',borderRadius:8,padding:'4px 10px',color:BLUE,fontSize:12,fontWeight:600 }}>Email</a>
             } />
           </SettingsGroup>
@@ -1209,22 +1304,22 @@ export default function AppPage() {
           <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
           <div>
             <p style={{ fontSize:16,fontWeight:700,color:'var(--text)' }}>Support</p>
-            <p style={{ fontSize:12,color:GREEN,marginTop:2 }}>● Online now</p>
+            <p style={{ fontSize:12,color:GREEN,marginTop:3,fontWeight:600 }}>● Online now</p>
           </div>
         </div>
         <div style={{ flex:1,overflowY:'auto',padding:'16px',display:'flex',flexDirection:'column',gap:12 }}>
           {chats.length === 0 && (
             <div style={{ textAlign:'center',padding:'40px 20px',color:'var(--text-secondary)' }}>
-              <div style={{ fontSize:40,marginBottom:12 }}>◎</div>
-              <p style={{ fontSize:15,fontWeight:600 }}>No messages yet</p>
+              <IconBox icon={Icons.mail(BLUE, 40)} bg={'rgba(0,113,227,.10)'} />
+              <p style={{ fontSize:15,fontWeight:700,color:'var(--text)',marginTop:12 }}>No messages yet</p>
               <p style={{ fontSize:13,marginTop:4 }}>Send a message and we'll help you right away</p>
             </div>
           )}
           {chats.map(msg => (
             <div key={msg.id} style={{ display:'flex',justifyContent: msg.sender==='user'?'flex-end':'flex-start' }}>
-              <div style={{ maxWidth:'80%',padding:'12px 16px',borderRadius: msg.sender==='user'?'16px 16px 4px 16px':'16px 16px 16px 4px', background: msg.sender==='user'?BLUE:'var(--card)',color: msg.sender==='user'?'#fff':'var(--text)',fontSize:15,lineHeight:1.5,border: msg.sender!=='user'?'1px solid var(--border)':undefined }}>
+              <div style={{ maxWidth:'80%',padding:'14px 16px',borderRadius: msg.sender==='user'?'18px 18px 4px 18px':'18px 18px 18px 4px', background: msg.sender==='user'?BLUE:'var(--card)',color: msg.sender==='user'?'#fff':'var(--text)',fontSize:15,lineHeight:1.5,border: msg.sender!=='user'?'1px solid var(--border)':undefined,boxShadow: msg.sender!=='user'?'0 2px 8px rgba(0,0,0,.04)':undefined }}>
                 {msg.message}
-                <p style={{ fontSize:11,opacity:.6,marginTop:6,textAlign:'right' }}>{new Date(msg.createdAt).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</p>
+                <p style={{ fontSize:12,opacity:.65,marginTop:6,textAlign:'right',fontWeight:500 }}>{new Date(msg.createdAt).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</p>
               </div>
             </div>
           ))}
@@ -1234,7 +1329,9 @@ export default function AppPage() {
             onKeyDown={e=>{ if(e.key==='Enter') sendChat(); }}
             placeholder="Type message…"
             style={{ flex:1,padding:'12px 16px',borderRadius:20,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:15 }} />
-          <button onClick={sendChat} style={{ width:44,height:44,borderRadius:22,background:BLUE,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'#fff',fontSize:18,fontWeight:600 }}>→</button>
+          <button onClick={sendChat} style={{ width:44,height:44,borderRadius:22,background:BLUE,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'#fff',fontSize:18,fontWeight:600,boxShadow:'0 4px 12px rgba(0,113,227,.3)',transition:'all .2s' }}
+            onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.05)'}}
+            onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)'}}>→</button>
         </div>
       </div>
     </>
@@ -1248,18 +1345,23 @@ export default function AppPage() {
         <div style={{ padding:'60px 20px 40px' }}>
           <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:600,marginBottom:32 }}>← Back</button>
           <div style={{ textAlign:'center',marginBottom:40 }}>
-            <p style={{ fontSize:28,fontWeight:800,color:'var(--text)',letterSpacing:-0.4 }}>SaukiMart</p>
-            <p style={{ color:'var(--text-secondary)',fontSize:14,marginTop:4 }}>Data & Devices · v1.0.0</p>
+            <p style={{ fontSize:32,fontWeight:800,color:'var(--text)',letterSpacing:-0.8 }}>SaukiMart</p>
+            <p style={{ color:'var(--text-secondary)',fontSize:15,marginTop:8 }}>Data & Devices · v1.0.0</p>
           </div>
           {[
-            ['Our Mission', 'Making data affordable for every Nigerian — instantly, reliably, at the best prices.'],
-            ['Security', 'All transactions encrypted. Payments processed securely through Flutterwave PCI-DSS compliance.'],
-            ['Contact', 'support@saukimart.online\n+234 704 464 7081\n+234 806 193 4056'],
-            ['Legal', 'SMEDAN Certified · By using this app you agree to our Terms of Service and Privacy Policy.'],
-          ].map(([title, body]) => (
-            <div key={title as string} style={{ background:'var(--card)',borderRadius:12,padding:'16px',marginBottom:12,border:'1px solid var(--border)',textAlign:'left' }}>
-              <p style={{ fontWeight:700,fontSize:15,color:'var(--text)',marginBottom:8 }}>{title as string}</p>
-              <p style={{ color:'var(--text-secondary)',fontSize:14,lineHeight:1.7,whiteSpace:'pre-line' }}>{body as string}</p>
+            { icon: Icons.mapPin(BLUE, 24), title: 'Our Mission', body: 'Making data affordable for every Nigerian — instantly, reliably, at the best prices.' },
+            { icon: Icons.shieldCheck(GREEN, 24), title: 'Security', body: 'All transactions encrypted. Payments processed securely through Flutterwave PCI-DSS compliance.' },
+            { icon: Icons.phone(TEAL, 24), title: 'Contact', body: 'support@saukimart.online\n+234 704 464 7081\n+234 806 193 4056' },
+            { icon: Icons.info(PURPLE, 24), title: 'Legal', body: 'SMEDAN Certified · By using this app you agree to our Terms of Service and Privacy Policy.' },
+          ].map(({ icon, title, body }) => (
+            <div key={title as string} style={{ background:'var(--card)',borderRadius:16,padding:'20px',marginBottom:14,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
+              <div style={{ display:'flex',gap:12,alignItems:'flex-start' }}>
+                <IconBox icon={icon} bg={undefined} />
+                <div style={{ textAlign:'left',flex:1 }}>
+                  <p style={{ fontWeight:700,fontSize:15,color:'var(--text)',marginBottom:8 }}>{title as string}</p>
+                  <p style={{ color:'var(--text-secondary)',fontSize:14,lineHeight:1.7,whiteSpace:'pre-line' }}>{body as string}</p>
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -1282,10 +1384,10 @@ function SettingsGroup({ title, children }: { title: string; children: React.Rea
   );
 }
 
-function SettingsRow({ icon, label, onPress, right }: { icon: string; label: string; onPress?: ()=>void; right?: React.ReactNode; }) {
+function SettingsRow({ icon, label, onPress, right }: { icon: string | React.ReactNode; label: string; onPress?: ()=>void; right?: React.ReactNode; }) {
   return (
-    <button onClick={onPress} style={{ width:'100%',display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom:'1px solid var(--border)',background:'none',textAlign:'left' }}>
-      <span style={{ fontSize:18,width:24,textAlign:'center' }}>{icon}</span>
+    <button onClick={onPress} style={{ width:'100%',display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom:'1px solid var(--border)',background:'none',textAlign:'left',cursor:onPress?'pointer':'default' }}>
+      <div style={{ fontSize:18,width:24,textAlign:'center',display:'flex',alignItems:'center',justifyContent:'center' }}>{icon}</div>
       <span style={{ flex:1,fontSize:15,fontWeight:500,color:'var(--text)' }}>{label}</span>
       {right || (onPress && <span style={{ color:'var(--text-secondary)',fontSize:18 }}>›</span>)}
     </button>
