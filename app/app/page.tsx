@@ -259,7 +259,7 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
         <div ref={ref} style={{ background:'#fff',width:'100%' }}>
           {/* Header */}
           <div style={{ background:'var(--bg)',padding:'48px 32px 40px',textAlign:'center' }}>
-            <p style={{ color:'var(--text)',fontWeight:700,fontSize:24,letterSpacing:-0.5,marginBottom:4 }}>SaukiMart</p>
+            <img src="/images/logo-sm.png" alt="SaukiMart" style={{ width:48,height:48,margin:'0 auto 12px',borderRadius:8 }} />
             <p style={{ color:'var(--text-secondary)',fontSize:13,marginBottom:20 }}>Your Receipt</p>
             <div style={{ background:GREEN+'15',borderRadius:12,padding:'12px 20px',display:'inline-block' }}>
               <p style={{ color:GREEN,fontWeight:700,fontSize:14 }}>✓ Transaction Successful</p>
@@ -314,7 +314,7 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
 
 /* ─────────────── MAIN APP ─────────────── */
 export default function AppPage() {
-  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'chat'|'sim-activation'|'notifications'|'about'>('splash');
+  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'chat'|'sim-activation'|'notifications'|'about'>('splash');
   const [dark, setDark] = useState(false);
   const [user, setUser] = useState<User|null>(null);
   const [token, setToken] = useState('');
@@ -604,11 +604,9 @@ export default function AppPage() {
         <div style={{ position:'absolute',bottom:'-30%',left:'-10%',width:'350px',height:'350px',borderRadius:'50%',background:`radial-gradient(circle, ${PURPLE}06, transparent)`,pointerEvents:'none' }} />
         
         <div style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'0 24px',position:'relative',zIndex:1 }}>
-          {/* Logo/Icon */}
+          {/* Logo */}
           <div style={{ marginBottom:32,textAlign:'center' }}>
-            <div style={{ width:56,height:56,borderRadius:16,background:`linear-gradient(135deg, ${BLUE}, ${PURPLE})`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',boxShadow:`0 8px 24px ${BLUE}40` }}>
-              <span style={{ fontSize:28,fontWeight:900,color:'#fff' }}>₦</span>
-            </div>
+            <img src="/images/logo.png" alt="SaukiMart" style={{ width:64,height:64,borderRadius:16,objectFit:'cover',boxShadow:`0 8px 24px ${BLUE}40` }} />
           </div>
           
           <h1 style={{ fontSize:32,fontWeight:800,color:'var(--text)',letterSpacing:-0.6,marginBottom:12,textAlign:'center' }}>Welcome Back</h1>
@@ -659,9 +657,7 @@ export default function AppPage() {
           
           {/* Header */}
           <div style={{ marginBottom:36,textAlign:'center',animation:'fadeUpScale .5s ease' }}>
-            <div style={{ width:52,height:52,borderRadius:14,background:`linear-gradient(135deg, ${GREEN}, ${TEAL})`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',boxShadow:`0 8px 24px ${GREEN}40` }}>
-              <span style={{ fontSize:26,fontWeight:900,color:'#fff' }}>+</span>
-            </div>
+            <img src="/images/logo.png" alt="SaukiMart" style={{ width:52,height:52,borderRadius:14,objectFit:'cover',margin:'0 auto 16px',boxShadow:`0 8px 24px ${GREEN}40` }} />
             <h1 style={{ fontSize:28,fontWeight:800,color:'var(--text)',letterSpacing:-0.6,marginBottom:8 }}>Create Account</h1>
             <p style={{ color:'var(--text-secondary)',fontSize:16 }}>Begin your journey with SaukiMart</p>
           </div>
@@ -746,8 +742,8 @@ export default function AppPage() {
   const getInitials = (u: User) => `${u.firstName[0]}${u.lastName[0]}`.toUpperCase();
 
   const Header = () => (
-    <div style={{ padding:'20px 20px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--bg)',borderBottom:'1px solid var(--border)',position:'fixed',top:0,left:0,right:0,zIndex:100,backdropFilter:'blur(10px)',backgroundImage: dark ? 'radial-gradient(ellipse at 50% 100%, rgba(0,113,227,0.05) 0%, transparent 80%)' : 'none' }}>
-      <p style={{ fontSize:18,fontWeight:800,color:'var(--text)',letterSpacing:-0.3,fontFamily:'Georgia, serif',fontStyle:'italic' }}>SaukiMart</p>
+    <div style={{ padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--bg)',borderBottom:'1px solid var(--border)',position:'fixed',top:0,left:0,right:0,zIndex:100,backdropFilter:'blur(10px)',backgroundImage: dark ? 'radial-gradient(ellipse at 50% 100%, rgba(0,113,227,0.05) 0%, transparent 80%)' : 'none' }}>
+      <img src="/images/logo-sm.png" alt="SaukiMart" style={{ height:36,width:'auto',borderRadius:8 }} />
       <div style={{ display:'flex',alignItems:'center',gap:10 }}>
         <button onClick={()=>updatePref('theme', dark?'light':'dark')} style={{ width:40,height:40,borderRadius:12,background:'var(--card2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,border:'1px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
           onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'}}
@@ -921,16 +917,13 @@ export default function AppPage() {
         <div style={{ flex:1,overflowY:'auto',padding:'16px 16px 40px' }}>
           <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginTop:12 }}>
             {NETWORKS.map(net => {
-              const colors = { MTN: { bg: 'rgba(255,159,10,.10)', color: ORANGE }, GLO: { bg: 'rgba(191,90,242,.10)', color: PURPLE }, AIRTEL: { bg: 'rgba(0,113,227,.10)', color: BLUE }, '9MOBILE': { bg: 'rgba(92,200,250,.10)', color: TEAL } };
-              const c = colors[net.name as keyof typeof colors] || { bg: 'rgba(0,113,227,.10)', color: BLUE };
+              const networkLogos = { 'MTN': '/images/mtn.png', 'GLO': '/images/glo.png', 'AIRTEL': '/images/airtel.png', '9MOBILE': '/images/mtn.png' };
               return (
-                <button key={net.name} onClick={()=>{ setSelectedNetwork(net); loadPlans(net.name); setScreen('data-plans'); }}
+                <button key={net.name} onClick={()=>{ setSelectedNetwork(net); setScreen('data-phone'); }}
                   style={{ background:'var(--card)',borderRadius:16,padding:'28px 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:14,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)',transition:'all .3s',cursor:'pointer' }}
                   onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
                   onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
-                  <div style={{ width:64,height:64,borderRadius:14,background:c.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:700,color:c.color }}>
-                    {net.name.substring(0,2)}
-                  </div>
+                  <img src={networkLogos[net.name as keyof typeof networkLogos]} alt={net.name} style={{ width:64,height:64,borderRadius:14,objectFit:'contain' }} />
                   <p style={{ fontWeight:700,fontSize:16,color:'var(--text)',marginTop:4 }}>{net.name}</p>
                 </button>
               );
@@ -941,20 +934,47 @@ export default function AppPage() {
     </>
   );
 
+  /* DATA PHONE */
+  if (screen === 'data-phone') return (
+    <>
+      <GlobalStyle dark={dark} />
+      <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
+        <div style={{ padding:'60px 20px 20px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
+          <button onClick={()=>setScreen('data-networks')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
+          <h2 style={{ fontSize:18,fontWeight:800,color:'var(--text)' }}>Enter Phone Number</h2>
+        </div>
+        <div style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 20px',gap:24 }}>
+          <div style={{ width:96,height:96,borderRadius:20,background:'var(--card)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
+            <img src={selectedNetwork?.name === 'MTN' ? '/images/mtn.png' : selectedNetwork?.name === 'GLO' ? '/images/glo.png' : selectedNetwork?.name === 'AIRTEL' ? '/images/airtel.png' : '/images/mtn.png'} alt={selectedNetwork?.name} style={{ width:80,height:80,objectFit:'contain' }} />
+          </div>
+          <div style={{ textAlign:'center' }}>
+            <p style={{ fontSize:18,fontWeight:700,color:'var(--text)' }}>{selectedNetwork?.name}</p>
+            <p style={{ color:'var(--text-secondary)',fontSize:14,marginTop:4 }}>Select your plan after entering phone number</p>
+          </div>
+          <div style={{ width:'100%',maxWidth:320 }}>
+            <input value={buyPhone} onChange={e=>setBuyPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
+              placeholder="Enter 11-digit phone number" inputMode="numeric" maxLength={11}
+              style={{ width:'100%',padding:'14px 16px',borderRadius:12,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:600,marginBottom:16 }} />
+            <button onClick={()=>{ if(buyPhone.length!==11){showError('Enter 11-digit phone number');return;} loadPlans(selectedNetwork?.name || ''); setScreen('data-plans'); }}
+              disabled={buyPhone.length!==11} 
+              style={{ width:'100%',padding:'14px',background:buyPhone.length===11?BLUE:'#ccc',color:'#fff',borderRadius:12,fontWeight:700,fontSize:16,border:'none',cursor:buyPhone.length===11?'pointer':'not-allowed',opacity:buyPhone.length===11?1:0.6 }}>
+              Proceed to Plans
+            </button>
+          </div>
+        </div>
+      </div>
+      {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
+    </>
+  );
+
   /* DATA PLANS */
   if (screen === 'data-plans') return (
     <>
       <GlobalStyle dark={dark} />
       <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
         <div style={{ padding:'60px 20px 20px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
-          <button onClick={()=>setScreen('data-networks')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
-          <h2 style={{ fontSize:18,fontWeight:800,color:'var(--text)' }}>{selectedNetwork?.name} Data</h2>
-        </div>
-        {/* Phone input */}
-        <div style={{ padding:'16px 16px 12px' }}>
-          <input value={buyPhone} onChange={e=>setBuyPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
-            placeholder="Enter phone number" inputMode="numeric"
-            style={{ width:'100%',padding:'12px 16px',borderRadius:12,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:600 }} />
+          <button onClick={()=>setScreen('data-phone')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
+          <h2 style={{ fontSize:18,fontWeight:800,color:'var(--text)' }}>{selectedNetwork?.name} Data Plans</h2>
         </div>
         <div style={{ flex:1,overflowY:'auto',padding:'0 16px 40px' }}>
           {plans.length === 0 ? (
