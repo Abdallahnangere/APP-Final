@@ -124,6 +124,14 @@ export async function initDB() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS deposits_webhook_log (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      flw_transaction_id TEXT,
+      status TEXT NOT NULL,
+      details TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS site_settings (
       key TEXT PRIMARY KEY,
       value TEXT,
