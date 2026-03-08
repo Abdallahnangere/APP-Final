@@ -125,11 +125,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: errorMsg }, { status: 400 });
     }
 
-    // ATOMIC: Deduct balance only if sufficient, then mark success
+    // Calculate cashback (2% of final amount)
+    const cashback = Math.round(price * 0.02 * 100) / 100;
+
+    // ATOMIC: Deduct balance only if sufficient, credit cashback, then mark success
     const [balanceUpdate] = await sql`
-      UPDATE users SET wallet_balance = wallet_balance - ${price}, updated_at = NOW()
+      UPDATE users
+      SET wallet_balance = wallet_balance - ${price},
+          cashback_balance = cashback_balance + ${cashback},
+          updated_at = NOW()
       WHERE id = ${userId} AND wallet_balance >= ${price}
-      RETURNING wallet_balance
+      RETURNING wallet_balance, cashback_balance
     `;
     if (!balanceUpdate) {
       await sql`UPDATE transactions SET status = 'failed' WHERE id = ${txn.id}`;
@@ -149,6 +155,20 @@ export async function POST(req: NextRequest) {
       WHERE id = ${txn.id}
     `;
 
+    // Record cashback transaction (reward)
+    if (cashback > 0) {
+      await sql`
+        INSERT INTO transactions (user_id, type, description, amount, status)
+        VALUES (
+          ${userId},
+          'cashback',
+          ${`2% Cashback — ${dataSize} ${network} data`},
+          ${cashback},
+          'success'
+        )
+      `;
+    }
+
     const updatedUser = balanceUpdate;
 
     return NextResponse.json({
@@ -157,6 +177,8 @@ export async function POST(req: NextRequest) {
       reference: amigoData.reference,
       receiptRef,
       newBalance: parseFloat(updatedUser.wallet_balance),
+      newCashbackBalance: parseFloat(updatedUser.cashback_balance),
+      cashbackEarned: cashback > 0 ? cashback : 0,
       receipt: {
         ref: receiptRef,
         network, dataSize, validity, phoneNumber, price,

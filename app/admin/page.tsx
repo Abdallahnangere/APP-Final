@@ -82,7 +82,7 @@ export default function AdminPage() {
   const [planForm, setPlanForm] = useState({ network:'MTN', network_id:'1', plan_id:'', data_size:'', validity:'30 days', selling_price:'', cost_price:'', editId:'' });
   const [productForm, setProductForm] = useState({ name:'', description:'', price:'', cost_price:'', category:'', shipping_terms:'', pickup_terms:'', in_stock:true, image_url:'', image_base64:'', editId:'' });
   const [broadcastForm, setBroadcastForm] = useState({ message:'', editId:'' });
-  const [walletForm, setWalletForm] = useState({ amount:'', note:'' });
+  const [walletForm, setWalletForm] = useState({ amount:'', note:'', target:'wallet' as 'wallet'|'cashback' });
   const [pinForm, setPinForm] = useState('');
   const [consoleInput, setConsoleInput] = useState('');
   const [consoleEndpoint, setConsoleEndpoint] = useState('amigo');
@@ -247,6 +247,7 @@ export default function AdminPage() {
                   { label:'Total Users', value: (analytics as Record<string,unknown>).totalUsers || 0, icon:'👥', color:BLUE },
                   { label:'Total Revenue', value: `₦${Number((analytics as Record<string,unknown>).totalRevenue||0).toLocaleString()}`, icon:'💰', color:GREEN },
                   { label:'Total Profit', value: `₦${Number((analytics as Record<string,unknown>).totalProfit||0).toLocaleString()}`, icon:'📈', color:GOLD },
+                  { label:'Cashback Liability', value: `₦${Number((analytics as Record<string,unknown>).totalCashbackLiability||0).toLocaleString()}`, icon:'🎁', color:GOLD },
                   { label:'Transactions', value: (analytics as Record<string,unknown>).totalTransactions || 0, icon:'💳', color:'#AF52DE' },
                 ].map(s => (
                   <Card key={s.label}>
@@ -304,13 +305,38 @@ export default function AdminPage() {
                     <div style={{ display:'flex',flexDirection:'column',gap:16 }}>
                       <Card>
                         <h3 style={{ fontWeight:800,fontSize:14,marginBottom:12 }}>💰 Wallet Management</h3>
-                        <Input label="Amount (₦)" value={walletForm.amount} onChange={v=>setWalletForm(p=>({...p,amount:v.replace(/\D/g,'')}))} placeholder="5000" />
+                        <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12 }}>
+                          <div>
+                            <Input label="Amount (₦)" value={walletForm.amount} onChange={v=>setWalletForm(p=>({...p,amount:v.replace(/\D/g,'')}))} placeholder="5000" />
+                          </div>
+                          <div>
+                            <label style={{ display:'block',fontSize:13,fontWeight:600,color:'#6E6E73',marginBottom:8 }}>Target</label>
+                            <select value={walletForm.target} onChange={e=>setWalletForm(p=>({...p,target:e.target.value as any}))}
+                              style={{ width:'100%',padding:'12px 14px',borderRadius:12,border:'1px solid rgba(0,0,0,0.15)',fontSize:14 }}>
+                              <option value="wallet">Main Wallet</option>
+                              <option value="cashback">Cashback Balance</option>
+                            </select>
+                          </div>
+                        </div>
+                        <Input label="Reason" value={walletForm.note} onChange={v=>setWalletForm(p=>({...p,note:v}))} placeholder="Adjustment note (optional)" />
                         <div style={{ display:'flex',gap:8 }}>
                           <Btn variant="success" size="sm" onClick={async()=>{
-                            try { await api('wallet', 'POST', { userId: selectedUser.id, action:'credit', amount: Number(walletForm.amount) }); showToast(`✅ Credited ₦${walletForm.amount}`); setWalletForm({amount:'',note:''}); } catch(e:unknown){ showError(e instanceof Error?e.message:'Failed'); }
+                            try {
+                              await api('wallet', 'POST', { userId: selectedUser.id, action:'credit', amount: Number(walletForm.amount), target: walletForm.target, note: walletForm.note });
+                              showToast(`✅ Credited ₦${walletForm.amount} to ${walletForm.target === 'cashback' ? 'cashback' : 'wallet'}`);
+                              setWalletForm({amount:'',note:'',target:'wallet'});
+                              load('users').then(d=>setUsers(Array.isArray(d)?d:[]));
+                              setSelectedUser(null);
+                            } catch(e:unknown){ showError(e instanceof Error?e.message:'Failed'); }
                           }}>Credit</Btn>
                           <Btn variant="danger" size="sm" onClick={async()=>{
-                            try { await api('wallet', 'POST', { userId: selectedUser.id, action:'debit', amount: Number(walletForm.amount) }); showToast(`✅ Debited ₦${walletForm.amount}`); setWalletForm({amount:'',note:''}); } catch(e:unknown){ showError(e instanceof Error?e.message:'Failed'); }
+                            try {
+                              await api('wallet', 'POST', { userId: selectedUser.id, action:'debit', amount: Number(walletForm.amount), target: walletForm.target, note: walletForm.note });
+                              showToast(`✅ Debited ₦${walletForm.amount} from ${walletForm.target === 'cashback' ? 'cashback' : 'wallet'}`);
+                              setWalletForm({amount:'',note:'',target:'wallet'});
+                              load('users').then(d=>setUsers(Array.isArray(d)?d:[]));
+                              setSelectedUser(null);
+                            } catch(e:unknown){ showError(e instanceof Error?e.message:'Failed'); }
                           }}>Debit</Btn>
                         </div>
                       </Card>
@@ -337,7 +363,7 @@ export default function AdminPage() {
                 <Card>
                   <table style={{ width:'100%',borderCollapse:'collapse' }}>
                     <thead><tr style={{ background:'#F9F9F9' }}>
-                      {['Name','Phone','Balance','Status','Actions'].map(h=><th key={h} style={{ padding:'10px 14px',fontSize:12,fontWeight:700,color:'#8E8E93',textAlign:'left',borderBottom:'1px solid #F2F2F7' }}>{h}</th>)}
+                      {['Name','Phone','Balance','Cashback','Status','Actions'].map(h=><th key={h} style={{ padding:'10px 14px',fontSize:12,fontWeight:700,color:'#8E8E93',textAlign:'left',borderBottom:'1px solid #F2F2F7' }}>{h}</th>)}
                     </tr></thead>
                     <tbody>
                       {users.filter(u=>!userSearch||u.first_name.toLowerCase().includes(userSearch.toLowerCase())||u.last_name.toLowerCase().includes(userSearch.toLowerCase())||u.phone.includes(userSearch)).map(u=>(
@@ -345,6 +371,7 @@ export default function AdminPage() {
                           <td style={{ padding:'12px 14px',fontSize:14,fontWeight:600 }}>{u.first_name} {u.last_name}</td>
                           <td style={{ padding:'12px 14px',fontSize:14,color:'#8E8E93' }}>{u.phone}</td>
                           <td style={{ padding:'12px 14px',fontSize:14,fontWeight:700,color:GREEN }}>₦{Number(u.wallet_balance).toLocaleString()}</td>
+                          <td style={{ padding:'12px 14px',fontSize:14,fontWeight:700,color:GOLD }}>₦{Number(u.cashback_balance).toLocaleString()}</td>
                           <td style={{ padding:'12px 14px' }}><span style={{ background:u.is_banned?'rgba(255,59,48,.1)':'rgba(52,199,89,.1)',color:u.is_banned?RED:GREEN,padding:'3px 10px',borderRadius:20,fontSize:12,fontWeight:700 }}>{u.is_banned?'Banned':'Active'}</span></td>
                           <td style={{ padding:'12px 14px' }}><Btn size="sm" onClick={()=>setSelectedUser(u)}>View →</Btn></td>
                         </tr>

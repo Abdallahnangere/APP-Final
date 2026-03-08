@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
   const [activeToday] = await sql`SELECT COUNT(*) as c FROM users WHERE updated_at > NOW() - INTERVAL '1 day'`;
   const [totalTxns] = await sql`SELECT COUNT(*) as c, COALESCE(SUM(amount),0) as vol FROM transactions WHERE status='success' AND created_at > NOW() - (${days}::text || ' days')::interval`;
   const [totalDeposits] = await sql`SELECT COALESCE(SUM(amount),0) as vol FROM deposits WHERE created_at > NOW() - (${days}::text || ' days')::interval`;
+  const [cashbackLiability] = await sql`SELECT COALESCE(SUM(cashback_balance),0) as total FROM users`;
 
   // Sales calc: sum selling price and cost price for each transaction
   const salesData = await sql`
@@ -63,6 +64,7 @@ export async function GET(req: NextRequest) {
       totalRevenue,
       totalCost,
       totalProfit,
+      totalCashbackLiability: parseFloat(cashbackLiability.total),
     },
     dailyBreakdown: dailyTxns,
     recentTransactions: recentTxns,

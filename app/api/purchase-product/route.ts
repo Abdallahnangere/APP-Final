@@ -79,11 +79,17 @@ export async function POST(req: NextRequest) {
       throw e;
     }
 
-    // ATOMIC: Deduct balance only if sufficient, then mark success
+    // Calculate cashback (2% of final amount)
+    const cashback = Math.round(price * 0.02 * 100) / 100;
+
+    // ATOMIC: Deduct balance only if sufficient, credit cashback, then mark success
     const [balanceUpdate] = await sql`
-      UPDATE users SET wallet_balance = wallet_balance - ${price}, updated_at = NOW()
+      UPDATE users
+      SET wallet_balance = wallet_balance - ${price},
+          cashback_balance = cashback_balance + ${cashback},
+          updated_at = NOW()
       WHERE id = ${user.id} AND wallet_balance >= ${price}
-      RETURNING wallet_balance
+      RETURNING wallet_balance, cashback_balance
     `;
     if (!balanceUpdate) {
       await sql`UPDATE transactions SET status = 'failed' WHERE id = ${txn.id}`;
@@ -95,11 +101,28 @@ export async function POST(req: NextRequest) {
       WHERE id = ${txn.id}
     `;
 
+    // Record cashback transaction (reward)
+    if (cashback > 0) {
+      await sql`
+        INSERT INTO transactions (user_id, type, description, amount, status)
+        VALUES (
+          ${user.id},
+          'cashback',
+          ${`2% Cashback — ${product.name}`},
+          ${cashback},
+          'success'
+        )
+      `;
+    }
+
     const updated = balanceUpdate;
 
     return NextResponse.json({
       success: true, receiptRef, transactionId: txn.id,
-      newBalance: parseFloat(updated.wallet_balance), receipt: receiptData,
+      newBalance: parseFloat(updated.wallet_balance),
+      newCashbackBalance: parseFloat(updated.cashback_balance),
+      cashbackEarned: cashback > 0 ? cashback : 0,
+      receipt: receiptData,
     });
   } catch (err) {
     console.error(err);

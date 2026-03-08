@@ -379,6 +379,11 @@ export default function AppPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
+  const [cashbackToast, setCashbackToast] = useState('');
+  const [redeemOpen, setRedeemOpen] = useState(false);
+  const [redeemAmount, setRedeemAmount] = useState('');
+  const [redeemError, setRedeemError] = useState('');
+  const [redeemLoading, setRedeemLoading] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [pinAction, setPinAction] = useState<'buy-data'|'buy-product'|'sim-pay'|null>(null);
   const [receipt, setReceipt] = useState<Record<string,unknown>|null>(null);
@@ -391,6 +396,9 @@ export default function AppPage() {
   const [confirmNewPin, setConfirmNewPin] = useState('');
   const [storedPhone, setStoredPhone] = useState('');
   const [isReturningUserPIN, setIsReturningUserPIN] = useState(false);
+
+  const prevCashbackRef = useRef<number>(0);
+  const hasSeenCashbackRef = useRef(false);
 
   const authHeader = useCallback(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
 
@@ -487,6 +495,24 @@ export default function AppPage() {
 
     return () => clearInterval(refreshInterval);
   }, [screen, token, authHeader]);
+
+  // Show cashback earned toast when balance increases
+  useEffect(() => {
+    if (!user) return;
+    if (!hasSeenCashbackRef.current) {
+      hasSeenCashbackRef.current = true;
+      prevCashbackRef.current = user.cashbackBalance;
+      return;
+    }
+    const previous = prevCashbackRef.current;
+    const current = user.cashbackBalance;
+    if (current > previous) {
+      const delta = current - previous;
+      setCashbackToast(`+₦${delta.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})} cashback earned!`);
+      setTimeout(() => setCashbackToast(''), 3000);
+    }
+    prevCashbackRef.current = current;
+  }, [user?.cashbackBalance]);
 
   // Auto-load products when store screen opens
   useEffect(() => {
@@ -599,6 +625,39 @@ export default function AppPage() {
       showToast('🎉 Purchase successful!');
     } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Purchase failed'); }
     finally { setLoading(false); }
+  };
+
+  /* ── REDEEM CASHBACK ── */
+  const handleRedeemCashback = async () => {
+    if (!user) return;
+    const amount = parseFloat(redeemAmount);
+    if (!amount || amount <= 0) {
+      setRedeemError('Enter a valid amount');
+      return;
+    }
+    if (amount > user.cashbackBalance) {
+      setRedeemError('Amount exceeds available cashback');
+      return;
+    }
+    setRedeemError('');
+    setRedeemLoading(true);
+    try {
+      const res = await fetch('/api/redeem-cashback', {
+        method: 'POST', headers: authHeader(),
+        body: JSON.stringify({ amount }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Redeem failed');
+      await refreshUser();
+      await loadHomeData();
+      setRedeemOpen(false);
+      setRedeemAmount('');
+      showToast(`✅ ₦${amount.toLocaleString('en-NG')} has been moved to your main balance! 🎉`);
+    } catch (e:unknown) {
+      setRedeemError(e instanceof Error ? e.message : 'Redeem failed');
+    } finally {
+      setRedeemLoading(false);
+    }
   };
 
   /* ── SIM ACTIVATION ── */
@@ -925,12 +984,46 @@ export default function AppPage() {
       {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} autoDownload={true} dark={dark} />}
       {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500,whiteSpace:'nowrap' }}>{toast}</div>}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
+      {redeemOpen && (
+        <div style={{ position:'fixed',inset:0,zIndex:600,background:'rgba(0,0,0,.65)',display:'flex',alignItems:'center',justifyContent:'center',padding:16 }}>
+          <div style={{ width:'100%',maxWidth:420,background:'var(--card)',borderRadius:24,padding:24,boxShadow:'0 28px 60px rgba(0,0,0,.35)' }}>
+            <h3 style={{ fontSize:18,fontWeight:800,color:'var(--text)',marginBottom:12 }}>Redeem Cashback</h3>
+            <p style={{ fontSize:13,color:'var(--text-secondary)',marginBottom:16 }}>Move your cashback into your main balance instantly.</p>
+            <div style={{ marginBottom:14 }}>
+              <p style={{ fontSize:12,color:'var(--text-secondary)',marginBottom:6 }}>Available cashback</p>
+              <p style={{ fontSize:16,fontWeight:800,color:ORANGE }}>₦{user?.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+            </div>
+            <div style={{ marginBottom:14 }}>
+              <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:8 }}>Amount to redeem</label>
+              <input value={redeemAmount} onChange={e=>setRedeemAmount(e.target.value.replace(/[^0-9.]/g,''))}
+                placeholder="0.00" inputMode="decimal"
+                style={{ width:'100%',padding:'12px 14px',borderRadius:12,border:'1px solid var(--border)',fontSize:16,color:'var(--text)',background:'var(--bg-secondary)' }} />
+              {redeemError && <p style={{ margin:8, color:RED, fontSize:13 }}>{redeemError}</p>}
+            </div>
+            <div style={{ display:'flex',gap:10,justifyContent:'flex-end' }}>
+              <button onClick={()=>{ setRedeemOpen(false); setRedeemError(''); setRedeemAmount(''); }}
+                style={{ flex:1,padding:'12px 16px',borderRadius:14,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontWeight:700,cursor:'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={handleRedeemCashback} disabled={redeemLoading || !redeemAmount || Number(redeemAmount)<=0 || Number(redeemAmount) > (user?.cashbackBalance||0)}
+                style={{ flex:1,padding:'12px 16px',borderRadius:14,border:'none',background:redeemLoading||!redeemAmount||Number(redeemAmount)<=0||Number(redeemAmount)>(user?.cashbackBalance||0)?'rgba(142,142,147,.35)':ORANGE,color:redeemLoading||!redeemAmount||Number(redeemAmount)<=0||Number(redeemAmount)>(user?.cashbackBalance||0)?'rgba(28,28,30,.6)':'#1A1A1A',fontWeight:700,cursor:redeemLoading||!redeemAmount||Number(redeemAmount)<=0||Number(redeemAmount)>(user?.cashbackBalance||0)?'not-allowed':'pointer' }}>
+                {redeemLoading ? 'Processing…' : 'Redeem'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{ height:'100dvh',overflowY:'auto',background:'var(--bg)',paddingTop:'80px',paddingBottom:100,backgroundImage: dark ? 'radial-gradient(ellipse at 50% 0%, rgba(0,113,227,0.08) 0%, transparent 50%)' : 'none',backgroundAttachment: 'fixed' }}>
         <Header />
         
         {/* Wallet Card with Enhanced Styling */}
         <div style={{ margin:'0 auto',maxWidth:980 }}>
-          <div style={{ margin:'0 16px',background:'var(--card)',borderRadius:20,padding:'28px 24px',border:'1px solid var(--border)',boxShadow:'0 8px 32px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.07)',backdropFilter:'blur(20px)' }}>
+          <div style={{ position:'relative', margin:'0 16px',background:'var(--card)',borderRadius:20,padding:'28px 24px',border:'1px solid var(--border)',boxShadow:'0 8px 32px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.07)',backdropFilter:'blur(20px)' }}>
+          {cashbackToast && (
+            <div className="fade-in" style={{ position:'absolute',top:16,right:16,background:'rgba(255,159,10,0.95)',color:'#1A1A1A',padding:'10px 14px',borderRadius:14,fontSize:13,fontWeight:700,boxShadow:'0 8px 24px rgba(0,0,0,0.22)',zIndex:10,whiteSpace:'nowrap' }}>
+              {cashbackToast}
+            </div>
+          )}
             <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20 }}>
               <div>
                 <p style={{ color:'var(--text-secondary)',fontSize:13,fontWeight:600,letterSpacing:.5,marginBottom:8 }}>AVAILABLE BALANCE</p>
@@ -945,14 +1038,27 @@ export default function AppPage() {
               </button>
             </div>
             <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16 }}>
-              <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'14px 16px',border:'1px solid var(--border)' }}>
+              <div style={{ background:'rgba(255,159,10,.08)',borderRadius:12,padding:'14px 16px',border:'1px solid rgba(255,159,10,.2)' }}>
                 <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:600 }}>CASHBACK</p>
-                <p style={{ color:GREEN,fontWeight:700,fontSize:18,marginTop:4 }}>₦{user.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                <p style={{ color:ORANGE,fontWeight:700,fontSize:18,marginTop:4 }}>₦{user.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:600,marginTop:6 }}>2% cashback on every purchase</p>
               </div>
               <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'14px 16px',border:'1px solid var(--border)' }}>
                 <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:600 }}>REFERRAL BONUS</p>
                 <p style={{ color:PURPLE,fontWeight:700,fontSize:18,marginTop:4 }}>₦{user.referralBonus.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
               </div>
+            </div>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginBottom:16 }}>
+              <button onClick={() => setRedeemOpen(true)}
+                disabled={user.cashbackBalance <= 0}
+                title={user.cashbackBalance > 0 ? 'Redeem to main wallet' : 'No cashback balance to redeem yet'}
+                style={{
+                  padding:'12px 18px',borderRadius:14,border:'none',background: user.cashbackBalance > 0 ? ORANGE : 'rgba(142,142,147,.2)',
+                  color: user.cashbackBalance > 0 ? '#1A1A1A' : 'rgba(28,28,30,.5)',fontWeight:700,cursor: user.cashbackBalance > 0 ? 'pointer' : 'not-allowed',transition:'all .2s'
+                }}>
+                Redeem Cashback
+              </button>
+              <p style={{ color:'var(--text-secondary)',fontSize:12,margin:0 }}>Move your cashback to your main balance instantly.</p>
             </div>
             {user.accountNumber && (
               <div style={{ background:'var(--bg-secondary)',borderRadius:14,padding:'12px 16px',border:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
@@ -1018,9 +1124,18 @@ export default function AppPage() {
             <div style={{ background:'var(--card)',borderRadius:16,overflow:'hidden',border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
               {transactions.slice(0,10).map((tx,i) => {
                 const isDeposit = tx.type === 'deposit';
-                const color = isDeposit ? GREEN : RED;
+                const isCashbackTx = tx.type === 'cashback' || tx.type === 'cashback_redemption';
+                const isCredit = isDeposit || isCashbackTx;
+                const color = isCashbackTx ? ORANGE : isDeposit ? GREEN : RED;
                 const icon = tx.type === 'data' ? Icons.arrowDown(color, 18) : tx.type === 'product' ? Icons.download(color, 18) : Icons.arrowUp(color, 18);
-                const bgColor = tx.type === 'data' ? 'rgba(0,113,227,.08)' : isDeposit ? 'rgba(48,209,88,.08)' : 'rgba(255,59,48,.08)';
+                const bgColor = tx.type === 'data'
+                  ? 'rgba(0,113,227,.08)'
+                  : isCashbackTx
+                    ? 'rgba(255,159,10,.08)'
+                    : isDeposit
+                      ? 'rgba(48,209,88,.08)'
+                      : 'rgba(255,59,48,.08)';
+                const sign = isCredit ? '+' : '-';
                 return (
                   <button key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt(tx.receipt as Record<string,unknown>); } }} style={{ display:'flex',alignItems:'center',gap:14,padding:'16px 16px',borderBottom: i<Math.min(transactions.length,10)-1?'1px solid var(--border)':undefined,background:'none',border:'none',width:'100%',cursor:'pointer',transition:'all .2s',textAlign:'left' }} onMouseEnter={e=>{e.currentTarget.style.opacity='0.8'}} onMouseLeave={e=>{e.currentTarget.style.opacity='1'}}>
                     <IconBox icon={icon} bg={bgColor} />
@@ -1029,7 +1144,7 @@ export default function AppPage() {
                       <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:3 }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</p>
                     </div>
                     <div style={{ textAlign:'right',flexShrink:0 }}>
-                      <p style={{ fontWeight:700,fontSize:15,color: tx.type==='deposit'||tx.type==='cashback'?GREEN:RED }}>{tx.type==='deposit'||tx.type==='cashback'?'+':'-'}₦{Number(tx.amount).toLocaleString()}</p>
+                      <p style={{ fontWeight:700,fontSize:15,color }}>{sign}₦{Number(tx.amount).toLocaleString()}</p>
                       <StatusPill label={tx.status} type={tx.status === 'success' ? 'success' : tx.status === 'pending' ? 'pending' : 'failed'} />
                     </div>
                   </button>
@@ -1275,11 +1390,13 @@ export default function AppPage() {
             <div style={{ display:'grid',gap:10 }}>
               {transactions.filter(tx => tx.status !== 'pending').map(tx => {
                 const isDeposit = tx.type === 'deposit';
-                const isData = tx.type === 'data';
+                const isCashbackTx = tx.type === 'cashback' || tx.type === 'cashback_redemption';
                 const isFailed = tx.status === 'failed';
-                const color = isFailed ? RED : isDeposit ? GREEN : RED;
-                const icon = isFailed ? Icons.alertCircle(RED, 20) : isDeposit ? Icons.arrowUp(GREEN, 20) : Icons.arrowDown(RED, 20);
-                const bgColor = isFailed ? 'rgba(255,59,48,.08)' : isDeposit ? 'rgba(48,209,88,.08)' : 'rgba(255,59,48,.08)';
+                const isCredit = isDeposit || isCashbackTx;
+                const color = isFailed ? RED : isCashbackTx ? ORANGE : isDeposit ? GREEN : RED;
+                const icon = isFailed ? Icons.alertCircle(RED, 20) : isCredit ? Icons.arrowUp(color, 20) : Icons.arrowDown(color, 20);
+                const bgColor = isFailed ? 'rgba(255,59,48,.08)' : isCashbackTx ? 'rgba(255,159,10,.08)' : isDeposit ? 'rgba(48,209,88,.08)' : 'rgba(255,59,48,.08)';
+                const sign = isCredit ? '+' : '-';
                 return (
                   <button key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt(tx.receipt as Record<string,unknown>); } }}
                     style={{ background:'var(--card)',borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,border:'1px solid var(--border)',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
@@ -1291,7 +1408,7 @@ export default function AppPage() {
                       <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:3 }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</p>
                     </div>
                     <div style={{ textAlign:'right',flexShrink:0 }}>
-                      <p style={{ fontWeight:700,fontSize:15,color }}>{isDeposit?'+':'-'}₦{Number(tx.amount).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                      <p style={{ fontWeight:700,fontSize:15,color }}>{sign}₦{Number(tx.amount).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
                       <div style={{ fontSize:11,fontWeight:700,color,marginTop:2,textTransform:'uppercase' }}>{isFailed ? '✕ Failed' : '✓ Success'}</div>
                     </div>
                   </button>
