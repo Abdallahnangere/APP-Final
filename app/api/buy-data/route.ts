@@ -139,8 +139,12 @@ export async function POST(req: NextRequest) {
     await sql`
       UPDATE transactions SET status = 'success', amigo_reference = ${amigoData.reference || null},
         receipt_data = ${JSON.stringify({
-          network, dataSize, validity, phoneNumber, price, receiptRef,
+          ref: receiptRef,
+          network, dataSize, validity, phoneNumber, price,
           reference: amigoData.reference, message: amigoData.message,
+          date: new Date().toISOString(), type: 'data',
+          userName: `${user.first_name} ${user.last_name}`,
+          userPhone: user.phone
         })}
       WHERE id = ${txn.id}
     `;

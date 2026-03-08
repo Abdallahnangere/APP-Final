@@ -12,7 +12,7 @@ type User = {
 type Transaction = {
   id: string; type: string; description: string; amount: number;
   status: string; network?: string; phoneNumber?: string;
-  productName?: string; createdAt: string; receiptData?: Record<string,unknown>;
+  productName?: string; createdAt: string; receipt?: Record<string,unknown>; amigoRef?: string;
 };
 type Deposit = { id: string; amount: number; senderName: string; createdAt: string; narration: string; };
 type Plan = { id: string; network: string; networkId: number; planId: number; dataSize: string; validity: string; price: number; };
@@ -939,7 +939,7 @@ export default function AppPage() {
     <>
       <GlobalStyle dark={dark} />
       {showPin && <PinKeyboard onComplete={handlePinComplete} onClose={()=>setShowPin(false)} pinAction={pinAction} />}
-      {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} dark={dark} />}
+      {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} autoDownload={true} dark={dark} />}
       {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500,whiteSpace:'nowrap' }}>{toast}</div>}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
       <div style={{ height:'100dvh',overflowY:'auto',background:'var(--bg)',paddingTop:'80px',paddingBottom:100,backgroundImage: dark ? 'radial-gradient(ellipse at 50% 0%, rgba(0,113,227,0.08) 0%, transparent 50%)' : 'none',backgroundAttachment: 'fixed' }}>
@@ -1039,7 +1039,7 @@ export default function AppPage() {
                 const icon = tx.type === 'data' ? Icons.arrowDown(color, 18) : tx.type === 'product' ? Icons.download(color, 18) : Icons.arrowUp(color, 18);
                 const bgColor = tx.type === 'data' ? 'rgba(0,113,227,.08)' : isDeposit ? 'rgba(48,209,88,.08)' : 'rgba(255,59,48,.08)';
                 return (
-                  <div key={tx.id} style={{ display:'flex',alignItems:'center',gap:14,padding:'16px 16px',borderBottom: i<Math.min(transactions.length,10)-1?'1px solid var(--border)':undefined }}>
+                  <button key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt(tx.receipt as Record<string,unknown>); } }} style={{ display:'flex',alignItems:'center',gap:14,padding:'16px 16px',borderBottom: i<Math.min(transactions.length,10)-1?'1px solid var(--border)':undefined,background:'none',border:'none',width:'100%',cursor:'pointer',transition:'all .2s',textAlign:'left' }} onMouseEnter={e=>{e.currentTarget.style.opacity='0.8'}} onMouseLeave={e=>{e.currentTarget.style.opacity='1'}}>
                     <IconBox icon={icon} bg={bgColor} />
                     <div style={{ flex:1,minWidth:0 }}>
                       <p style={{ fontWeight:600,fontSize:14,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{tx.description}</p>
@@ -1049,7 +1049,7 @@ export default function AppPage() {
                       <p style={{ fontWeight:700,fontSize:15,color: tx.type==='deposit'||tx.type==='cashback'?GREEN:RED }}>{tx.type==='deposit'||tx.type==='cashback'?'+':'-'}₦{Number(tx.amount).toLocaleString()}</p>
                       <StatusPill label={tx.status} type={tx.status === 'success' ? 'success' : tx.status === 'pending' ? 'pending' : 'failed'} />
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -1298,7 +1298,7 @@ export default function AppPage() {
                 const icon = isFailed ? Icons.alertCircle(RED, 20) : isDeposit ? Icons.arrowUp(GREEN, 20) : Icons.arrowDown(RED, 20);
                 const bgColor = isFailed ? 'rgba(255,59,48,.08)' : isDeposit ? 'rgba(48,209,88,.08)' : 'rgba(255,59,48,.08)';
                 return (
-                  <button key={tx.id} onClick={()=>{ if(tx.receiptData) { setReceipt(tx.receiptData as Record<string,unknown>); } }}
+                  <button key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt(tx.receipt as Record<string,unknown>); } }}
                     style={{ background:'var(--card)',borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,border:'1px solid var(--border)',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
                     onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)';e.currentTarget.style.transform='translateY(-1px)'}}
                     onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.04)';e.currentTarget.style.transform='translateY(0)'}}>
