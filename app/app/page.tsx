@@ -300,19 +300,19 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
               <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'24px' }}>
                 <div style={{ paddingBottom:'24px',borderBottom:'1px solid rgba(0,0,0,0.08)' }}>
                   <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Network</p>
-                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{data.network || 'N/A'}</p>
+                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{(data.network as string) || 'N/A'}</p>
                 </div>
                 <div style={{ paddingBottom:'24px',borderBottom:'1px solid rgba(0,0,0,0.08)' }}>
                   <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Data</p>
-                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{data.dataSize || 'N/A'}</p>
+                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{(data.dataSize as string) || 'N/A'}</p>
                 </div>
                 <div style={{ paddingBottom:'24px',borderBottom:'1px solid rgba(0,0,0,0.08)' }}>
                   <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Validity</p>
-                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{data.validity || 'N/A'}</p>
+                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{(data.validity as string) || 'N/A'}</p>
                 </div>
                 <div style={{ paddingBottom:'24px',borderBottom:'1px solid rgba(0,0,0,0.08)' }}>
                   <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Phone</p>
-                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{data.phoneNumber || 'N/A'}</p>
+                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{(data.phoneNumber as string) || 'N/A'}</p>
                 </div>
                 <div style={{ gridColumn:'1/-1',paddingBottom:'0' }}>
                   <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Reference</p>
