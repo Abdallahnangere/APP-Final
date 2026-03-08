@@ -361,6 +361,7 @@ export default function AppPage() {
   const [newPin, setNewPin] = useState('');
   const [confirmNewPin, setConfirmNewPin] = useState('');
   const [storedPhone, setStoredPhone] = useState('');
+  const [isReturningUserPIN, setIsReturningUserPIN] = useState(false);
 
   const authHeader = useCallback(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
 
@@ -383,17 +384,24 @@ export default function AppPage() {
       const saved = localStorage.getItem('sm_token');
       const savedUser = localStorage.getItem('sm_user');
       const phone = localStorage.getItem('sm_phone');
-      if (saved && savedUser) {
+      
+      // Returning user - require PIN verification
+      if (saved && savedUser && phone) {
         setToken(saved);
         setUser(JSON.parse(savedUser));
-        setStoredPhone(phone || '');
+        setStoredPhone(phone);
+        setLoginPhone(phone);
         setDark(JSON.parse(savedUser).theme === 'dark');
-        setScreen('home');
+        setIsReturningUserPIN(true);
+        setShowPin(true);
+        setScreen('login');
       } else if (phone) {
         setStoredPhone(phone);
         setLoginPhone(phone);
+        setIsReturningUserPIN(false);
         setScreen('login');
       } else {
+        setIsReturningUserPIN(false);
         setScreen('login');
       }
     }, 1800);
@@ -660,31 +668,55 @@ export default function AppPage() {
             <img src="/images/logo.png" alt="SaukiMart" style={{ width:64,height:64,borderRadius:16,objectFit:'cover',boxShadow:`0 8px 24px ${BLUE}40` }} />
           </div>
           
-          <h1 style={{ fontSize:32,fontWeight:800,color:'var(--text)',letterSpacing:-0.6,marginBottom:12,textAlign:'center' }}>Welcome Back</h1>
-          <p style={{ color:'var(--text-secondary)',fontSize:16,marginBottom:40,textAlign:'center',maxWidth:340 }}>Sign in to your SaukiMart account and manage your data and purchases seamlessly</p>
-          
-          {error && <div style={{ width:'100%',maxWidth:340,padding:'12px 16px',borderRadius:14,background:'rgba(255,59,48,.12)',border:`1px solid ${RED}30`,color:RED,fontSize:15,marginBottom:24,animation:'fadeUpScale .3s ease' }}>{error}</div>}
-          
-          <div style={{ width:'100%',maxWidth:340,marginBottom:20,background:'var(--card)',borderRadius:16,padding:20,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
-            <label style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',marginBottom:10,display:'block',textTransform:'uppercase',letterSpacing:.5 }}>Phone Number</label>
-            <input value={loginPhone} onChange={e=>setLoginPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
-              placeholder="08012345678" inputMode="numeric"
-              style={{ width:'100%',padding:'14px 14px',borderRadius:10,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:600,transition:'all .2s',outline:'none',boxSizing:'border-box' }} 
-              onFocus={e=>{ e.currentTarget.style.borderColor = BLUE; e.currentTarget.style.background = dark?'#2a2a3e':'#fff'; }}
-              onBlur={e=>{ e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-            />
-          </div>
-          
-          <button onClick={()=>{ if(loginPhone.length===11){ setShowPin(true); } else showError('Enter 11-digit phone number'); }}
-            disabled={loginPhone.length !== 11}
-            style={{ width:'100%',maxWidth:340,padding:'16px',borderRadius:12,background: loginPhone.length===11 ? `linear-gradient(135deg, ${BLUE}, ${TEAL})` : 'var(--card2)',color: loginPhone.length===11 ? '#fff' : 'var(--text-secondary)',fontSize:16,fontWeight:700,transition:'all .3s cubic-bezier(.16,.1,0,1)',marginBottom:20,boxShadow: loginPhone.length===11 ? `0 12px 32px ${BLUE}40` : 'none',cursor:loginPhone.length===11?'pointer':'not-allowed',transform: loginPhone.length===11?'translateY(0)':'translateY(0)',border:'none' }}>
-            Continue
-          </button>
-          
-          <p style={{ fontSize:15,color:'var(--text-secondary)' }}>
-            New to SaukiMart?{' '}
-            <button onClick={()=>setScreen('register')} style={{ color:BLUE,fontWeight:600,background:'none',border:'none',cursor:'pointer',fontSize:15 }}>Create Account</button>
-          </p>
+          {isReturningUserPIN ? (
+            <>
+              <h1 style={{ fontSize:32,fontWeight:800,color:'var(--text)',letterSpacing:-0.6,marginBottom:12,textAlign:'center' }}>Welcome Back!</h1>
+              <p style={{ color:'var(--text-secondary)',fontSize:16,marginBottom:40,textAlign:'center',maxWidth:340 }}>Enter your 4-digit PIN to access your account</p>
+              
+              <div style={{ width:'100%',maxWidth:340,marginBottom:28,background:'var(--card)',borderRadius:16,padding:20,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
+                <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',marginBottom:10,textTransform:'uppercase',letterSpacing:.5 }}>Phone Number</p>
+                <p style={{ fontSize:16,fontWeight:600,color:'var(--text)',padding:'14px 0' }}>{loginPhone}</p>
+              </div>
+
+              <button onClick={()=>{ setShowPin(true); }}
+                style={{ width:'100%',maxWidth:340,padding:'16px',borderRadius:12,background:`linear-gradient(135deg, ${BLUE}, ${TEAL})`,color:'#fff',fontSize:16,fontWeight:700,transition:'all .3s cubic-bezier(.16,.1,0,1)',marginBottom:20,boxShadow:`0 12px 32px ${BLUE}40`,cursor:'pointer',border:'none' }}>
+                Enter PIN
+              </button>
+
+              <button onClick={()=>{ setStoredPhone(''); setLoginPhone(''); setIsReturningUserPIN(false); localStorage.removeItem('sm_phone'); localStorage.removeItem('sm_token'); localStorage.removeItem('sm_user'); setToken(''); setUser(null); }}
+                style={{ fontSize:14,color:BLUE,fontWeight:600,background:'none',border:'none',cursor:'pointer' }}>
+                Use different phone number
+              </button>
+            </>
+          ) : (
+            <>
+              <h1 style={{ fontSize:32,fontWeight:800,color:'var(--text)',letterSpacing:-0.6,marginBottom:12,textAlign:'center' }}>Welcome Back</h1>
+              <p style={{ color:'var(--text-secondary)',fontSize:16,marginBottom:40,textAlign:'center',maxWidth:340 }}>Sign in to your SaukiMart account and manage your data and purchases seamlessly</p>
+              
+              {error && <div style={{ width:'100%',maxWidth:340,padding:'12px 16px',borderRadius:14,background:'rgba(255,59,48,.12)',border:`1px solid ${RED}30`,color:RED,fontSize:15,marginBottom:24,animation:'fadeUpScale .3s ease' }}>{error}</div>}
+              
+              <div style={{ width:'100%',maxWidth:340,marginBottom:20,background:'var(--card)',borderRadius:16,padding:20,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
+                <label style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',marginBottom:10,display:'block',textTransform:'uppercase',letterSpacing:.5 }}>Phone Number</label>
+                <input value={loginPhone} onChange={e=>setLoginPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
+                  placeholder="08012345678" inputMode="numeric"
+                  style={{ width:'100%',padding:'14px 14px',borderRadius:10,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:600,transition:'all .2s',outline:'none',boxSizing:'border-box' }} 
+                  onFocus={e=>{ e.currentTarget.style.borderColor = BLUE; e.currentTarget.style.background = dark?'#2a2a3e':'#fff'; }}
+                  onBlur={e=>{ e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-secondary)'; }}
+                />
+              </div>
+              
+              <button onClick={()=>{ if(loginPhone.length===11){ setShowPin(true); } else showError('Enter 11-digit phone number'); }}
+                disabled={loginPhone.length !== 11}
+                style={{ width:'100%',maxWidth:340,padding:'16px',borderRadius:12,background: loginPhone.length===11 ? `linear-gradient(135deg, ${BLUE}, ${TEAL})` : 'var(--card2)',color: loginPhone.length===11 ? '#fff' : 'var(--text-secondary)',fontSize:16,fontWeight:700,transition:'all .3s cubic-bezier(.16,.1,0,1)',marginBottom:20,boxShadow: loginPhone.length===11 ? `0 12px 32px ${BLUE}40` : 'none',cursor:loginPhone.length===11?'pointer':'not-allowed',transform: loginPhone.length===11?'translateY(0)':'translateY(0)',border:'none' }}>
+                Continue
+              </button>
+              
+              <p style={{ fontSize:15,color:'var(--text-secondary)' }}>
+                New to SaukiMart?{' '}
+                <button onClick={()=>setScreen('register')} style={{ color:BLUE,fontWeight:600,background:'none',border:'none',cursor:'pointer',fontSize:15 }}>Create Account</button>
+              </p>
+            </>
+          )}
         </div>
         
         <p style={{ textAlign:'center',fontSize:13,color:'var(--text-secondary)',padding:'0 24px 32px',position:'relative',zIndex:1 }}>
@@ -850,8 +882,8 @@ export default function AppPage() {
             <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20 }}>
               <div>
                 <p style={{ color:'var(--text-secondary)',fontSize:13,fontWeight:600,letterSpacing:.5,marginBottom:8 }}>AVAILABLE BALANCE</p>
-                <div style={{ display:'flex',alignItems:'flex-start',gap:'4px' }}>
-                  <span style={{ fontSize:'18px',opacity:.7,marginTop:'2px' }}>₦</span>
+                <div style={{ display:'flex',alignItems:'flex-start',gap:'2px' }}>
+                  <span style={{ fontSize:'28px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>₦</span>
                   <span style={{ fontSize:'28px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>{(user.walletBalance/1).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                 </div>
               </div>
