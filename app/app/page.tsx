@@ -131,7 +131,14 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', su
     if (pin.length >= 4) return;
     const np = pin + d;
     setPin(np);
-    if (np.length === 4) setTimeout(() => onComplete(np), 120);
+    if (np.length === 4) {
+      // Blur keyboard on 4th digit
+      if (typeof window !== 'undefined') {
+        const activeElement = document.activeElement as HTMLElement;
+        if (activeElement) activeElement.blur();
+      }
+      setTimeout(() => onComplete(np), 120);
+    }
   };
   const del = () => setPin(p => p.slice(0, -1));
 
@@ -353,22 +360,39 @@ export default function AppPage() {
   const [purchaseIdempotencyKey, setPurchaseIdempotencyKey] = useState<string|null>(null);
   const [newPin, setNewPin] = useState('');
   const [confirmNewPin, setConfirmNewPin] = useState('');
+  const [storedPhone, setStoredPhone] = useState('');
 
   const authHeader = useCallback(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
   const showError = (msg: string) => { setError(msg); setTimeout(() => setError(''), 4000); };
 
+  // Back Button Prevention
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href);
+    const handleBackButton = () => {
+      window.history.pushState(null, '', window.location.href);
+    };
+    window.addEventListener('popstate', handleBackButton);
+    return () => window.removeEventListener('popstate', handleBackButton);
+  }, []);
+
   // Splash
   useEffect(() => {
     setTimeout(() => {
       const saved = localStorage.getItem('sm_token');
       const savedUser = localStorage.getItem('sm_user');
+      const phone = localStorage.getItem('sm_phone');
       if (saved && savedUser) {
         setToken(saved);
         setUser(JSON.parse(savedUser));
+        setStoredPhone(phone || '');
         setDark(JSON.parse(savedUser).theme === 'dark');
         setScreen('home');
+      } else if (phone) {
+        setStoredPhone(phone);
+        setLoginPhone(phone);
+        setScreen('login');
       } else {
         setScreen('login');
       }
@@ -404,6 +428,29 @@ export default function AppPage() {
     if (screen === 'home') { loadHomeData(); refreshUser(); }
   }, [screen, loadHomeData, refreshUser]);
 
+  // Real-time wallet balance refresh (no caching)
+  useEffect(() => {
+    if (screen !== 'home' || !token) return;
+    
+    const refreshInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/user', { 
+          headers: authHeader(),
+          cache: 'no-store' as RequestCache
+        });
+        if (res.ok) {
+          const u = await res.json();
+          setUser(u);
+          localStorage.setItem('sm_user', JSON.stringify(u));
+        }
+      } catch (err) {
+        console.error('Balance refresh error:', err);
+      }
+    }, 5000); // Refresh every 5 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [screen, token, authHeader]);
+
   /* ── REGISTER ── */
   const handleRegister = async () => {
     if (!agreed) return;
@@ -416,6 +463,8 @@ export default function AppPage() {
       setUser(data.user);
       localStorage.setItem('sm_token', data.token);
       localStorage.setItem('sm_user', JSON.stringify(data.user));
+      localStorage.setItem('sm_phone', regForm.phone);
+      setStoredPhone(regForm.phone);
       setScreen('registered');
     } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Registration failed'); }
     finally { setLoading(false); }
@@ -433,6 +482,8 @@ export default function AppPage() {
       setDark(data.user.theme === 'dark');
       localStorage.setItem('sm_token', data.token);
       localStorage.setItem('sm_user', JSON.stringify(data.user));
+      localStorage.setItem('sm_phone', loginPhone);
+      setStoredPhone(loginPhone);
       setScreen('home');
     } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Login failed'); }
     finally { setLoading(false); }
@@ -800,8 +851,8 @@ export default function AppPage() {
               <div>
                 <p style={{ color:'var(--text-secondary)',fontSize:13,fontWeight:600,letterSpacing:.5,marginBottom:8 }}>AVAILABLE BALANCE</p>
                 <div style={{ display:'flex',alignItems:'flex-start',gap:'4px' }}>
-                  <span style={{ fontSize:'24px',opacity:.7,marginTop:'4px' }}>₦</span>
-                  <span style={{ fontSize:'44px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>{(user.walletBalance/1).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                  <span style={{ fontSize:'18px',opacity:.7,marginTop:'2px' }}>₦</span>
+                  <span style={{ fontSize:'28px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>{(user.walletBalance/1).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                 </div>
               </div>
               <IconBox icon={Icons.wallet(BLUE, 28)} bg={'rgba(0,113,227,.10)'} />

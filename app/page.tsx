@@ -106,6 +106,12 @@ function Hero({ plans }: { plans: Plan[] }) {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#007AFF'; (e.currentTarget as HTMLElement).style.background = 'rgba(0,122,255,.04)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#E5E5EA'; (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,.025)'; }}
             >Earn as Agent <span>→</span></a>
+            <a href="https://play.google.com/store/apps/details?id=online.saukimart.twa" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, transition: 'all .3s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.05)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
+            >
+              <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" style={{ height: 80, width: 'auto' }} />
+            </a>
           </div>
           <div style={{ display: 'flex', gap: 48 }}>
             {[['10K+','Active Users'],['₦50M+','Processed'],['<3s','Fast Delivery']].map(([v, l]) => (
