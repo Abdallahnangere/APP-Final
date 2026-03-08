@@ -14,7 +14,9 @@ export async function GET(req: NextRequest) {
     FROM sim_activations sa JOIN users u ON sa.user_id = u.id
     ORDER BY sa.created_at DESC
   `;
-  return NextResponse.json(activations);
+  const response = NextResponse.json(activations);
+  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  return response;
 }
 
 export async function PATCH(req: NextRequest) {

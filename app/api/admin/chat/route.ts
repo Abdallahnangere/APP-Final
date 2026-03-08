@@ -15,7 +15,9 @@ export async function GET(req: NextRequest) {
   if (userId) {
     const msgs = await sql`SELECT * FROM chats WHERE user_id=${userId} ORDER BY created_at ASC`;
     await sql`UPDATE chats SET is_read=TRUE WHERE user_id=${userId} AND sender='user'`;
-    return NextResponse.json(msgs);
+    const response = NextResponse.json(msgs);
+    response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+    return response;
   }
 
   // List all users with unread counts
@@ -26,7 +28,9 @@ export async function GET(req: NextRequest) {
     FROM users u LEFT JOIN chats c ON c.user_id=u.id
     GROUP BY u.id ORDER BY last_message DESC NULLS LAST
   `;
-  return NextResponse.json(users);
+  const response = NextResponse.json(users);
+  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  return response;
 }
 
 export async function POST(req: NextRequest) {

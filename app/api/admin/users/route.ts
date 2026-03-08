@@ -15,7 +15,9 @@ export async function GET(req: NextRequest) {
   const users = q
     ? await sql`SELECT id, first_name, last_name, phone, wallet_balance, cashback_balance, referral_bonus, flw_account_number, flw_bank_name, is_banned, created_at FROM users WHERE first_name ILIKE ${'%' + q + '%'} OR last_name ILIKE ${'%' + q + '%'} OR phone ILIKE ${'%' + q + '%'} ORDER BY created_at DESC LIMIT 50`
     : await sql`SELECT id, first_name, last_name, phone, wallet_balance, cashback_balance, referral_bonus, flw_account_number, flw_bank_name, is_banned, created_at FROM users ORDER BY created_at DESC LIMIT 100`;
-  return NextResponse.json(users);
+  const response = NextResponse.json(users);
+  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  return response;
 }
 
 export async function PATCH(req: NextRequest) {

@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
     WHERE t.status='success' ORDER BY t.created_at DESC LIMIT 20
   `;
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     overview: {
       totalUsers: parseInt(users.total),
       activeToday: parseInt(activeToday.c),
@@ -68,4 +68,6 @@ export async function GET(req: NextRequest) {
     recentTransactions: recentTxns,
     salesData: salesData.slice(0, 100),
   });
+  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  return response;
 }

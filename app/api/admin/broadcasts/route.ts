@@ -10,7 +10,9 @@ async function auth(req: NextRequest) {
 export async function GET(req: NextRequest) {
   if (!await auth(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const rows = await sql`SELECT * FROM broadcasts ORDER BY created_at DESC`;
-  return NextResponse.json(rows);
+  const response = NextResponse.json(rows);
+  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  return response;
 }
 
 export async function POST(req: NextRequest) {

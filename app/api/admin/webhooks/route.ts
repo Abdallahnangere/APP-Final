@@ -12,5 +12,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const limit = parseInt(searchParams.get('limit') || '50');
   const logs = await sql`SELECT id, event, payload, processed, created_at FROM webhooks_log ORDER BY created_at DESC LIMIT ${limit}`;
-  return NextResponse.json(logs);
+  const response = NextResponse.json(logs);
+  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  return response;
 }

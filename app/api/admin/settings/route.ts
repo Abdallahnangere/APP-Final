@@ -14,7 +14,9 @@ export async function GET(req: NextRequest) {
   settings.forEach((s: Record<string,string>) => { map[s.key] = s.value; });
   // Also include webhook log
   const webhooks = await sql`SELECT id, event, payload, processed, created_at FROM webhooks_log ORDER BY created_at DESC LIMIT 50`;
-  return NextResponse.json({ settings: map, webhooks });
+  const response = NextResponse.json({ settings: map, webhooks });
+  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  return response;
 }
 
 export async function PATCH(req: NextRequest) {

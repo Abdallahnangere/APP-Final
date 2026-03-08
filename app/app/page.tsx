@@ -500,7 +500,7 @@ export default function AppPage() {
       } catch (err) {
         console.error('Balance refresh error:', err);
       }
-    }, 5000); // Refresh every 5 seconds
+    }, 2000); // Refresh every 2 seconds for instant updates
 
     return () => clearInterval(refreshInterval);
   }, [screen, token, authHeader]);
@@ -612,6 +612,7 @@ export default function AppPage() {
       setReceipt({ ...data.receipt, type:'product' });
       setPurchaseIdempotencyKey(null); // Clear for next purchase
       await refreshUser();
+      await loadHomeData();
       showToast('🎉 Purchase successful!');
     } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Purchase failed'); }
     finally { setLoading(false); }
@@ -633,6 +634,7 @@ export default function AppPage() {
       setSimActivations(prev => [data.activation, ...prev]);
       setSimSerial(''); setSimFront(null); setSimBack(null);
       await refreshUser();
+      await loadHomeData();
     } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Failed to submit'); }
     finally { setLoading(false); }
   };
