@@ -10,7 +10,7 @@ type Transaction = { id: string; user_id: string; type: string; description: str
 type Broadcast = { id: string; message: string; is_active: boolean; created_at: string; };
 type Webhook = { id: string; event: string; payload: Record<string,unknown>; created_at: string; };
 type SimAct = { id: string; user_id: string; serial_number: string; front_image_url: string; back_image_url: string; status: string; created_at: string; first_name?: string; last_name?: string; phone?: string; };
-type ChatMsg = { id: string; user_id: string; sender: string; message: string; created_at: string; user_name?: string; };
+type ChatMsg = { id: string; user_id: string; sender: string; message: string; created_at: string; user_name?: string; delivered_at?: string; read_at?: string; };
 
 const GlobalStyle = () => (
   <style>{`

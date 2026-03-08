@@ -17,7 +17,7 @@ type Transaction = {
 type Deposit = { id: string; amount: number; senderName: string; createdAt: string; narration: string; };
 type Plan = { id: string; network: string; networkId: number; planId: number; dataSize: string; validity: string; price: number; };
 type Product = { id: string; name: string; description: string; price: number; imageUrl: string; imageBase64?: string; inStock: boolean; shippingTerms: string; pickupTerms: string; category: string; };
-type ChatMsg = { id: string; sender: string; message: string; createdAt: string; };
+type ChatMsg = { id: string; sender: string; message: string; created_at: string; delivered_at?: string; read_at?: string; };
 type SimActivation = { id: string; status: string; createdAt: string; serialNumber?: string; };
 
 /* ─────────────── CONSTANTS ─────────────── */
@@ -475,6 +475,35 @@ export default function AppPage() {
     }
   }, [token, authHeader]);
 
+  /* ── LOAD PLANS ── */
+  const loadPlans = useCallback(async (network: string) => {
+    const res = await fetch(`/api/data-plans?network=${network}`, { cache: 'no-store' as RequestCache });
+    const data = await res.json();
+    setPlans(Array.isArray(data) ? data : []);
+  }, []);
+
+  /* ── LOAD PRODUCTS ── */
+  const loadProducts = useCallback(async () => {
+    const res = await fetch(`/api/products`, { cache: 'no-store' as RequestCache });
+    const data = await res.json();
+    setProducts(Array.isArray(data) ? data : []);
+  }, []);
+
+  /* ── CHAT SESSION ── */
+  const loadChatSession = useCallback(async (forceNew = false) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/chat${forceNew ? '?new=true' : ''}`, { headers: authHeader(), cache: 'no-store' as RequestCache });
+      if (!res.ok) return;
+      const data = await res.json();
+      setChatSession(data.session || null);
+      setChatMessages(Array.isArray(data.messages) ? data.messages : []);
+      setIdlePrompted(false);
+      setChatBanner('');
+    } catch { /* silent */ }
+  }, [token, authHeader]);
+
+
   useEffect(() => {
     if (screen === 'home') { loadHomeData(); refreshUser(); }
   }, [screen, loadHomeData, refreshUser]);
@@ -525,14 +554,14 @@ export default function AppPage() {
     if (screen === 'store') {
       loadProducts();
     }
-  }, [screen]);
+  }, [screen, loadProducts]);
 
   // Auto-load data plans when data-plans screen opens
   useEffect(() => {
     if (screen === 'data-plans' && selectedNetwork?.name) {
       loadPlans(selectedNetwork.name);
     }
-  }, [screen, selectedNetwork?.name]);
+  }, [screen, selectedNetwork?.name, loadPlans]);
 
   // Real-time chat via Server-Sent Events
   useEffect(() => {
@@ -756,34 +785,6 @@ export default function AppPage() {
     else if (pinAction === 'buy-product') handleBuyProduct(pin);
     else if (pinAction === 'sim-pay') handleSimPay(pin);
   };
-
-  /* ── LOAD PLANS ── */
-  const loadPlans = async (network: string) => {
-    const res = await fetch(`/api/data-plans?network=${network}`, { cache: 'no-store' as RequestCache });
-    const data = await res.json();
-    setPlans(Array.isArray(data) ? data : []);
-  };
-
-  /* ── LOAD PRODUCTS ── */
-  const loadProducts = async () => {
-    const res = await fetch(`/api/products`, { cache: 'no-store' as RequestCache });
-    const data = await res.json();
-    setProducts(Array.isArray(data) ? data : []);
-  };
-
-  /* ── CHAT SESSION ── */
-  const loadChatSession = useCallback(async (forceNew = false) => {
-    if (!token) return;
-    try {
-      const res = await fetch(`/api/chat${forceNew ? '?new=true' : ''}`, { headers: authHeader(), cache: 'no-store' as RequestCache });
-      if (!res.ok) return;
-      const data = await res.json();
-      setChatSession(data.session || null);
-      setChatMessages(Array.isArray(data.messages) ? data.messages : []);
-      setIdlePrompted(false);
-      setChatBanner('');
-    } catch { /* silent */ }
-  }, [token, authHeader]);
 
   const sendChat = async () => {
     if (!chatInput.trim() || !token) return;
@@ -1046,7 +1047,7 @@ export default function AppPage() {
         { id:'chat', label:'Chat', icon: Icons.messageSquare(BLUE, 24) },
         { id:'profile', label:'Account', icon: Icons.user(BLUE, 24) },
       ].map(item => (
-        <button key={item.id} onClick={()=>{ if(item.id==='chat') loadChats(); setScreen(item.id as typeof screen); }}
+        <button key={item.id} onClick={()=>{ if(item.id==='chat') loadChatSession(); setScreen(item.id as typeof screen); }}
           style={{ padding:'12px 0 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,background:'none',borderTop: active===item.id ? `3px solid ${BLUE}` : 'none',paddingTop: active===item.id ? '9px' : '12px',transition:'all .2s',opacity: active===item.id ? 1 : 0.65,cursor:'pointer' }}
           onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}}
           onMouseLeave={e=>{e.currentTarget.style.opacity = active===item.id ? '1' : '0.65'}}>
@@ -1790,7 +1791,7 @@ export default function AppPage() {
                   <div style={{ maxWidth:'82%',padding:'14px 16px',borderRadius:18,background:bubbleColor,color:textColor,fontSize:15,lineHeight:1.5,boxShadow:isUser?'0 12px 32px rgba(0,0,0,.25)':'0 6px 18px rgba(0,0,0,.12)',border }}>
                     {msg.message}
                     <div style={{ marginTop:8,display:'flex',justifyContent:'space-between',alignItems:'center' }}>
-                      <span style={{ fontSize:11,opacity:.7 }}>{new Date(msg.createdAt).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</span>
+                      <span style={{ fontSize:11,opacity:.7 }}>{new Date(msg.created_at).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</span>
                       {isUser && (
                         <span style={{ fontSize:11,opacity:.7,marginLeft:10 }}>{read ? 'Read' : delivered ? 'Delivered' : 'Sent'}</span>
                       )}
