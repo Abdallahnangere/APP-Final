@@ -113,6 +113,7 @@ const GlobalStyle = ({ dark }: { dark: boolean }) => (
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
     @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
     @keyframes floatUp{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-20px);opacity:0}}
+    @keyframes typing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-10px)}}
     .slide-up{animation:slideUp .32s cubic-bezier(.32,.72,0,1) both}
     .fade-in{animation:fadeIn .2s ease both}
     .fade-up-scale{animation:fadeUpScale .4s cubic-bezier(.16,.1,0,1) both}
@@ -827,6 +828,17 @@ export default function AppPage() {
     
     const messageToSend = chatInput.trim();
     setChatInput(''); // Clear input immediately
+    
+    // Optimistic update - show user message immediately
+    const optimisticUserMsg = {
+      id: `temp-${Date.now()}`,
+      sender: 'user',
+      message: messageToSend,
+      created_at: new Date().toISOString(),
+      delivered_at: null,
+      read_at: null
+    };
+    setChatMessages(prev => [...prev, optimisticUserMsg as ChatMsg]);
     setAiTyping(true);
     
     try {
@@ -838,19 +850,26 @@ export default function AppPage() {
       });
       if (!res.ok) {
         const errData = await res.json();
+        // Remove optimistic message on error
+        setChatMessages(prev => prev.filter(m => m.id !== optimisticUserMsg.id));
         showError(errData.error || 'Failed to send message');
         return;
       }
       const data = await res.json();
       if (data.session) setChatSession(data.session);
-      if (Array.isArray(data.messages)) setChatMessages(data.messages);
+      // Replace with actual messages from API
+      if (Array.isArray(data.messages)) {
+        setChatMessages(data.messages);
+      }
     } catch (err: unknown) { 
       const msg = err instanceof Error ? err.message : 'Error sending message';
       console.error('Chat send error:', msg);
+      // Remove optimistic message on error
+      setChatMessages(prev => prev.filter(m => m.id !== optimisticUserMsg.id));
       showError(msg);
     }
     finally {
-      setTimeout(() => setAiTyping(false), 600);
+      setTimeout(() => setAiTyping(false), 800);
     }
   }, [chatInput, token, authHeader, showError]);
 
@@ -1755,19 +1774,19 @@ export default function AppPage() {
       <>
         <GlobalStyle dark={dark} />
         <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
-          <div style={{ padding:'56px 16px 14px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12 }}>
+          <div style={{ padding:'56px 16px 14px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,background:'var(--card)',backdropFilter:'blur(10px)' }}>
             <div style={{ display:'flex',alignItems:'center',gap:12 }}>
-              <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:600,background:'none',border:'none',cursor:'pointer' }}>← Back</button>
+              <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:600,background:'none',border:'none',cursor:'pointer',padding:'6px 8px' }}>← Back</button>
               <div>
-                <p style={{ fontSize:16,fontWeight:700,color:'var(--text)' }}>Sauki Support</p>
-                <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:3,fontWeight:600 }}>{sessionStatus === 'agent_active' ? 'Agent is here' : 'Sauki AI is ready to assist'}</p>
+                <p style={{ fontSize:16,fontWeight:800,color:'var(--text)',letterSpacing:-0.3 }}>Sauki Support</p>
+                <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:2,fontWeight:600 }}>{sessionStatus === 'agent_active' ? '🟢 Agent is here' : agentRequired ? '🟠 Connecting...' : '💬 Ready to help'}</p>
               </div>
             </div>
-            <button onClick={()=>loadChatSession(true)} style={{ fontSize:12,fontWeight:700,color:BLUE,background:'rgba(0,113,227,.12)',border:'1px solid rgba(0,113,227,.2)',borderRadius:14,padding:'8px 12px',cursor:'pointer' }}>New Session</button>
+            <button onClick={()=>loadChatSession(true)} style={{ fontSize:12,fontWeight:700,color:'#fff',background:BLUE,border:'none',borderRadius:12,padding:'10px 14px',cursor:'pointer',transition:'all .2s' }} onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}} onMouseLeave={e=>{e.currentTarget.style.opacity='1'}}>New Chat</button>
           </div>
 
           {statusBanner && (
-            <div style={{ padding:'10px 16px',background:'rgba(255,255,255,.06)',borderBottom:'1px solid var(--border)',textAlign:'center',fontSize:13,fontWeight:700,color:'var(--text)',position:'relative' }}>
+            <div style={{ padding:'12px 16px',background:agentRequired?'rgba(255,152,0,.1)':'rgba(52,199,89,.1)',borderBottom:'1px solid var(--border)',textAlign:'center',fontSize:13,fontWeight:700,color:'var(--text)' }}>
               {statusBanner}
             </div>
           )}
@@ -1785,22 +1804,24 @@ export default function AppPage() {
               const isUser = msg.sender === 'user';
               const isAgent = msg.sender === 'agent';
               const isAI = msg.sender === 'ai';
-              const bubbleColor = isUser ? 'linear-gradient(135deg, #00C6FF, #0071E3)' : isAgent ? 'linear-gradient(135deg, #00D1B2, #0E7F61)' : 'rgba(255,255,255,.08)';
+              const bubbleColor = isUser ? 'linear-gradient(135deg, #0084FF 0%, #0066CC 100%)' : isAgent ? 'linear-gradient(135deg, #34C759 0%, #0E7F61 100%)' : 'rgba(255,255,255,.12)';
               const textColor = isUser ? '#fff' : '#F5F5F7';
               const align = isUser ? 'flex-end' : 'flex-start';
-              const border = isUser ? 'none' : '1px solid rgba(255,255,255,.12)';
+              const border = isUser ? 'none' : '1px solid rgba(255,255,255,.15)';
 
               const delivered = !!msg.delivered_at;
               const read = !!msg.read_at;
 
               return (
-                <div key={msg.id} style={{ display:'flex',justifyContent:align,animation:'fadeUpScale .25s ease',opacity:0,animationFillMode:'forwards' }}>
-                  <div style={{ maxWidth:'82%',padding:'14px 16px',borderRadius:18,background:bubbleColor,color:textColor,fontSize:15,lineHeight:1.5,boxShadow:isUser?'0 12px 32px rgba(0,0,0,.25)':'0 6px 18px rgba(0,0,0,.12)',border }}>
+                <div key={msg.id} style={{ display:'flex',justifyContent:align,animation:'fadeUpScale .3s cubic-bezier(0.16, 1, 0.3, 1)',opacity:0,animationFillMode:'forwards' }}>
+                  <div style={{ maxWidth:'85%',padding:'12px 16px',borderRadius:isUser?'20px 4px 20px 20px':'20px 20px 4px 20px',background:bubbleColor,color:textColor,fontSize:15,lineHeight:1.6,boxShadow:isUser?'0 10px 28px rgba(0,132,255,.25)':'0 6px 16px rgba(52,199,89,.15)',border,whiteSpace:'pre-wrap',overflowWrap:'break-word',wordBreak:'break-word' }}>
                     {msg.message}
-                    <div style={{ marginTop:8,display:'flex',justifyContent:'space-between',alignItems:'center' }}>
-                      <span style={{ fontSize:11,opacity:.7 }}>{new Date(msg.created_at).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</span>
+                    <div style={{ marginTop:6,display:'flex',justifyContent:isUser?'flex-end':'flex-start',alignItems:'center',gap:6 }}>
+                      <span style={{ fontSize:12,opacity:.8,fontWeight:500 }}>{new Date(msg.created_at).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</span>
                       {isUser && (
-                        <span style={{ fontSize:11,opacity:.7,marginLeft:10 }}>{read ? 'Read' : delivered ? 'Delivered' : 'Sent'}</span>
+                        <span style={{ fontSize:10,opacity:.7 }}>
+                          {read ? '✓✓' : delivered ? '✓✓' : '✓'}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -1809,12 +1830,12 @@ export default function AppPage() {
             })}
 
             {showTyping && (
-              <div style={{ display:'flex',justifyContent:'flex-start',gap:12,alignItems:'center',padding:'6px 12px',borderRadius:18,background:'rgba(255,255,255,.08)',width:'fit-content',maxWidth:'80%' }}>
-                <div style={{ width:10,height:10,borderRadius:'50%',background:'#00D1B2' }} />
-                <span style={{ fontSize:13,color:'var(--text-secondary)' }}>Sauki AI is typing</span>
-                <span style={{ width:32,display:'flex',gap:4,alignItems:'center' }}>
+              <div style={{ display:'flex',justifyContent:'flex-start',gap:10,alignItems:'center',padding:'12px 16px',borderRadius:'20px 20px 4px 20px',background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.12)',width:'fit-content',maxWidth:'80%',animation:'fadeUpScale .3s cubic-bezier(0.16, 1, 0.3, 1)',opacity:0,animationFillMode:'forwards' }}>
+                <div style={{ width:12,height:12,borderRadius:'50%',background:'#34C759' }} />
+                <span style={{ fontSize:14,color:'var(--text-secondary)',fontWeight:500 }}>Sauki AI is typing</span>
+                <span style={{ width:36,display:'flex',gap:5,alignItems:'center',marginLeft:4 }}>
                   {[0,1,2].map(i=> (
-                    <span key={i} style={{ width:6,height:6,borderRadius:3,background:'var(--text-secondary)',opacity:0.7,animation:`pulse 1s ${i*0.1}s infinite` }} />
+                    <span key={i} style={{ width:6,height:6,borderRadius:'50%',background:'var(--text-secondary)',opacity:0.6,animation:`typing .6s ${i*0.12}s infinite` }} />
                   ))}
                 </span>
               </div>
@@ -1823,20 +1844,22 @@ export default function AppPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          <div style={{ padding:'12px 16px',borderTop:'1px solid rgba(255,255,255,.08)',display:'flex',gap:10,background:'rgba(0,0,0,.05)' }}>
-            <input value={chatInput} onChange={e=>{
+          <div style={{ padding:'16px',borderTop:'1px solid rgba(255,255,255,.08)',display:'flex',gap:12,background:'rgba(0,0,0,.05)',alignItems:'flex-end' }}>
+            <input ref={inputRef} value={chatInput} onChange={e=>{
                 setChatInput(e.target.value);
                 setChatTyping(true);
                 setTimeout(()=>setChatTyping(false), 1200);
               }}
-              onKeyDown={e=>{ if(e.key==='Enter') sendChat(); }}
+              onKeyDown={e=>{ if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
               placeholder="Type a message…"
-              style={{ flex:1,padding:'14px 16px',borderRadius:18,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',color:'var(--text)',fontSize:15 }} />
-            <button onClick={sendChat} style={{ width:48,height:48,borderRadius:16,background:chatInput.trim()?BLUE:'rgba(0,113,227,.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'#fff',fontSize:20,fontWeight:700,border:'none',cursor:chatInput.trim()?'pointer':'not-allowed',transition:'transform .2s' }}
+              style={{ flex:1,padding:'14px 16px',borderRadius:20,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',color:'var(--text)',fontSize:15,outline:'none',transition:'all .2s',boxShadow:'0 0 0 2px transparent' }}
+              onFocus={(e)=>{ e.currentTarget.style.borderColor='rgba(0,113,227,.4)'; e.currentTarget.style.boxShadow='0 0 0 2px rgba(0,113,227,.15)'; e.currentTarget.style.background='rgba(255,255,255,.12)'; }}
+              onBlur={(e)=>{ e.currentTarget.style.borderColor='rgba(255,255,255,.15)'; e.currentTarget.style.boxShadow='0 0 0 2px transparent'; e.currentTarget.style.background='rgba(255,255,255,.08)'; }} />
+            <button onClick={sendChat} style={{ width:52,height:52,borderRadius:18,background:chatInput.trim()?BLUE:'rgba(0,113,227,.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'#fff',fontSize:22,fontWeight:700,border:'none',cursor:chatInput.trim()?'pointer':'not-allowed',transition:'all .2s',boxShadow:chatInput.trim()?'0 8px 20px rgba(0,113,227,.3)':'none' }}
               disabled={!chatInput.trim()}
-              onMouseEnter={e=>{ if(chatInput.trim()) e.currentTarget.style.transform='scale(1.05)'; }}
-              onMouseLeave={e=>{ e.currentTarget.style.transform='scale(1)'; }}>
-              →
+              onMouseEnter={e=>{ if(chatInput.trim()) { e.currentTarget.style.transform='scale(1.08)'; e.currentTarget.style.boxShadow='0 12px 28px rgba(0,113,227,.4)'; } }}
+              onMouseLeave={e=>{ e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow=chatInput.trim()?'0 8px 20px rgba(0,113,227,.3)':'none'; }}>
+              ⏎
             </button>
           </div>
         </div>
