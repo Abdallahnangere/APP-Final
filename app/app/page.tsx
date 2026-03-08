@@ -563,56 +563,82 @@ export default function AppPage() {
     }
   }, [screen, selectedNetwork?.name, loadPlans]);
 
-  // Real-time chat via Server-Sent Events
+  // Real-time chat via Server-Sent Events with fallback polling
   useEffect(() => {
     if (screen !== 'chat' || !token) return;
 
-    // Ensure initial content is loaded quickly
+    // Initial load
     loadChatSession();
+    let isMounted = true;
+    let pollInterval: NodeJS.Timeout | null = null;
 
-    const url = `/api/chat/stream?token=${encodeURIComponent(token)}`;
-    const source = new EventSource(url);
+    // Try SSE first, fallback to polling if it fails
+    try {
+      const url = `/api/chat/stream?token=${encodeURIComponent(token)}`;
+      const source = new EventSource(url);
 
-    source.addEventListener('init', (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data);
-        setChatSession(data.session || null);
-        setChatMessages(Array.isArray(data.messages) ? data.messages : []);
-      } catch {
-        // ignore parse errors
+      source.addEventListener('init', (event: MessageEvent) => {
+        if (!isMounted) return;
+        try {
+          const data = JSON.parse(event.data);
+          if (data.session) setChatSession(data.session);
+          if (Array.isArray(data.messages)) setChatMessages(data.messages);
+          console.log('[SSE] init received:', data.messages?.length || 0, 'messages');
+        } catch (err) {
+          console.error('[SSE] init parse error:', err);
+        }
+      });
+
+      source.addEventListener('session', (event: MessageEvent) => {
+        if (!isMounted) return;
+        try {
+          const data = JSON.parse(event.data);
+          setChatSession(data);
+        } catch (err) {
+          console.error('[SSE] session parse error:', err);
+        }
+      });
+
+      source.addEventListener('messages', (event: MessageEvent) => {
+        if (!isMounted) return;
+        try {
+          const msgs = JSON.parse(event.data) as ChatMsg[];
+          console.log('[SSE] messages received:', msgs.length);
+          setChatMessages(prev => {
+            const existingIds = new Set(prev.map(m => m.id));
+            const additional = msgs.filter(m => !existingIds.has(m.id));
+            return additional.length > 0 ? [...prev, ...additional] : prev;
+          });
+        } catch (err) {
+          console.error('[SSE] messages parse error:', err);
+        }
+      });
+
+      source.onerror = () => {
+        console.warn('[SSE] Connection error, falling back to polling');
+        source.close();
+        // Fallback to polling if SSE fails
+        if (pollInterval === null && isMounted) {
+          pollInterval = setInterval(() => loadChatSession(), 3000);
+        }
+      };
+
+      return () => {
+        isMounted = false;
+        source.close();
+        if (pollInterval) clearInterval(pollInterval);
+      };
+    } catch (err) {
+      console.error('[SSE] Setup error, using polling:', err);
+      // Fallback to polling if SSE setup fails
+      if (isMounted) {
+        pollInterval = setInterval(() => loadChatSession(), 3000);
       }
-    });
-
-    source.addEventListener('session', (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data);
-        setChatSession(data);
-      } catch {
-        // ignore
-      }
-    });
-
-    source.addEventListener('messages', (event: MessageEvent) => {
-      try {
-        const msgs = JSON.parse(event.data) as ChatMsg[];
-        setChatMessages(prev => {
-          const existingIds = new Set(prev.map(m => m.id));
-          const additional = msgs.filter(m => !existingIds.has(m.id));
-          return [...prev, ...additional];
-        });
-      } catch {
-        // ignore
-      }
-    });
-
-    source.onerror = () => {
-      // Keep the connection alive; errors will auto-reconnect.
-      // If needed, implement fallback polling here.
-    };
-
-    return () => {
-      source.close();
-    };
+      return () => {
+        isMounted = false;
+        if (pollInterval) clearInterval(pollInterval);
+      };
+    }
   }, [screen, token, loadChatSession]);
 
   // Scroll to bottom when new messages arrive
@@ -786,22 +812,37 @@ export default function AppPage() {
     else if (pinAction === 'sim-pay') handleSimPay(pin);
   };
 
-  const sendChat = async () => {
+  const sendChat = useCallback(async () => {
     if (!chatInput.trim() || !token) return;
+    
+    const messageToSend = chatInput.trim();
+    setChatInput(''); // Clear input immediately
     setAiTyping(true);
-    const body = { message: chatInput.trim() };
-    setChatInput('');
+    
     try {
-      const res = await fetch('/api/chat', { method: 'POST', headers: authHeader(), body: JSON.stringify(body) });
-      if (!res.ok) throw new Error('Failed to send');
+      const res = await fetch('/api/chat', { 
+        method: 'POST', 
+        headers: authHeader(), 
+        body: JSON.stringify({ message: messageToSend }),
+        cache: 'no-store' as RequestCache
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        showError(errData.error || 'Failed to send message');
+        return;
+      }
       const data = await res.json();
-      setChatSession(data.session || null);
-      setChatMessages(Array.isArray(data.messages) ? data.messages : []);
-    } catch { /* silent */ }
+      if (data.session) setChatSession(data.session);
+      if (Array.isArray(data.messages)) setChatMessages(data.messages);
+    } catch (err: unknown) { 
+      const msg = err instanceof Error ? err.message : 'Error sending message';
+      console.error('Chat send error:', msg);
+      showError(msg);
+    }
     finally {
       setTimeout(() => setAiTyping(false), 600);
     }
-  };
+  }, [chatInput, token, authHeader, showError]);
 
 
   /* ── CHANGE PIN ── */
