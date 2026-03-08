@@ -1,18 +1,50 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'SaukiMart — Data & Devices',
-  description: 'Buy MTN, Airtel & Glo data bundles instantly. Quality devices delivered to your door.',
+  title: 'SaukiMart — Instant Data, Airtime & Devices',
+  description: 'Buy MTN, Airtel & Glo data bundles instantly. Quality devices, competitive prices, trusted service.',
+  keywords: 'data bundle, MTN data, Airtel data, Glo data, Nigeria, instant delivery, mobile data',
   metadataBase: new URL('https://www.saukimart.online'),
+  authors: [{ name: 'SaukiMart', url: 'https://www.saukimart.online' }],
+  creator: 'SaukiMart',
+  publisher: 'SaukiMart',
+  robots: 'index, follow',
   openGraph: {
-    title: 'SaukiMart — Data & Devices',
-    description: 'Nigeria\'s fastest data reseller. Instant delivery, best prices.',
+    title: 'SaukiMart — Instant Data, Airtime & Devices',
+    description: 'Nigeria\'s fastest digital commerce platform. Instant data delivery, best prices, secure payments.',
     url: 'https://www.saukimart.online',
     siteName: 'SaukiMart',
     locale: 'en_NG',
+    images: [{ url: '/images/logo.png', width: 256, height: 256, alt: 'SaukiMart Logo' }],
     type: 'website',
   },
-  icons: { icon: '/favicon.ico' },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SaukiMart — Instant Data & Devices',
+    description: 'Buy data bundles instantly. Trusted by thousands.',
+    creator: '@SaukiMart',
+    images: ['/images/logo.png'],
+  },
+  icons: {
+    icon: [
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-48x48.png', sizes: '48x48', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'SaukiMart',
+  },
+  formatDetection: {
+    telephone: true,
+    email: true,
+    address: true,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

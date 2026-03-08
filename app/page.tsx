@@ -84,35 +84,34 @@ function Ticker() {
 
 function Hero({ plans }: { plans: Plan[] }) {
   return (
-    <section style={{ paddingTop: 120, paddingBottom: 80, background: 'linear-gradient(160deg,#F0F7FF 0%,#fff 60%)', overflow: 'hidden' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+    <section style={{ paddingTop: 160, paddingBottom: 100, background: '#fff', overflow: 'hidden' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
         {/* Left */}
         <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(0,122,255,.08)', border: '1px solid rgba(0,122,255,.15)', borderRadius: 20, padding: '5px 14px', marginBottom: 20 }}>
-            <span style={{ fontSize: 12 }}>✅</span>
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: '#007AFF' }}>SMEDAN Certified Business</span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(0,122,255,.06)', border: '1px solid rgba(0,122,255,.2)', borderRadius: 24, padding: '8px 16px', marginBottom: 28, fontSize: 13, fontWeight: 600, color: '#007AFF' }}>
+            ✅ Trusted by 10,000+ Nigerians
           </div>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 54, fontWeight: 900, lineHeight: 1.1, color: '#1C1C1E', letterSpacing: -1.5, marginBottom: 20 }}>
-            Fast Data,<br /><span style={{ color: '#007AFF' }}>Better Prices</span>
+          <h1 style={{ fontFamily: "'DM Sans', system-ui", fontSize: 60, fontWeight: 900, lineHeight: 1.2, color: '#1C1C1E', letterSpacing: -1.2, marginBottom: 24 }}>
+            Mobile Data.<br />Delivered Instantly.
           </h1>
-          <p style={{ fontSize: 17, color: '#6C6C70', lineHeight: 1.7, maxWidth: 420, marginBottom: 32 }}>
-            Buy MTN, Airtel & Glo data bundles instantly. No delays, no hassle. Register as an agent and earn 2% cashback on every purchase.
+          <p style={{ fontSize: 18, color: '#6C6C70', lineHeight: 1.8, maxWidth: 460, marginBottom: 40 }}>
+            Buy data from MTN, Airtel, or Glo in seconds. See network logos, enter your phone number, select a plan. That's it. Data delivered before you finish reading this.
           </p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 40 }}>
-            <a href="/app" style={{ background: '#007AFF', color: '#fff', borderRadius: 14, padding: '14px 28px', fontSize: 16, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'all .2s', boxShadow: '0 4px 20px rgba(0,122,255,.35)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 30px rgba(0,122,255,.45)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,122,255,.35)'; }}
-            >Buy Data Now <span style={{ fontSize: 20 }}>→</span></a>
-            <a href="#agents" style={{ background: '#fff', color: '#1C1C1E', borderRadius: 14, padding: '14px 28px', fontSize: 16, fontWeight: 600, border: '1.5px solid #E5E5EA', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'all .2s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#007AFF'; (e.currentTarget as HTMLElement).style.color = '#007AFF'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#E5E5EA'; (e.currentTarget as HTMLElement).style.color = '#1C1C1E'; }}
-            >Become an Agent</a>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 48 }}>
+            <a href="/app" style={{ background: '#007AFF', color: '#fff', borderRadius: 16, padding: '16px 32px', fontSize: 16, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 10, transition: 'all .3s', boxShadow: '0 8px 24px rgba(0,122,255,.25)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 32px rgba(0,122,255,.35)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,122,255,.25)'; }}
+            >Get Started <span>→</span></a>
+            <a href="#agents" style={{ background: 'rgba(0,0,0,.025)', color: '#1C1C1E', borderRadius: 16, padding: '16px 32px', fontSize: 16, fontWeight: 600, border: '1.5px solid #E5E5EA', display: 'inline-flex', alignItems: 'center', gap: 10, transition: 'all .3s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#007AFF'; (e.currentTarget as HTMLElement).style.background = 'rgba(0,122,255,.04)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#E5E5EA'; (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,.025)'; }}
+            >Earn as Agent <span>→</span></a>
           </div>
-          <div style={{ display: 'flex', gap: 32 }}>
-            {[['10K+','Happy Users'],['₦50M+','Processed'],['< 3s','Avg Delivery']].map(([v, l]) => (
+          <div style={{ display: 'flex', gap: 48 }}>
+            {[['10K+','Active Users'],['₦50M+','Processed'],['<3s','Fast Delivery']].map(([v, l]) => (
               <div key={l}>
-                <div style={{ fontSize: 24, fontWeight: 800, color: '#1C1C1E', letterSpacing: -0.5 }}>{v}</div>
-                <div style={{ fontSize: 12.5, color: '#8E8E93', marginTop: 2 }}>{l}</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#1C1C1E', letterSpacing: -0.6 }}>{v}</div>
+                <div style={{ fontSize: 13, color: '#8E8E93', marginTop: 4, fontWeight: 500 }}>{l}</div>
               </div>
             ))}
           </div>
@@ -120,9 +119,9 @@ function Hero({ plans }: { plans: Plan[] }) {
 
         {/* Right — Phone mockup */}
         <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
-          <div className="float" style={{ width: 280, background: '#1C1C1E', borderRadius: 44, padding: '12px', boxShadow: '0 40px 80px rgba(0,0,0,.25)', position: 'relative' }}>
+          <div className="float" style={{ width: 290, background: '#000', borderRadius: 48, padding: '13px', boxShadow: '0 50px 100px rgba(0,0,0,.2), 0 0 1px rgba(0,0,0,.5)', position: 'relative', border: '1px solid rgba(255,255,255,.1)' }}>
             {/* Screen */}
-            <div style={{ background: '#000', borderRadius: 34, overflow: 'hidden', height: 560 }}>
+            <div style={{ background: '#000', borderRadius: 40, overflow: 'hidden', height: 580 }}>
               {/* Status bar */}
               <div style={{ background: '#000', padding: '14px 20px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}>9:41</span>
@@ -172,13 +171,13 @@ function Hero({ plans }: { plans: Plan[] }) {
           </div>
           {/* Floating badges */}
           {[
-            { top: '10%', right: '-24%', bg: '#E8FAE8', icon: '✅', label: 'Instant Delivery' },
-            { top: '55%', right: '-20%', bg: '#FFF3E0', icon: '🎁', label: '2% Cashback' },
-            { top: '80%', left: '-22%', bg: '#E8F0FE', icon: '🔒', label: '100% Secure' },
+            { top: '12%', right: '-32%', bg: '#E8FAE8', icon: '⚡', label: 'In Seconds' },
+            { top: '58%', right: '-28%', bg: '#E8F0FE', icon: '🔒', label: 'Secure' },
+            { top: '82%', left: '-26%', bg: '#FFF3E0', icon: '💰', label: 'Best Prices' },
           ].map((b,i) => (
-            <div key={i} style={{ position: 'absolute', ...b, display: 'flex', alignItems: 'center', gap: 8, background: b.bg, borderRadius: 50, padding: '8px 14px', boxShadow: '0 4px 16px rgba(0,0,0,.1)', whiteSpace: 'nowrap' }}>
-              <span style={{ fontSize: 16 }}>{b.icon}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#1C1C1E' }}>{b.label}</span>
+            <div key={i} style={{ position: 'absolute', ...b, display: 'flex', alignItems: 'center', gap: 9, background: b.bg, borderRadius: 28, padding: '10px 16px', boxShadow: '0 4px 16px rgba(0,0,0,.08)', whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700 }}>
+              <span style={{ fontSize: 18 }}>{b.icon}</span>
+              {b.label}
             </div>
           ))}
         </div>
@@ -193,11 +192,11 @@ function Plans({ plans }: { plans: Plan[] }) {
   const nets = [{ id: 'MTN', color: '#FFCC00', emoji: '🟡' }, { id: 'AIRTEL', color: '#E40000', emoji: '🔴' }, { id: 'GLO', color: '#00892C', emoji: '🟢' }];
 
   return (
-    <section id="data-plans" style={{ padding: '80px 24px', background: '#F2F2F7' }}>
+    <section id="data-plans" style={{ padding: '100px 24px', background: '#F5F5F7' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 42, fontWeight: 900, color: '#1C1C1E', letterSpacing: -1 }}>Data Plans</h2>
-          <p style={{ color: '#6C6C70', fontSize: 17, marginTop: 10 }}>Cheapest data bundles — delivered instantly</p>
+        <div style={{ textAlign: 'center', marginBottom: 56 }}>
+          <h2 style={{ fontFamily: "'DM Sans', system-ui", fontSize: 48, fontWeight: 900, color: '#1C1C1E', letterSpacing: -1.2, marginBottom: 12 }}>Network-Specific Plans</h2>
+          <p style={{ color: '#6C6C70', fontSize: 18, marginTop: 0, maxWidth: 500, margin: '0 auto' }}>Select your network and see freshly updated data plans with our best prices</p>
           {/* Network tabs */}
           <div style={{ display: 'inline-flex', gap: 8, marginTop: 28, background: '#fff', borderRadius: 16, padding: 6, boxShadow: '0 2px 12px rgba(0,0,0,.06)' }}>
             {nets.map(n => (
@@ -242,21 +241,21 @@ function Features() {
     { icon: '💬', title: '24/7 Support', desc: 'WhatsApp and email support available around the clock.', color: '#E8FAE8' },
   ];
   return (
-    <section style={{ padding: '80px 24px', background: '#fff' }}>
+    <section style={{ padding: '100px 24px', background: '#fff' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 52 }}>
-          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 42, fontWeight: 900, color: '#1C1C1E', letterSpacing: -1 }}>Why SaukiMart?</h2>
-          <p style={{ color: '#6C6C70', fontSize: 17, marginTop: 10 }}>Everything you need in one platform</p>
+        <div style={{ textAlign: 'center', marginBottom: 64 }}>
+          <h2 style={{ fontFamily: "'DM Sans', system-ui", fontSize: 48, fontWeight: 900, color: '#1C1C1E', letterSpacing: -1.2, marginBottom: 12 }}>Why SaukiMart</h2>
+          <p style={{ color: '#6C6C70', fontSize: 18, maxWidth: 520, margin: '0 auto' }}>Everything you need to buy data, manage funds, and grow your business</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }}>
           {features.map(f => (
-            <div key={f.title} style={{ background: f.color, borderRadius: 24, padding: 28, transition: 'transform .2s' }}
-              onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-4px)')}
+            <div key={f.title} style={{ background: f.color, borderRadius: 28, padding: 32, transition: 'transform .3s', border: '1px solid rgba(0,0,0,.04)' }}
+              onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-6px)')}
               onMouseLeave={e => (e.currentTarget.style.transform = 'none')}
             >
-              <div style={{ fontSize: 36, marginBottom: 16 }}>{f.icon}</div>
-              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1C1C1E', marginBottom: 8 }}>{f.title}</h3>
-              <p style={{ fontSize: 14, color: '#3C3C43', lineHeight: 1.6 }}>{f.desc}</p>
+              <div style={{ fontSize: 40, marginBottom: 20 }}>{f.icon}</div>
+              <h3 style={{ fontSize: 19, fontWeight: 800, color: '#1C1C1E', marginBottom: 10 }}>{f.title}</h3>
+              <p style={{ fontSize: 15, color: '#3C3C43', lineHeight: 1.7 }}>{f.desc}</p>
             </div>
           ))}
         </div>
@@ -267,16 +266,15 @@ function Features() {
 
 function AgentsSection() {
   return (
-    <section id="agents" style={{ padding: '80px 24px', background: 'linear-gradient(135deg,#1C1C1E 0%,#000 100%)' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+    <section id="agents" style={{ padding: '100px 24px', background: '#000' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
         <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(255,204,0,.1)', border: '1px solid rgba(255,204,0,.2)', borderRadius: 20, padding: '5px 14px', marginBottom: 20 }}>
-            <span style={{ fontSize: 12 }}>⭐</span>
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: '#FFCC00' }}>Agent Program</span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,203,5,.1)', border: '1px solid rgba(255,203,5,.25)', borderRadius: 24, padding: '8px 16px', marginBottom: 28, fontSize: 13, fontWeight: 600, color: '#FFD000', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            💰 Agent Program
           </div>
-          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 44, fontWeight: 900, color: '#fff', lineHeight: 1.1, letterSpacing: -1, marginBottom: 20 }}>Earn Money<br />Reselling Data</h2>
-          <p style={{ color: 'rgba(255,255,255,.6)', fontSize: 16, lineHeight: 1.8, marginBottom: 32 }}>
-            Register as a SaukiMart agent, fund your wallet, and start reselling data bundles to customers. Earn 2% cashback on every purchase.
+          <h2 style={{ fontFamily: "'DM Sans', system-ui", fontSize: 52, fontWeight: 900, color: '#fff', lineHeight: 1.15, letterSpacing: -1.2, marginBottom: 24 }}>Build Your Reselling Business</h2>
+          <p style={{ color: 'rgba(255,255,255,.65)', fontSize: 17, lineHeight: 1.8, marginBottom: 36 }}>
+            Become a SaukiMart agent and earn real money. Get a personal virtual account, fund your wallet, and start reselling data immediately. 2% cashback on every transaction.
           </p>
           {['Free registration — no startup cost', '2% cashback on every transaction', 'Personal virtual bank account for funding', 'Real-time balance and transaction tracking', 'Priority customer support 24/7'].map(b => (
             <div key={b} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
@@ -284,10 +282,10 @@ function AgentsSection() {
               <span style={{ color: 'rgba(255,255,255,.8)', fontSize: 15 }}>{b}</span>
             </div>
           ))}
-          <a href="/app" style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: '#FFCC00', color: '#000', borderRadius: 14, padding: '14px 28px', fontSize: 15, fontWeight: 800, marginTop: 28, transition: 'all .2s' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 28px rgba(255,204,0,.4)'; }}
+          <a href="/app" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: '#FFD000', color: '#000', borderRadius: 16, padding: '16px 32px', fontSize: 16, fontWeight: 800, marginTop: 32, transition: 'all .3s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 32px rgba(255,208,0,.3)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
-          >Register as Agent →</a>
+          >Apply Now <span>→</span></a>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           {[
@@ -316,11 +314,11 @@ function Testimonials() {
     { name: 'Halima B.', loc: 'Kaduna', rating: 5, text: "Best prices for Glo data in Nigeria. I've compared many platforms and SaukiMart consistently beats them all." },
   ];
   return (
-    <section style={{ padding: '80px 24px', background: '#F2F2F7' }}>
+    <section style={{ padding: '100px 24px', background: '#F5F5F7' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 42, fontWeight: 900, color: '#1C1C1E', letterSpacing: -1 }}>Loved by Nigerians</h2>
-          <p style={{ color: '#6C6C70', fontSize: 17, marginTop: 10 }}>10,000+ customers trust SaukiMart every day</p>
+        <div style={{ textAlign: 'center', marginBottom: 56 }}>
+          <h2 style={{ fontFamily: "'DM Sans', system-ui", fontSize: 48, fontWeight: 900, color: '#1C1C1E', letterSpacing: -1.2, marginBottom: 12 }}>Loved by Nigerians</h2>
+          <p style={{ color: '#6C6C70', fontSize: 18 }}>10,000+ users trust SaukiMart for fast, reliable data</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
           {reviews.map(r => (
@@ -351,11 +349,11 @@ function Testimonials() {
 
 function SupportSection() {
   return (
-    <section id="support" style={{ padding: '80px 24px', background: '#fff' }}>
+    <section id="support" style={{ padding: '100px 24px', background: '#fff' }}>
       <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
-        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 42, fontWeight: 900, color: '#1C1C1E', letterSpacing: -1, marginBottom: 14 }}>Need Help?</h2>
-        <p style={{ color: '#6C6C70', fontSize: 17, lineHeight: 1.7, marginBottom: 40 }}>
-          Our team is available 24/7 to help you with any issues. Reach us via WhatsApp or email.
+        <h2 style={{ fontFamily: "'DM Sans', system-ui", fontSize: 48, fontWeight: 900, color: '#1C1C1E', letterSpacing: -1.2, marginBottom: 16 }}>We're Here to Help</h2>
+        <p style={{ color: '#6C6C70', fontSize: 18, lineHeight: 1.8, marginBottom: 44 }}>
+          Our team responds in minutes. WhatsApp, email, or in-app chat — we're available 24/7.
         </p>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
           <a href="https://wa.me/234XXXXXXXXXX" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#25D366', color: '#fff', borderRadius: 14, padding: '16px 28px', fontWeight: 700, fontSize: 15, textDecoration: 'none', transition: 'all .2s' }}
@@ -430,7 +428,6 @@ export default function HomePage() {
   return (
     <>
       <GlobalStyle />
-      <Ticker />
       <Nav />
       <main>
         <Hero plans={plans} />
