@@ -258,61 +258,107 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
   }, [autoDownload]);
 
   const date = new Date(data.date as string).toLocaleString('en-NG', { dateStyle:'long', timeStyle:'short' });
+  const isDataPurchase = data.type === 'data' || data.network;
+  const amount = Number(data.price || data.amount || 0);
 
   return (
-    <div style={{ position:'fixed',top:0,right:0,bottom:0,left:0,zIndex:300,background:'rgba(0,0,0,.5)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:20 }}>
-      <div className="slide-up" style={{ width:'100%',maxWidth:420,background:'var(--card)',borderRadius:28,overflow:'hidden' }}>
-        {/* Downloadable receipt */}
-        <div ref={ref} style={{ background:'#fff',width:'100%' }}>
-          {/* Header */}
-          <div style={{ background:'var(--bg)',padding:'48px 32px 40px',textAlign:'center' }}>
-            <img src="/images/logo-sm.png" alt="SaukiMart" style={{ width:48,height:48,margin:'0 auto 12px',borderRadius:8 }} />
-            <p style={{ color:'var(--text-secondary)',fontSize:13,marginBottom:20 }}>Your Receipt</p>
-            <div style={{ background:GREEN+'15',borderRadius:12,padding:'12px 20px',display:'inline-block' }}>
-              <p style={{ color:GREEN,fontWeight:700,fontSize:14 }}>✓ Transaction Successful</p>
-            </div>
-          </div>
-          {/* Body */}
-          <div style={{ padding:'32px' }}>
-            <p style={{ fontSize:14,color:'var(--text-secondary)',textAlign:'center',marginBottom:24 }}>{date}</p>
-            <div style={{ textAlign:'center',marginBottom:32 }}>
-              <p style={{ fontSize:40,fontWeight:800,color:'var(--text)',letterSpacing:-1 }}>₦{Number(data.price||data.amount||0).toLocaleString()}</p>
-            </div>
-            {/* Fields */}
-            {data.type === 'data' || data.network ? [
-              ['Network', data.network],
-              ['Data', data.dataSize],
-              ['Validity', data.validity],
-              ['Phone', data.phoneNumber],
-              ['Reference', data.ref || data.amigoRef],
-            ].filter(([,v])=>v).map(([k,v])=>(
-              <div key={k as string} style={{ display:'flex',justifyContent:'space-between',padding:'12px 0',borderBottom:'1px solid #F2F2F7' }}>
-                <span style={{ color:'var(--text-secondary)',fontSize:14 }}>{k as string}</span>
-                <span style={{ fontWeight:600,fontSize:14,color:'var(--text)',textAlign:'right' }}>{v as string}</span>
+    <div style={{ position:'fixed',top:0,right:0,bottom:0,left:0,zIndex:300,background:'rgba(0,0,0,.6)',backdropFilter:'blur(12px)',display:'flex',alignItems:'center',justifyContent:'center',padding:16 }}>
+      <div className="slide-up" style={{ width:'100%',maxWidth:550,borderRadius:40,overflow:'hidden',boxShadow:'0 50px 100px rgba(0,0,0,.3), 0 0 1px rgba(0,0,0,.5)' }}>
+        {/* Downloadable receipt - 1080px square aspect ratio */}
+        <div ref={ref} style={{ background:'linear-gradient(135deg, #FFFFFF 0%, #F8FBFF 100%)',width:'1080px',aspectRatio:'1/1',padding:'80px 60px',display:'flex',flexDirection:'column',justifyContent:'space-between',boxSizing:'border-box',position:'relative',overflow:'hidden' }}>
+          {/* Decorative elements */}
+          <div style={{ position:'absolute',top:0,right:0,width:'400px',height:'400px',background:'radial-gradient(circle, rgba(0,113,227,0.08) 0%, transparent 70%)',borderRadius:'50%',pointerEvents:'none' }} />
+          <div style={{ position:'absolute',bottom:0,left:0,width:'300px',height:'300px',background:'radial-gradient(circle, rgba(48,209,88,0.06) 0%, transparent 70%)',borderRadius:'50%',pointerEvents:'none' }} />
+
+          {/* Header section */}
+          <div style={{ textAlign:'center',zIndex:1,marginBottom:'40px' }}>
+            {/* Logo with frame */}
+            <div style={{ marginBottom:'32px',display:'flex',justifyContent:'center' }}>
+              <div style={{ width:'100px',height:'100px',background:'linear-gradient(135deg, #0071E3, #5AC8FA)',borderRadius:'32px',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 10px 40px rgba(0,113,227,0.2)' }}>
+                <img src="/images/logo-icon.png" alt="SaukiMart" style={{ width:'70px',height:'70px',borderRadius:'20px' }} />
               </div>
-            )) : [
-              ['Customer', `${data.userName}`],
-              ['Phone', data.userPhone],
-              ['Item', data.productName || data.itemName],
-              ['Reference', data.ref],
-            ].filter(([,v])=>v).map(([k,v])=>(
-              <div key={k as string} style={{ display:'flex',justifyContent:'space-between',padding:'12px 0',borderBottom:'1px solid #F2F2F7' }}>
-                <span style={{ color:'var(--text-secondary)',fontSize:14 }}>{k as string}</span>
-                <span style={{ fontWeight:600,fontSize:14,color:'var(--text)',textAlign:'right' }}>{v as string}</span>
-              </div>
-            ))}
+            </div>
+            
+            {/* Title */}
+            <h2 style={{ fontSize:'48px',fontWeight:900,color:'#1D1D1F',marginBottom:'8px',letterSpacing:'-1px',fontFamily:"'SF Pro Display', system-ui, sans-serif" }}>Receipt</h2>
+            <p style={{ fontSize:'18px',color:'#8E8E93',fontWeight:500 }}>Transaction Confirmed</p>
           </div>
+
+          {/* Amount section - Premium highlight */}
+          <div style={{ textAlign:'center',background:'linear-gradient(135deg, rgba(0,113,227,0.05) 0%, rgba(90,200,250,0.05) 100%)',borderRadius:'28px',padding:'48px 40px',marginBottom:'48px',zIndex:1,border:'1px solid rgba(0,113,227,0.1)' }}>
+            <p style={{ fontSize:'16px',color:'#8E8E93',marginBottom:'16px',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.5px' }}>Amount Paid</p>
+            <div style={{ display:'flex',alignItems:'baseline',justifyContent:'center',gap:'8px',marginBottom:'12px' }}>
+              <span style={{ fontSize:'72px',fontWeight:900,color:'#0071E3',letterSpacing:'-2px' }}>₦</span>
+              <span style={{ fontSize:'72px',fontWeight:900,color:'#1D1D1F',letterSpacing:'-2px' }}>{amount.toLocaleString('en-NG',{maximumFractionDigits:0})}</span>
+            </div>
+            <p style={{ fontSize:'14px',color:'#8E8E93',fontWeight:500 }}>{date}</p>
+          </div>
+
+          {/* Details section */}
+          <div style={{ zIndex:1,marginBottom:'48px' }}>
+            {isDataPurchase ? (
+              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'24px' }}>
+                <div style={{ paddingBottom:'24px',borderBottom:'1px solid rgba(0,0,0,0.08)' }}>
+                  <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Network</p>
+                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{data.network || 'N/A'}</p>
+                </div>
+                <div style={{ paddingBottom:'24px',borderBottom:'1px solid rgba(0,0,0,0.08)' }}>
+                  <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Data</p>
+                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{data.dataSize || 'N/A'}</p>
+                </div>
+                <div style={{ paddingBottom:'24px',borderBottom:'1px solid rgba(0,0,0,0.08)' }}>
+                  <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Validity</p>
+                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{data.validity || 'N/A'}</p>
+                </div>
+                <div style={{ paddingBottom:'24px',borderBottom:'1px solid rgba(0,0,0,0.08)' }}>
+                  <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Phone</p>
+                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{data.phoneNumber || 'N/A'}</p>
+                </div>
+                <div style={{ gridColumn:'1/-1',paddingBottom:'0' }}>
+                  <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Reference</p>
+                  <p style={{ fontSize:'14px',fontWeight:600,color:'#0071E3',fontFamily:"'Menlo', 'Monaco', monospace",letterSpacing:'0.5px' }}>{(data.ref || data.amigoRef || 'N/A') as string}</p>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'24px' }}>
+                <div style={{ paddingBottom:'24px',borderBottom:'1px solid rgba(0,0,0,0.08)' }}>
+                  <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Customer</p>
+                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{(data.userName || 'N/A') as string}</p>
+                </div>
+                <div style={{ paddingBottom:'24px',borderBottom:'1px solid rgba(0,0,0,0.08)' }}>
+                  <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Phone</p>
+                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{(data.userPhone || 'N/A') as string}</p>
+                </div>
+                <div style={{ gridColumn:'1/-1',paddingBottom:'24px',borderBottom:'1px solid rgba(0,0,0,0.08)' }}>
+                  <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Item</p>
+                  <p style={{ fontSize:'16px',fontWeight:700,color:'#1D1D1F',letterSpacing:'-0.3px' }}>{(data.productName || data.itemName || 'N/A') as string}</p>
+                </div>
+                <div style={{ gridColumn:'1/-1',paddingBottom:'0' }}>
+                  <p style={{ fontSize:'12px',color:'#8E8E93',textTransform:'uppercase',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px' }}>Reference</p>
+                  <p style={{ fontSize:'14px',fontWeight:600,color:'#0071E3',fontFamily:"'Menlo', 'Monaco', monospace",letterSpacing:'0.5px' }}>{(data.ref || 'N/A') as string}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Footer */}
-          <div style={{ background:'var(--bg-secondary)',padding:'24px 32px',textAlign:'center' }}>
-            <p style={{ fontSize:13,fontWeight:700,color:'var(--text)',marginBottom:4 }}>SaukiMart · Data & Devices</p>
-            <p style={{ fontSize:12,color:'var(--text-secondary)' }}>support@saukimart.online</p>
-            <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>+234 704 464 7081 · +234 806 193 4056</p>
+          <div style={{ textAlign:'center',borderTop:'1px solid rgba(0,0,0,0.08)',paddingTop:'32px',zIndex:1 }}>
+            <p style={{ fontSize:'14px',fontWeight:700,color:'#1D1D1F',marginBottom:'6px' }}>SaukiMart</p>
+            <p style={{ fontSize:'12px',color:'#8E8E93',marginBottom:'4px' }}>Data & Devices Platform</p>
+            <p style={{ fontSize:'11px',color:'#A1A1A6',marginTop:'12px' }}>support@saukimart.online</p>
+            <p style={{ fontSize:'11px',color:'#A1A1A6' }}>+234 704 464 7081</p>
+            <p style={{ fontSize:'10px',color:'#C7C7CC',marginTop:'16px' }}>✓ This receipt is valid and verifiable</p>
           </div>
         </div>
-        {/* Actions */}
-        <div style={{ padding:'16px 20px 28px',display:'flex',gap:10 }}>
-          <button onClick={downloadPng} style={{ flex:1,padding:'16px',borderRadius:16,background:BLUE,color:'#fff',fontWeight:700,fontSize:16 }}>Download</button>
-          <button onClick={onClose} style={{ padding:'16px 20px',borderRadius:16,background:'var(--bg-secondary)',color:'var(--text)',fontWeight:600,fontSize:16,border:'1px solid var(--border)' }}>Close</button>
+
+        {/* Actions - Fixed outside downloadable area */}
+        <div style={{ padding:'16px 20px 28px',display:'flex',gap:10,background:'var(--card)' }}>
+          <button onClick={downloadPng} style={{ flex:1,padding:'16px',borderRadius:16,background:BLUE,color:'#fff',fontWeight:700,fontSize:16,border:'none',cursor:'pointer',transition:'all .3s' }}>
+            ↓ Download
+          </button>
+          <button onClick={onClose} style={{ padding:'16px 20px',borderRadius:16,background:'var(--bg-secondary)',color:'var(--text)',fontWeight:600,fontSize:16,border:'1px solid var(--border)',cursor:'pointer',transition:'all .3s' }}>
+            Close
+          </button>
         </div>
       </div>
     </div>
