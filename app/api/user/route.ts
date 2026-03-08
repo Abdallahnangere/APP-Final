@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (user.is_banned) return NextResponse.json({ error: 'Account suspended' }, { status: 403 });
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     id: user.id,
     firstName: user.first_name,
     lastName: user.last_name,
@@ -37,6 +37,8 @@ export async function GET(req: NextRequest) {
     hapticsEnabled: user.haptics_enabled,
     createdAt: user.created_at,
   });
+  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  return response;
 }
 
 export async function PATCH(req: NextRequest) {

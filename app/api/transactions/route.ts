@@ -17,11 +17,13 @@ export async function GET(req: NextRequest) {
     ORDER BY created_at DESC LIMIT ${limit}
   `;
 
-  return NextResponse.json(txns.map(t => ({
+  const response = NextResponse.json(txns.map(t => ({
     id: t.id, type: t.type, description: t.description,
     amount: parseFloat(t.amount), status: t.status,
     network: t.network, phoneNumber: t.phone_number,
     productName: t.product_name, amigoRef: t.amigo_reference,
     receipt: t.receipt_data, createdAt: t.created_at,
   })));
+  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  return response;
 }

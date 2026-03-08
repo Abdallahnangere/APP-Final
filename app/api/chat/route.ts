@@ -18,7 +18,9 @@ export async function GET(req: NextRequest) {
   // Mark admin messages as read
   await sql`UPDATE chats SET is_read = TRUE WHERE user_id = ${payload.userId as string} AND sender = 'admin'`;
 
-  return NextResponse.json(messages);
+  const response = NextResponse.json(messages);
+  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  return response;
 }
 
 export async function POST(req: NextRequest) {

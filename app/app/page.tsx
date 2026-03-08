@@ -458,9 +458,9 @@ export default function AppPage() {
     if (!token) return;
     try {
       const [bc, tx, dep] = await Promise.all([
-        fetch('/api/broadcasts').then(r=>r.json()),
-        fetch('/api/transactions', { headers: authHeader() }).then(r=>r.json()),
-        fetch('/api/deposits', { headers: authHeader() }).then(r=>r.json()),
+        fetch('/api/broadcasts', { cache: 'no-store' as RequestCache }).then(r=>r.json()),
+        fetch('/api/transactions', { headers: authHeader(), cache: 'no-store' as RequestCache }).then(r=>r.json()),
+        fetch('/api/deposits', { headers: authHeader(), cache: 'no-store' as RequestCache }).then(r=>r.json()),
       ]);
       setBroadcasts(Array.isArray(bc) ? bc.map((b:Record<string,unknown>)=>b.message as string) : []);
       setTransactions(Array.isArray(tx) ? tx : []);
@@ -470,7 +470,7 @@ export default function AppPage() {
 
   const refreshUser = useCallback(async () => {
     if (!token) return;
-    const res = await fetch('/api/user', { headers: authHeader() });
+    const res = await fetch('/api/user', { headers: authHeader(), cache: 'no-store' as RequestCache });
     if (res.ok) {
       const u = await res.json();
       setUser(u);
@@ -504,6 +504,27 @@ export default function AppPage() {
 
     return () => clearInterval(refreshInterval);
   }, [screen, token, authHeader]);
+
+  // Auto-load products when store screen opens
+  useEffect(() => {
+    if (screen === 'store') {
+      loadProducts();
+    }
+  }, [screen]);
+
+  // Auto-load data plans when data-plans screen opens
+  useEffect(() => {
+    if (screen === 'data-plans' && selectedNetwork?.name) {
+      loadPlans(selectedNetwork.name);
+    }
+  }, [screen, selectedNetwork?.name]);
+
+  // Auto-load chats when chat screen opens
+  useEffect(() => {
+    if (screen === 'chat' && token) {
+      loadChats();
+    }
+  }, [screen, token]);
 
   /* ── REGISTER ── */
   const handleRegister = async () => {
@@ -625,14 +646,14 @@ export default function AppPage() {
 
   /* ── LOAD PLANS ── */
   const loadPlans = async (network: string) => {
-    const res = await fetch(`/api/data-plans?network=${network}`);
+    const res = await fetch(`/api/data-plans?network=${network}`, { cache: 'no-store' as RequestCache });
     const data = await res.json();
     setPlans(Array.isArray(data) ? data : []);
   };
 
   /* ── LOAD PRODUCTS ── */
   const loadProducts = async () => {
-    const res = await fetch(`/api/products?t=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
+    const res = await fetch(`/api/products`, { cache: 'no-store' as RequestCache });
     const data = await res.json();
     setProducts(Array.isArray(data) ? data : []);
   };
@@ -640,7 +661,7 @@ export default function AppPage() {
   /* ── LOAD CHATS ── */
   const loadChats = async () => {
     if (!token) return;
-    const res = await fetch('/api/chat', { headers: authHeader() });
+    const res = await fetch('/api/chat', { headers: authHeader(), cache: 'no-store' as RequestCache });
     const data = await res.json();
     setChats(Array.isArray(data) ? data : []);
   };
@@ -933,7 +954,10 @@ export default function AppPage() {
                   <span style={{ fontSize:'28px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>{(user.walletBalance/1).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                 </div>
               </div>
-              <IconBox icon={Icons.wallet(BLUE, 28)} bg={'rgba(0,113,227,.10)'} />
+              <button onClick={refreshUser} style={{ background:'rgba(0,113,227,.10)',border:'1px solid rgba(0,113,227,.2)',borderRadius:12,padding:'12px 16px',cursor:'pointer',display:'flex',alignItems:'center',gap:8,transition:'all .2s',fontSize:13,fontWeight:600,color:BLUE }} onMouseEnter={e=>{e.currentTarget.style.background='rgba(0,113,227,.15)'; e.currentTarget.style.borderColor='rgba(0,113,227,.3)'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(0,113,227,.10)'; e.currentTarget.style.borderColor='rgba(0,113,227,.2)'}}>
+                {Icons.wallet(BLUE, 20)}
+                Refresh
+              </button>
             </div>
             <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16 }}>
               <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'14px 16px',border:'1px solid var(--border)' }}>

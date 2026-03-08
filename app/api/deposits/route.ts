@@ -14,9 +14,11 @@ export async function GET(req: NextRequest) {
     ORDER BY created_at DESC LIMIT 50
   `;
 
-  return NextResponse.json(deposits.map(d => ({
+  const response = NextResponse.json(deposits.map(d => ({
     id: d.id, amount: parseFloat(d.amount),
     senderName: d.sender_name, narration: d.narration,
     status: d.status, createdAt: d.created_at,
   })));
+  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  return response;
 }

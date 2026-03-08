@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     ? await sql`SELECT id, network, network_id, plan_id, data_size, validity, selling_price FROM data_plans WHERE is_active = TRUE AND UPPER(network) = UPPER(${network}) ORDER BY selling_price ASC`
     : await sql`SELECT id, network, network_id, plan_id, data_size, validity, selling_price FROM data_plans WHERE is_active = TRUE ORDER BY network, selling_price ASC`;
 
-  return NextResponse.json(plans.map(p => ({
+  const response = NextResponse.json(plans.map(p => ({
     id: p.id,
     network: p.network,
     networkId: p.network_id,
@@ -18,4 +18,6 @@ export async function GET(req: NextRequest) {
     validity: p.validity,
     price: parseFloat(p.selling_price),
   })));
+  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  return response;
 }
