@@ -235,7 +235,7 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', su
 function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Record<string,unknown>; onDownload: ()=>void; onClose: ()=>void; dark: boolean; autoDownload?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
 
-  const downloadPng = async () => {
+  const downloadPng = useCallback(async () => {
     if (typeof window === 'undefined' || !ref.current) return;
     try {
       const { toPng } = await import('html-to-image');
@@ -248,14 +248,14 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
     } catch (err) {
       console.error('Receipt download error:', err);
     }
-  };
+  }, [data, onDownload]);
 
   useEffect(() => {
     if (autoDownload) {
-      const timer = setTimeout(downloadPng, 500);
+      const timer = setTimeout(() => downloadPng(), 500);
       return () => clearTimeout(timer);
     }
-  }, [autoDownload]);
+  }, [autoDownload, downloadPng]);
 
   const date = new Date(data.date as string).toLocaleString('en-NG', { dateStyle:'short', timeStyle:'short' });
   const isDataPurchase = data.type === 'data' || data.network;
@@ -366,7 +366,13 @@ export default function AppPage() {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [chats, setChats] = useState<ChatMsg[]>([]);
+  const [chatSession, setChatSession] = useState<any|null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
+  const [chatTyping, setChatTyping] = useState(false);
+  const [aiTyping, setAiTyping] = useState(false);
+  const [chatBanner, setChatBanner] = useState('');
+  const [idlePrompted, setIdlePrompted] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement|null>(null);
   const [simActivations, setSimActivations] = useState<SimActivation[]>([]);
 
   // Selection
@@ -512,7 +518,7 @@ export default function AppPage() {
       setTimeout(() => setCashbackToast(''), 3000);
     }
     prevCashbackRef.current = current;
-  }, [user?.cashbackBalance]);
+  }, [user]);
 
   // Auto-load products when store screen opens
   useEffect(() => {
@@ -528,12 +534,75 @@ export default function AppPage() {
     }
   }, [screen, selectedNetwork?.name]);
 
-  // Auto-load chats when chat screen opens
+  // Real-time chat via Server-Sent Events
   useEffect(() => {
-    if (screen === 'chat' && token) {
-      loadChats();
+    if (screen !== 'chat' || !token) return;
+
+    // Ensure initial content is loaded quickly
+    loadChatSession();
+
+    const url = `/api/chat/stream?token=${encodeURIComponent(token)}`;
+    const source = new EventSource(url);
+
+    source.addEventListener('init', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        setChatSession(data.session || null);
+        setChatMessages(Array.isArray(data.messages) ? data.messages : []);
+      } catch {
+        // ignore parse errors
+      }
+    });
+
+    source.addEventListener('session', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        setChatSession(data);
+      } catch {
+        // ignore
+      }
+    });
+
+    source.addEventListener('messages', (event: MessageEvent) => {
+      try {
+        const msgs = JSON.parse(event.data) as ChatMsg[];
+        setChatMessages(prev => {
+          const existingIds = new Set(prev.map(m => m.id));
+          const additional = msgs.filter(m => !existingIds.has(m.id));
+          return [...prev, ...additional];
+        });
+      } catch {
+        // ignore
+      }
+    });
+
+    source.onerror = () => {
+      // Keep the connection alive; errors will auto-reconnect.
+      // If needed, implement fallback polling here.
+    };
+
+    return () => {
+      source.close();
+    };
+  }, [screen, token, loadChatSession]);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
-  }, [screen, token]);
+  }, [chatMessages.length]);
+
+  // Idle prompt after 5 minutes of inactivity
+  useEffect(() => {
+    if (!chatSession || !screen || screen !== 'chat') return;
+    setIdlePrompted(false);
+    const timer = setTimeout(() => {
+      setChatBanner('Still there? An agent will respond soon.');
+      setIdlePrompted(true);
+    }, 300000);
+    return () => clearTimeout(timer);
+  }, [chatSession, chatMessages.length, screen]);
 
   /* ── REGISTER ── */
   const handleRegister = async () => {
@@ -702,23 +771,37 @@ export default function AppPage() {
     setProducts(Array.isArray(data) ? data : []);
   };
 
-  /* ── LOAD CHATS ── */
-  const loadChats = async () => {
+  /* ── CHAT SESSION ── */
+  const loadChatSession = useCallback(async (forceNew = false) => {
     if (!token) return;
-    const res = await fetch('/api/chat', { headers: authHeader(), cache: 'no-store' as RequestCache });
-    const data = await res.json();
-    setChats(Array.isArray(data) ? data : []);
+    try {
+      const res = await fetch(`/api/chat${forceNew ? '?new=true' : ''}`, { headers: authHeader(), cache: 'no-store' as RequestCache });
+      if (!res.ok) return;
+      const data = await res.json();
+      setChatSession(data.session || null);
+      setChatMessages(Array.isArray(data.messages) ? data.messages : []);
+      setIdlePrompted(false);
+      setChatBanner('');
+    } catch { /* silent */ }
+  }, [token, authHeader]);
+
+  const sendChat = async () => {
+    if (!chatInput.trim() || !token) return;
+    setAiTyping(true);
+    const body = { message: chatInput.trim() };
+    setChatInput('');
+    try {
+      const res = await fetch('/api/chat', { method: 'POST', headers: authHeader(), body: JSON.stringify(body) });
+      if (!res.ok) throw new Error('Failed to send');
+      const data = await res.json();
+      setChatSession(data.session || null);
+      setChatMessages(Array.isArray(data.messages) ? data.messages : []);
+    } catch { /* silent */ }
+    finally {
+      setTimeout(() => setAiTyping(false), 600);
+    }
   };
 
-  /* ── SEND CHAT ── */
-  const sendChat = async () => {
-    if (!chatInput.trim()) return;
-    try {
-      await fetch('/api/chat', { method:'POST', headers: authHeader(), body: JSON.stringify({ message: chatInput.trim() }) });
-      setChatInput('');
-      loadChats();
-    } catch { /* silent */ }
-  };
 
   /* ── CHANGE PIN ── */
   const handleChangePin = async (currentPin: string) => {
@@ -1646,46 +1729,112 @@ export default function AppPage() {
   );
 
   /* CHAT */
-  if (screen === 'chat') return (
-    <>
-      <GlobalStyle dark={dark} />
-      <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
-        <div style={{ padding:'60px 20px 14px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:12 }}>
-          <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
-          <div>
-            <p style={{ fontSize:16,fontWeight:700,color:'var(--text)' }}>Support</p>
-            <p style={{ fontSize:12,color:GREEN,marginTop:3,fontWeight:600 }}>● Online now</p>
-          </div>
-        </div>
-        <div style={{ flex:1,overflowY:'auto',padding:'16px',display:'flex',flexDirection:'column',gap:12 }}>
-          {chats.length === 0 && (
-            <div style={{ textAlign:'center',padding:'40px 20px',color:'var(--text-secondary)' }}>
-              <IconBox icon={Icons.mail(BLUE, 40)} bg={'rgba(0,113,227,.10)'} />
-              <p style={{ fontSize:15,fontWeight:700,color:'var(--text)',marginTop:12 }}>No messages yet</p>
-              <p style={{ fontSize:13,marginTop:4 }}>Send a message and we'll help you right away</p>
-            </div>
-          )}
-          {chats.map(msg => (
-            <div key={msg.id} style={{ display:'flex',justifyContent: msg.sender==='user'?'flex-end':'flex-start' }}>
-              <div style={{ maxWidth:'80%',padding:'14px 16px',borderRadius: msg.sender==='user'?'18px 18px 4px 18px':'18px 18px 18px 4px', background: msg.sender==='user'?BLUE:'var(--card)',color: msg.sender==='user'?'#fff':'var(--text)',fontSize:15,lineHeight:1.5,border: msg.sender!=='user'?'1px solid var(--border)':undefined,boxShadow: msg.sender!=='user'?'0 2px 8px rgba(0,0,0,.04)':undefined }}>
-                {msg.message}
-                <p style={{ fontSize:12,opacity:.65,marginTop:6,textAlign:'right',fontWeight:500 }}>{new Date(msg.createdAt).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</p>
+  if (screen === 'chat') {
+    const sessionStatus = chatSession?.status;
+    const agentRequired = chatSession?.agent_required;
+    const showTyping = aiTyping || chatSession?.is_typing;
+
+    let statusBanner = chatBanner;
+    if (agentRequired && sessionStatus !== 'agent_active') {
+      statusBanner = '🟠 Connecting you to a live agent...';
+    } else if (sessionStatus === 'agent_active') {
+      statusBanner = '🟢 You are now connected to a live agent';
+    } else if (sessionStatus === 'resolved') {
+      statusBanner = '✅ This session has been resolved. Start a new session to continue.';
+    }
+
+    return (
+      <>
+        <GlobalStyle dark={dark} />
+        <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
+          <div style={{ padding:'56px 16px 14px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12 }}>
+            <div style={{ display:'flex',alignItems:'center',gap:12 }}>
+              <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:600,background:'none',border:'none',cursor:'pointer' }}>← Back</button>
+              <div>
+                <p style={{ fontSize:16,fontWeight:700,color:'var(--text)' }}>Sauki Support</p>
+                <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:3,fontWeight:600 }}>{sessionStatus === 'agent_active' ? 'Agent is here' : 'Sauki AI is ready to assist'}</p>
               </div>
             </div>
-          ))}
+            <button onClick={()=>loadChatSession(true)} style={{ fontSize:12,fontWeight:700,color:BLUE,background:'rgba(0,113,227,.12)',border:'1px solid rgba(0,113,227,.2)',borderRadius:14,padding:'8px 12px',cursor:'pointer' }}>New Session</button>
+          </div>
+
+          {statusBanner && (
+            <div style={{ padding:'10px 16px',background:'rgba(255,255,255,.06)',borderBottom:'1px solid var(--border)',textAlign:'center',fontSize:13,fontWeight:700,color:'var(--text)',position:'relative' }}>
+              {statusBanner}
+            </div>
+          )}
+
+          <div style={{ flex:1,overflowY:'auto',padding:'18px 16px 12px',display:'flex',flexDirection:'column',gap:10 }}>
+            {chatMessages.length === 0 && (
+              <div style={{ textAlign:'center',padding:'60px 20px',color:'var(--text-secondary)' }}>
+                <IconBox icon={Icons.mail(BLUE, 40)} bg={'rgba(0,113,227,.10)'} />
+                <p style={{ fontSize:16,fontWeight:700,color:'var(--text)',marginTop:16 }}>Need help? Send a message and I’ll respond right away.</p>
+                <p style={{ fontSize:13,marginTop:8 }}>Sauki AI is trained to assist with data bundles, devices, payments and account issues.</p>
+              </div>
+            )}
+
+            {chatMessages.map(msg => {
+              const isUser = msg.sender === 'user';
+              const isAgent = msg.sender === 'agent';
+              const isAI = msg.sender === 'ai';
+              const bubbleColor = isUser ? 'linear-gradient(135deg, #00C6FF, #0071E3)' : isAgent ? 'linear-gradient(135deg, #00D1B2, #0E7F61)' : 'rgba(255,255,255,.08)';
+              const textColor = isUser ? '#fff' : '#F5F5F7';
+              const align = isUser ? 'flex-end' : 'flex-start';
+              const border = isUser ? 'none' : '1px solid rgba(255,255,255,.12)';
+
+              const delivered = !!msg.delivered_at;
+              const read = !!msg.read_at;
+
+              return (
+                <div key={msg.id} style={{ display:'flex',justifyContent:align,animation:'fadeUpScale .25s ease',opacity:0,animationFillMode:'forwards' }}>
+                  <div style={{ maxWidth:'82%',padding:'14px 16px',borderRadius:18,background:bubbleColor,color:textColor,fontSize:15,lineHeight:1.5,boxShadow:isUser?'0 12px 32px rgba(0,0,0,.25)':'0 6px 18px rgba(0,0,0,.12)',border }}>
+                    {msg.message}
+                    <div style={{ marginTop:8,display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+                      <span style={{ fontSize:11,opacity:.7 }}>{new Date(msg.createdAt).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</span>
+                      {isUser && (
+                        <span style={{ fontSize:11,opacity:.7,marginLeft:10 }}>{read ? 'Read' : delivered ? 'Delivered' : 'Sent'}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {showTyping && (
+              <div style={{ display:'flex',justifyContent:'flex-start',gap:12,alignItems:'center',padding:'6px 12px',borderRadius:18,background:'rgba(255,255,255,.08)',width:'fit-content',maxWidth:'80%' }}>
+                <div style={{ width:10,height:10,borderRadius:'50%',background:'#00D1B2' }} />
+                <span style={{ fontSize:13,color:'var(--text-secondary)' }}>Sauki AI is typing</span>
+                <span style={{ width:32,display:'flex',gap:4,alignItems:'center' }}>
+                  {[0,1,2].map(i=> (
+                    <span key={i} style={{ width:6,height:6,borderRadius:3,background:'var(--text-secondary)',opacity:0.7,animation:`pulse 1s ${i*0.1}s infinite` }} />
+                  ))}
+                </span>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          <div style={{ padding:'12px 16px',borderTop:'1px solid rgba(255,255,255,.08)',display:'flex',gap:10,background:'rgba(0,0,0,.05)' }}>
+            <input value={chatInput} onChange={e=>{
+                setChatInput(e.target.value);
+                setChatTyping(true);
+                setTimeout(()=>setChatTyping(false), 1200);
+              }}
+              onKeyDown={e=>{ if(e.key==='Enter') sendChat(); }}
+              placeholder="Type a message…"
+              style={{ flex:1,padding:'14px 16px',borderRadius:18,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',color:'var(--text)',fontSize:15 }} />
+            <button onClick={sendChat} style={{ width:48,height:48,borderRadius:16,background:chatInput.trim()?BLUE:'rgba(0,113,227,.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'#fff',fontSize:20,fontWeight:700,border:'none',cursor:chatInput.trim()?'pointer':'not-allowed',transition:'transform .2s' }}
+              disabled={!chatInput.trim()}
+              onMouseEnter={e=>{ if(chatInput.trim()) e.currentTarget.style.transform='scale(1.05)'; }}
+              onMouseLeave={e=>{ e.currentTarget.style.transform='scale(1)'; }}>
+              →
+            </button>
+          </div>
         </div>
-        <div style={{ padding:'12px 16px',borderTop:'1px solid var(--border)',display:'flex',gap:10,background:'var(--card)' }}>
-          <input value={chatInput} onChange={e=>setChatInput(e.target.value)}
-            onKeyDown={e=>{ if(e.key==='Enter') sendChat(); }}
-            placeholder="Type message…"
-            style={{ flex:1,padding:'12px 16px',borderRadius:20,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:15 }} />
-          <button onClick={sendChat} style={{ width:44,height:44,borderRadius:22,background:BLUE,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'#fff',fontSize:18,fontWeight:600,boxShadow:'0 4px 12px rgba(0,113,227,.3)',transition:'all .2s' }}
-            onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.05)'}}
-            onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)'}}>→</button>
-        </div>
-      </div>
-    </>
-  );
+      </>
+    );
+  }
 
   /* ABOUT */
   if (screen === 'about') return (

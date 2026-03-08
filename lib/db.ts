@@ -116,6 +116,43 @@ export async function initDB() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS chat_sessions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'ai', -- ai, needs_agent, agent_active, resolved, flagged
+      agent_required BOOLEAN DEFAULT FALSE,
+      agent_id UUID,
+      is_typing BOOLEAN DEFAULT FALSE,
+      typing_updated_at TIMESTAMPTZ DEFAULT NOW(),
+      abusive_warned BOOLEAN DEFAULT FALSE,
+      last_message TEXT,
+      last_activity TIMESTAMPTZ DEFAULT NOW(),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS chat_notes (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE,
+      created_by TEXT,
+      note TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    -- Backfill schema for old chats (new columns for improved chat features)
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='chats' AND column_name='session_id') THEN
+        ALTER TABLE chats ADD COLUMN session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='chats' AND column_name='delivered_at') THEN
+        ALTER TABLE chats ADD COLUMN delivered_at TIMESTAMPTZ;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='chats' AND column_name='read_at') THEN
+        ALTER TABLE chats ADD COLUMN read_at TIMESTAMPTZ;
+      END IF;
+    END $$;
+
     CREATE TABLE IF NOT EXISTS webhooks_log (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       event TEXT,
