@@ -125,7 +125,7 @@ const GlobalStyle = ({ dark }: { dark: boolean }) => (
 
 /* ─────────────── PIN KEYBOARD ─────────────── */
 function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', subtitle = '', pinAction }: {
-  onComplete: (pin: string) => void; onClose: () => void; title?: string; subtitle?: string; pinAction?: "buy-data" | "buy-product" | "sim-pay" | null;
+  onComplete: (pin: string) => void; onClose: () => void; title?: string; subtitle?: string; pinAction?: "buy-data" | "buy-product" | "sim-pay" | "transfer" | null;
 }) {
   const [pin, setPin] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
