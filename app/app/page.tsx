@@ -827,12 +827,25 @@ export default function AppPage() {
         body: JSON.stringify({ message: messageToSend }),
         cache: 'no-store' as RequestCache
       });
+      
       if (!res.ok) {
-        const errData = await res.json();
-        showError(errData.error || 'Failed to send message');
+        const text = await res.text();
+        try {
+          const errData = JSON.parse(text);
+          showError(errData.error || `Error (${res.status})`);
+        } catch {
+          showError(`Error ${res.status}: ${text.substring(0, 100)}`);
+        }
         return;
       }
-      const data = await res.json();
+      
+      const text = await res.text();
+      if (!text) {
+        showError('Empty response from server');
+        return;
+      }
+      
+      const data = JSON.parse(text);
       if (data.session) setChatSession(data.session);
       if (Array.isArray(data.messages)) setChatMessages(data.messages);
     } catch (err: unknown) { 
