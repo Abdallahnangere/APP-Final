@@ -137,7 +137,7 @@ export default function AdminPage() {
     if (tab === 'webhooks') load('webhooks').then(d => setWebhooks(Array.isArray(d)?d:[]));
     if (tab === 'sim') load('sim-activations').then(d => setSimActs(Array.isArray(d)?d:[]));
     if (tab === 'analytics') load('analytics').then(d => setAnalytics(d?.overview || d || {}));
-  }, [tab, authed, load, pendingChatUserId]);
+  }, [tab, authed, load]);
 
   // Real-time wallet updates when needed
   useEffect(() => {
