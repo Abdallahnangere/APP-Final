@@ -1123,10 +1123,9 @@ export default function AppPage() {
       {[
         { id:'home', label:'Home', icon: Icons.bolt(BLUE, 24) },
         { id:'transactions', label:'Activity', icon: Icons.arrowDown(BLUE, 24) },
-        { id:'chat', label:'Chat', icon: Icons.messageSquare(BLUE, 24) },
         { id:'profile', label:'Account', icon: Icons.user(BLUE, 24) },
       ].map(item => (
-        <button key={item.id} onClick={()=>{ if(item.id==='chat') loadChatSession(); setScreen(item.id as typeof screen); }}
+        <button key={item.id} onClick={()=>{ setScreen(item.id as typeof screen); }}
           style={{ padding:'12px 0 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,background:'none',borderTop: active===item.id ? `3px solid ${BLUE}` : 'none',paddingTop: active===item.id ? '9px' : '12px',transition:'all .2s',opacity: active===item.id ? 1 : 0.65,cursor:'pointer' }}
           onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}}
           onMouseLeave={e=>{e.currentTarget.style.opacity = active===item.id ? '1' : '0.65'}}>

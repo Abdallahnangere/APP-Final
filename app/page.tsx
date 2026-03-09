@@ -110,6 +110,7 @@ function Hero({ plans }: { plans: Plan[] }) {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.05)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" style={{ height: 80, width: 'auto' }} />
             </a>
           </div>
