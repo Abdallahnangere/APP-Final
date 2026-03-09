@@ -68,38 +68,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Recipient account is inactive' }, { status: 400 });
     }
 
-    // Perform transfer in transaction
-    await sql.begin(async (sql) => {
-      // Debit sender
-      await sql`
-        UPDATE users 
-        SET wallet_balance = wallet_balance - ${transferAmount},
-            updated_at = NOW()
-        WHERE id = ${userId}
-      `;
+    // Perform transfer
+    // Debit sender
+    await sql`
+      UPDATE users 
+      SET wallet_balance = wallet_balance - ${transferAmount},
+          updated_at = NOW()
+      WHERE id = ${userId}
+    `;
 
-      // Credit recipient
-      await sql`
-        UPDATE users 
-        SET wallet_balance = wallet_balance + ${transferAmount},
-            updated_at = NOW()
-        WHERE id = ${recipient.id}
-      `;
+    // Credit recipient
+    await sql`
+      UPDATE users 
+      SET wallet_balance = wallet_balance + ${transferAmount},
+          updated_at = NOW()
+      WHERE id = ${recipient.id}
+    `;
 
-      // Record sender transaction
-      await sql`
-        INSERT INTO transactions 
-        (user_id, type, description, amount, status, created_at)
-        VALUES (${userId}, 'transfer_out', ${'Transfer to ' + recipientPhone}, ${transferAmount}, 'success', NOW())
-      `;
+    // Record sender transaction
+    await sql`
+      INSERT INTO transactions 
+      (user_id, type, description, amount, status, created_at)
+      VALUES (${userId}, 'transfer_out', ${'Transfer to ' + recipientPhone}, ${transferAmount}, 'success', NOW())
+    `;
 
-      // Record recipient transaction
-      await sql`
-        INSERT INTO transactions 
-        (user_id, type, description, amount, status, created_at)
-        VALUES (${recipient.id}, 'transfer_in', ${'Transfer from ' + sender.phone}, ${transferAmount}, 'success', NOW())
-      `;
-    });
+    // Record recipient transaction
+    await sql`
+      INSERT INTO transactions 
+      (user_id, type, description, amount, status, created_at)
+      VALUES (${recipient.id}, 'transfer_in', ${'Transfer from ' + sender.phone}, ${transferAmount}, 'success', NOW())
+    `;
 
     return NextResponse.json({
       success: true,
