@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { verifyPin } from '@/lib/utils';
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,7 +41,6 @@ export async function POST(req: NextRequest) {
     const sender = senderRows[0];
 
     // Verify PIN
-    const { verifyPin } = await import('@/lib/auth');
     const isPinValid = await verifyPin(pin, sender.pin_hash);
     if (!isPinValid) {
       return NextResponse.json({ error: 'Invalid PIN' }, { status: 401 });

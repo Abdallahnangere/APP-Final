@@ -1360,6 +1360,8 @@ export default function AppPage() {
                 const isData = tx.type === 'data';
                 const isProduct = tx.type === 'product';
                 const isCashback = tx.type === 'cashback' || tx.type === 'cashback_redemption';
+                const isTransferOut = tx.type === 'transfer_out';
+                const isTransferIn = tx.type === 'transfer_in';
                 
                 // Icon and color mapping
                 const typeConfig: Record<string, {icon: any; color: string; bg: string; label: string}> = {
@@ -1367,11 +1369,13 @@ export default function AppPage() {
                   data: { icon: Icons.bolt(BLUE, 18), color: BLUE, bg: 'rgba(0,113,227,.08)', label: 'Data Purchase' },
                   product: { icon: Icons.download(PURPLE, 18), color: PURPLE, bg: 'rgba(191,90,242,.08)', label: 'Product' },
                   cashback: { icon: Icons.arrowUp(ORANGE, 18), color: ORANGE, bg: 'rgba(255,159,10,.08)', label: 'Cashback' },
+                  transfer_in: { icon: Icons.arrowDown(TEAL, 18), color: TEAL, bg: 'rgba(90,200,250,.08)', label: 'Money Received' },
+                  transfer_out: { icon: Icons.arrowUp(TEAL, 18), color: TEAL, bg: 'rgba(90,200,250,.08)', label: 'Money Sent' },
                 };
                 
                 const config = typeConfig[tx.type] || typeConfig.deposit;
                 const amount = Number(tx.amount);
-                const isCredit = isDeposit || isCashback;
+                const isCredit = isDeposit || isCashback || isTransferIn;
                 const displayAmount = `${isCredit ? '+' : '−'}₦${amount.toLocaleString('en-NG',{maximumFractionDigits:0})}`;
                 const amountColor = isCredit ? GREEN : RED;
                 
