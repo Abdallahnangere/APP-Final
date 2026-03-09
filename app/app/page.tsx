@@ -133,12 +133,17 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', su
     const np = pin + d;
     setPin(np);
     if (np.length === 4) {
-      // Blur keyboard on 4th digit
+      // Auto-dismiss keyboard on 4th digit
       if (typeof window !== 'undefined') {
+        // Blur any active element
         const activeElement = document.activeElement as HTMLElement;
         if (activeElement) activeElement.blur();
+        // Explicitly hide keyboard on mobile
+        if ('ontouchstart' in window) {
+          document.body.style.overflow = 'hidden';
+        }
       }
-      setTimeout(() => onComplete(np), 120);
+      setTimeout(() => onComplete(np), 100);
     }
   };
   const del = () => setPin(p => p.slice(0, -1));
@@ -420,6 +425,38 @@ export default function AppPage() {
     };
     window.addEventListener('popstate', handleBackButton);
     return () => window.removeEventListener('popstate', handleBackButton);
+  }, []);
+
+  // Initialize database on app load
+  useEffect(() => {
+    const initDatabase = async () => {
+      try {
+        const adminPass = process.env.NEXT_PUBLIC_ADMIN_PASS || 'saukimart2025';
+        const loginRes = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: adminPass })
+        });
+        
+        if (loginRes.ok) {
+          const loginData = await loginRes.json();
+          const token = loginData.token;
+          
+          const initRes = await fetch('/api/admin/init-db', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+          });
+          
+          if (initRes.ok) {
+            console.log('Database initialized successfully');
+          }
+        }
+      } catch (err) {
+        console.error('Database initialization error (non-critical):', err);
+      }
+    };
+    
+    initDatabase();
   }, []);
 
   // Splash
@@ -1157,56 +1194,56 @@ export default function AppPage() {
         
         {/* Wallet Card with Enhanced Styling */}
         <div style={{ margin:'0 auto',maxWidth:980 }}>
-          <div style={{ position:'relative', margin:'0 16px',background:'var(--card)',borderRadius:20,padding:'28px 24px',border:'1px solid var(--border)',boxShadow:'0 8px 32px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.07)',backdropFilter:'blur(20px)' }}>
+          <div style={{ position:'relative', margin:'0 16px',background:'var(--card)',borderRadius:20,padding:'20px 18px',border:'1px solid var(--border)',boxShadow:'0 8px 32px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.07)',backdropFilter:'blur(20px)' }}>
           {cashbackToast && (
-            <div className="fade-in" style={{ position:'absolute',top:16,right:16,background:'rgba(255,159,10,0.95)',color:'#1A1A1A',padding:'10px 14px',borderRadius:14,fontSize:13,fontWeight:700,boxShadow:'0 8px 24px rgba(0,0,0,0.22)',zIndex:10,whiteSpace:'nowrap' }}>
+            <div className="fade-in" style={{ position:'absolute',top:14,right:14,background:'rgba(255,159,10,0.95)',color:'#1A1A1A',padding:'8px 12px',borderRadius:12,fontSize:12,fontWeight:700,boxShadow:'0 8px 24px rgba(0,0,0,0.22)',zIndex:10,whiteSpace:'nowrap' }}>
               {cashbackToast}
             </div>
           )}
-            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20 }}>
+            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14 }}>
               <div>
-                <p style={{ color:'var(--text-secondary)',fontSize:13,fontWeight:600,letterSpacing:.5,marginBottom:8 }}>AVAILABLE BALANCE</p>
+                <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:600,letterSpacing:.5,marginBottom:6 }}>AVAILABLE BALANCE</p>
                 <div style={{ display:'flex',alignItems:'flex-start',gap:'2px' }}>
-                  <span style={{ fontSize:'28px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>₦</span>
-                  <span style={{ fontSize:'28px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>{(user.walletBalance/1).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                  <span style={{ fontSize:'26px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>₦</span>
+                  <span style={{ fontSize:'26px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>{(user.walletBalance/1).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                 </div>
               </div>
-              <button onClick={refreshUser} style={{ background:'rgba(0,113,227,.10)',border:'1px solid rgba(0,113,227,.2)',borderRadius:12,padding:'12px 16px',cursor:'pointer',display:'flex',alignItems:'center',gap:8,transition:'all .2s',fontSize:13,fontWeight:600,color:BLUE }} onMouseEnter={e=>{e.currentTarget.style.background='rgba(0,113,227,.15)'; e.currentTarget.style.borderColor='rgba(0,113,227,.3)'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(0,113,227,.10)'; e.currentTarget.style.borderColor='rgba(0,113,227,.2)'}}>
+              <button onClick={refreshUser} style={{ background:'rgba(0,113,227,.10)',border:'1px solid rgba(0,113,227,.2)',borderRadius:10,padding:'10px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:8,transition:'all .2s',fontSize:12,fontWeight:600,color:BLUE }} onMouseEnter={e=>{e.currentTarget.style.background='rgba(0,113,227,.15)'; e.currentTarget.style.borderColor='rgba(0,113,227,.3)'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(0,113,227,.10)'; e.currentTarget.style.borderColor='rgba(0,113,227,.2)'}}>
                 {Icons.wallet(BLUE, 20)}
                 Refresh
               </button>
             </div>
-            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16 }}>
-              <div style={{ background:'rgba(255,159,10,.08)',borderRadius:12,padding:'14px 16px',border:'1px solid rgba(255,159,10,.2)' }}>
-                <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:600 }}>CASHBACK</p>
-                <p style={{ color:ORANGE,fontWeight:700,fontSize:18,marginTop:4 }}>₦{user.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
-                <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:600,marginTop:6 }}>2% cashback on every purchase</p>
+            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12 }}>
+              <div style={{ background:'rgba(255,159,10,.08)',borderRadius:12,padding:'12px 14px',border:'1px solid rgba(255,159,10,.2)' }}>
+                <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:700 }}>CASHBACK</p>
+                <p style={{ color:ORANGE,fontWeight:700,fontSize:16,marginTop:3 }}>₦{user.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                <p style={{ color:'var(--text-secondary)',fontSize:10,fontWeight:600,marginTop:4 }}>2% on every purchase</p>
               </div>
-              <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'14px 16px',border:'1px solid var(--border)' }}>
-                <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:600 }}>REFERRAL BONUS</p>
-                <p style={{ color:PURPLE,fontWeight:700,fontSize:18,marginTop:4 }}>₦{user.referralBonus.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+              <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'12px 14px',border:'1px solid var(--border)' }}>
+                <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:700 }}>REFERRAL BONUS</p>
+                <p style={{ color:PURPLE,fontWeight:700,fontSize:16,marginTop:3 }}>₦{user.referralBonus.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
               </div>
             </div>
-            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginBottom:16 }}>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginBottom:12 }}>
               <button onClick={() => setRedeemOpen(true)}
                 disabled={user.cashbackBalance <= 0}
                 title={user.cashbackBalance > 0 ? 'Redeem to main wallet' : 'No cashback balance to redeem yet'}
                 style={{
-                  padding:'12px 18px',borderRadius:14,border:'none',background: user.cashbackBalance > 0 ? ORANGE : 'rgba(142,142,147,.2)',
-                  color: user.cashbackBalance > 0 ? '#1A1A1A' : 'rgba(28,28,30,.5)',fontWeight:700,cursor: user.cashbackBalance > 0 ? 'pointer' : 'not-allowed',transition:'all .2s'
+                  padding:'10px 16px',borderRadius:12,border:'none',background: user.cashbackBalance > 0 ? ORANGE : 'rgba(142,142,147,.2)',
+                  color: user.cashbackBalance > 0 ? '#1A1A1A' : 'rgba(28,28,30,.5)',fontWeight:700,cursor: user.cashbackBalance > 0 ? 'pointer' : 'not-allowed',transition:'all .2s',fontSize:14
                 }}>
                 Redeem Cashback
               </button>
-              <p style={{ color:'var(--text-secondary)',fontSize:12,margin:0 }}>Move your cashback to your main balance instantly.</p>
+              <p style={{ color:'var(--text-secondary)',fontSize:11,margin:0 }}>Move cashback to main balance.</p>
             </div>
             {user.accountNumber && (
-              <div style={{ background:'var(--bg-secondary)',borderRadius:14,padding:'12px 16px',border:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+              <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'10px 14px',border:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
                 <div>
-                  <p style={{ color:'var(--text-secondary)',fontSize:12 }}>{user.bankName}</p>
-                  <p style={{ color:'var(--text)',fontWeight:700,fontSize:15,letterSpacing:.3,marginTop:2 }}>{user.accountNumber}</p>
+                  <p style={{ color:'var(--text-secondary)',fontSize:11,margin:0 }}>{user.bankName}</p>
+                  <p style={{ color:'var(--text)',fontWeight:700,fontSize:14,letterSpacing:.3,marginTop:2 }}>{user.accountNumber}</p>
                 </div>
                 <button onClick={()=>{ navigator.clipboard.writeText(user.accountNumber); showToast('Copied'); }}
-                  style={{ background:BLUE,color:'#fff',fontSize:12,fontWeight:600,padding:'6px 14px',borderRadius:8 }}>Copy</button>
+                  style={{ background:BLUE,color:'#fff',fontSize:11,fontWeight:600,padding:'5px 12px',borderRadius:8 }}>Copy</button>
               </div>
             )}
           </div>
