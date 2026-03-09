@@ -287,25 +287,22 @@ export async function POST(req: NextRequest) {
     // Update session status if needed
     if (behavior.update && Object.keys(behavior.update).length > 0) {
       const updates: Record<string, unknown> = { ...behavior.update, updated_at: new Date() };
-      const setClause = Object.entries(updates)
-        .map(([key]) => `${key} = $${Object.keys(updates).indexOf(key) + 1}`)
-        .join(', ');
-      
-      const values = Object.values(updates);
-      
-      await sql`
-        UPDATE chat_sessions
-        SET ${sql(setClause.replace(/\$\d+/g, () => {
-          let i = 0;
-          return () => `$${++i}`;
-        }))}
-        WHERE id = ${session.id}
-      `.catch(() => {
-        // Fallback to individual updates
-        Object.entries(behavior.update).forEach(async ([key, value]) => {
-          await sql`UPDATE chat_sessions SET ${sql(key)} = ${value} WHERE id = ${session.id}`;
-        });
-      });
+      // Update session with dynamic fields
+      for (const [key, value] of Object.entries(updates)) {
+        if (key === 'status') {
+          await sql`UPDATE chat_sessions SET status = ${value} WHERE id = ${session.id}`;
+        } else if (key === 'is_typing') {
+          await sql`UPDATE chat_sessions SET is_typing = ${value} WHERE id = ${session.id}`;
+        } else if (key === 'agent_required') {
+          await sql`UPDATE chat_sessions SET agent_required = ${value} WHERE id = ${session.id}`;
+        } else if (key === 'agent_id') {
+          await sql`UPDATE chat_sessions SET agent_id = ${value} WHERE id = ${session.id}`;
+        } else if (key === 'abusive_warned') {
+          await sql`UPDATE chat_sessions SET abusive_warned = ${value} WHERE id = ${session.id}`;
+        } else if (key === 'last_message') {
+          await sql`UPDATE chat_sessions SET last_message = ${value} WHERE id = ${session.id}`;
+        }
+      }
     }
 
     if (behavior.escalateNote) {
