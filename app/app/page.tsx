@@ -16,7 +16,7 @@ type Transaction = {
 };
 type Deposit = { id: string; amount: number; senderName: string; createdAt: string; narration: string; };
 type Plan = { id: string; network: string; networkId: number; planId: number; dataSize: string; validity: string; price: number; };
-type Product = { id: string; name: string; description: string; price: number; imageUrl: string; imageBase64?: string; inStock: boolean; shippingTerms: string; pickupTerms: string; category: string; };
+type Product = { id: string; name: string; description: string; price: number; imageUrl: string; imageBase64?: string; inStock: boolean; shippingTerms: string; pickupTerms: string; category: string; deliveryAddress?: string; };
 type ChatMsg = { id: string; sender: string; message: string; created_at: string; delivered_at?: string; read_at?: string; };
 type SimActivation = { id: string; status: string; createdAt: string; serialNumber?: string; };
 
@@ -345,10 +345,16 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
                   <p style={{ fontSize:'11px',color:'#8E8E93',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.3px',margin:'0 0 4px' }}>Customer</p>
                   <p style={{ fontSize:'13px',fontWeight:600,color:'#1D1D1F',margin:'0' }}>{(data.userName || 'N/A') as string}</p>
                 </div>
-                <div style={{ marginBottom:'0' }}>
+                <div style={{ marginBottom:data.deliveryAddress ? '10px' : '0' }}>
                   <p style={{ fontSize:'11px',color:'#8E8E93',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.3px',margin:'0 0 4px' }}>Contact</p>
                   <p style={{ fontSize:'13px',fontWeight:600,color:'#1D1D1F',margin:'0' }}>{(data.userPhone || 'N/A') as string}</p>
                 </div>
+                {data.deliveryAddress && (
+                  <div>
+                    <p style={{ fontSize:'11px',color:'#8E8E93',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.3px',margin:'0 0 4px' }}>Delivery Address</p>
+                    <p style={{ fontSize:'13px',fontWeight:600,color:'#1D1D1F',margin:'0',lineHeight:'1.5' }}>{(data.deliveryAddress as string) || 'N/A'}</p>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -432,6 +438,11 @@ export default function AppPage() {
   const [transferAmount, setTransferAmount] = useState('');
   const [transferRecipient, setTransferRecipient] = useState<{name:string; phone:string}|null>(null);
   const [transferLoading, setTransferLoading] = useState(false);
+
+  // Product delivery states
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryCity, setDeliveryCity] = useState('');
+  const [deliveryPostalCode, setDeliveryPostalCode] = useState('');
   const [chatInput, setChatInput] = useState('');
   const [simSerial, setSimSerial] = useState('');
   const [simFront, setSimFront] = useState<string|null>(null);
@@ -763,9 +774,10 @@ export default function AppPage() {
       localStorage.setItem('sm_user', JSON.stringify(data.user));
       localStorage.setItem('sm_phone', loginPhone);
       setStoredPhone(loginPhone);
+      setShowPin(false);
       setScreen('home');
     } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Login failed'); }
-    finally { setLoading(false); }
+    finally { setLoading(false); setShowPin(false); }
   };
 
   /* ── BUY DATA ── */
@@ -801,20 +813,32 @@ export default function AppPage() {
   /* ── BUY PRODUCT ── */
   const handleBuyProduct = async (pin: string) => {
     if (!selectedProduct) return;
+    if (!deliveryAddress || !deliveryCity || !deliveryPostalCode) {
+      showError('Please fill in all delivery address fields');
+      return;
+    }
     setLoading(true);
     try {
-      // Generate idempotency key on first attempt, reuse on retry
       const idempKey = purchaseIdempotencyKey || generateIdempotencyKey();
       if (!purchaseIdempotencyKey) setPurchaseIdempotencyKey(idempKey);
       
+      const fullAddress = `${deliveryAddress}, ${deliveryCity} ${deliveryPostalCode}`;
       const res = await fetch('/api/purchase-product', {
         method:'POST', headers: authHeader(),
-        body: JSON.stringify({ pin, productId: selectedProduct.id, idempotencyKey: idempKey }),
+        body: JSON.stringify({ 
+          pin, 
+          productId: selectedProduct.id, 
+          deliveryAddress: fullAddress,
+          idempotencyKey: idempKey 
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setReceipt({ ...data.receipt, type:'product' });
-      setPurchaseIdempotencyKey(null); // Clear for next purchase
+      setReceipt({ ...data.receipt, type:'product', deliveryAddress: fullAddress });
+      setPurchaseIdempotencyKey(null);
+      setDeliveryAddress('');
+      setDeliveryCity('');
+      setDeliveryPostalCode('');
       await refreshUser();
       await loadHomeData();
       showToast('🎉 Purchase successful!');
@@ -881,6 +905,7 @@ export default function AppPage() {
     if (pinAction === 'buy-data') handleBuyData(pin);
     else if (pinAction === 'buy-product') handleBuyProduct(pin);
     else if (pinAction === 'sim-pay') handleSimPay(pin);
+    else if (pinAction === 'transfer') handleTransfer(pin);
   };
 
   const sendChat = useCallback(async () => {
@@ -1265,32 +1290,39 @@ export default function AppPage() {
       <div style={{ height:'100dvh',overflowY:'auto',background:'var(--bg)',paddingTop:'80px',paddingBottom:100,backgroundImage: dark ? 'radial-gradient(ellipse at 50% 0%, rgba(0,113,227,0.08) 0%, transparent 50%)' : 'none',backgroundAttachment: 'fixed' }}>
         <Header />
         
-        {/* Wallet Card - Minimal Compact Design */}
-        <div style={{ margin:'0 16px',background:'var(--card)',borderRadius:16,padding:'16px',border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,0.12)' }}>
-          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-end',gap:12 }}>
+        {/* Wallet Card - Professional Fintech Design */}
+        <div style={{ margin:'0 16px',background:`linear-gradient(135deg, ${BLUE}08, ${TEAL}08)`,borderRadius:20,padding:'20px',border:'1px solid var(--border)',boxShadow:'0 8px 24px rgba(0,113,227,.15)' }}>
+          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,marginBottom:20 }}>
             <div>
-              <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:700,marginBottom:4 }}>BALANCE</p>
-              <div style={{ display:'flex',alignItems:'baseline',gap:'1px' }}>
-                <span style={{ fontSize:'20px',fontWeight:900,color:'var(--text)' }}>₦{(user.walletBalance/1).toLocaleString('en-NG',{minimumFractionDigits:0,maximumFractionDigits:0})}</span>
+              <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:700,marginBottom:8,letterSpacing:.5 }}>TOTAL BALANCE</p>
+              <div style={{ display:'flex',alignItems:'baseline',gap:2 }}>
+                <span style={{ fontSize:28,fontWeight:900,color:'var(--text)' }}>₦</span>
+                <span style={{ fontSize:28,fontWeight:900,color:'var(--text)' }}>{user.walletBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
               </div>
             </div>
             <div style={{ display:'flex',gap:8 }}>
-              <button onClick={refreshUser} style={{ background:'rgba(0,113,227,.1)',border:'none',borderRadius:8,padding:'8px 12px',cursor:'pointer',fontSize:12,fontWeight:600,color:BLUE,transition:'all .2s' }}>Refresh</button>
-              <button onClick={() => setRedeemOpen(true)} disabled={user.cashbackBalance <= 0} style={{ background:user.cashbackBalance > 0 ? ORANGE : 'rgba(142,142,147,.2)',border:'none',borderRadius:8,padding:'8px 12px',cursor:user.cashbackBalance > 0 ? 'pointer' : 'not-allowed',fontSize:12,fontWeight:600,color:user.cashbackBalance > 0 ? '#1A1A1A' : 'rgba(28,28,30,.5)',transition:'all .2s' }}>Redeem</button>
+              <button onClick={refreshUser} style={{ background:`${BLUE}15`,border:`1px solid ${BLUE}30`,borderRadius:10,padding:'10px 14px',cursor:'pointer',fontSize:12,fontWeight:600,color:BLUE,transition:'all .2s' }}>↻ Sync</button>
+              <button onClick={() => setRedeemOpen(true)} disabled={user.cashbackBalance <= 0} style={{ background:user.cashbackBalance > 0 ? `${ORANGE}15` : 'rgba(142,142,147,.08)',border:user.cashbackBalance > 0 ? `1px solid ${ORANGE}30` : '1px solid rgba(142,142,147,.2)',borderRadius:10,padding:'10px 14px',cursor:user.cashbackBalance > 0 ? 'pointer' : 'not-allowed',fontSize:12,fontWeight:600,color:user.cashbackBalance > 0 ? ORANGE : 'rgba(142,142,147,.5)',transition:'all .2s' }}>+ Redeem</button>
             </div>
           </div>
-          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginTop:12 }}>
-            <div style={{ background:'rgba(255,159,10,.08)',borderRadius:10,padding:'10px',border:'1px solid rgba(255,159,10,.15)',textAlign:'center' }}>
-              <p style={{ color:'var(--text-secondary)',fontSize:10,fontWeight:700,margin:0 }}>CASHBACK</p>
-              <p style={{ color:ORANGE,fontWeight:700,fontSize:14,margin:'3px 0 0' }}>₦{user.cashbackBalance.toLocaleString('en-NG',{maximumFractionDigits:0})}</p>
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16 }}>
+            <div style={{ background:'rgba(255,159,10,.06)',borderRadius:14,padding:'12px',border:`1px solid ${ORANGE}20` }}>
+              <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:700,margin:0,letterSpacing:.3 }}>CASHBACK</p>
+              <p style={{ color:ORANGE,fontWeight:800,fontSize:16,margin:'6px 0 0' }}>₦{user.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
             </div>
-            <div style={{ background:'var(--bg-secondary)',borderRadius:10,padding:'10px',border:'1px solid var(--border)',textAlign:'center' }}>
-              <p style={{ color:'var(--text-secondary)',fontSize:10,fontWeight:700,margin:0 }}>REFERRAL</p>
-              <p style={{ color:PURPLE,fontWeight:700,fontSize:14,margin:'3px 0 0' }}>₦{user.referralBonus.toLocaleString('en-NG',{maximumFractionDigits:0})}</p>
+            <div style={{ background:'rgba(191,90,242,.06)',borderRadius:14,padding:'12px',border:`1px solid ${PURPLE}20` }}>
+              <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:700,margin:0,letterSpacing:.3 }}>REFERRAL</p>
+              <p style={{ color:PURPLE,fontWeight:800,fontSize:16,margin:'6px 0 0' }}>₦{user.referralBonus.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
             </div>
-            <div style={{ background:'rgba(48,209,88,.08)',borderRadius:10,padding:'10px',border:'1px solid rgba(48,209,88,.15)',textAlign:'center' }}>
-              <p style={{ color:'var(--text-secondary)',fontSize:10,fontWeight:700,margin:0 }}>ACCOUNT</p>
-              <p style={{ color:GREEN,fontWeight:700,fontSize:13,margin:'3px 0 0',wordBreak:'break-all' }}>{user.accountNumber?.slice(-4) || 'N/A'}</p>
+          </div>
+          <div style={{ background:'rgba(0,0,0,.04)',borderRadius:14,padding:'12px',border:'1px solid var(--border)' }}>
+            <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:700,margin:0,marginBottom:6,letterSpacing:.3 }}>ACCOUNT DETAILS</p>
+            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+              <div>
+                <p style={{ color:'var(--text)',fontWeight:700,fontSize:14,margin:0 }}>{user.bankName || 'No Bank'}</p>
+                <p style={{ color:'var(--text-secondary)',fontSize:12,margin:'4px 0 0',fontFamily:'monospace',fontWeight:600 }}>{user.accountNumber || 'N/A'}</p>
+              </div>
+              <button onClick={() => { navigator.clipboard.writeText(user.accountNumber || ''); showToast('✓ Copied'); }} style={{ background:`${BLUE}15`,border:`1px solid ${BLUE}30`,borderRadius:8,padding:'8px 12px',cursor:'pointer',fontSize:11,fontWeight:600,color:BLUE,transition:'all .2s' }}>Copy</button>
             </div>
           </div>
         </div>
@@ -1606,6 +1638,29 @@ export default function AppPage() {
                 <p style={{ fontSize:14,color:'var(--text-secondary)',lineHeight:1.6 }}>{selectedProduct.pickupTerms}</p>
               </div>
             )}
+
+            {/* Delivery Address Form */}
+            <div style={{ background:'var(--bg-secondary)',borderRadius:14,padding:'16px',marginTop:16,border:'1px solid var(--border)' }}>
+              <p style={{ fontWeight:700,fontSize:14,color:'var(--text)',marginBottom:12 }}>Delivery Address</p>
+              <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Street Address *</label>
+              <input value={deliveryAddress} onChange={e=>setDeliveryAddress(e.target.value)}
+                placeholder="123 Main Street" maxLength={100}
+                style={{ width:'100%',padding:'12px 14px',borderRadius:10,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:14,marginBottom:12,boxSizing:'border-box' }} />
+              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10 }}>
+                <div>
+                  <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>City *</label>
+                  <input value={deliveryCity} onChange={e=>setDeliveryCity(e.target.value)}
+                    placeholder="Lagos"
+                    style={{ width:'100%',padding:'12px 14px',borderRadius:10,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:14,boxSizing:'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Postal Code *</label>
+                  <input value={deliveryPostalCode} onChange={e=>setDeliveryPostalCode(e.target.value)}
+                    placeholder="100001"
+                    style={{ width:'100%',padding:'12px 14px',borderRadius:10,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:14,boxSizing:'border-box' }} />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         {selectedProduct.inStock && (

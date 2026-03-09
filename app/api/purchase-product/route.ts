@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   if (!payload?.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const { pin, productId, idempotencyKey: clientIdempotency } = await req.json();
+    const { pin, productId, idempotencyKey: clientIdempotency, deliveryAddress } = await req.json();
     if (!/^\d{4}$/.test(pin)) return NextResponse.json({ error: 'Invalid PIN' }, { status: 400 });
 
     const idempotencyKey = clientIdempotency || generateIdempotencyKey();
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     const receiptData = {
       ref: receiptRef, productId: product.id, productName: product.name,
       price, description: product.description, userName: `${user.first_name} ${user.last_name}`,
-      userPhone: user.phone, date: new Date().toISOString(), type: 'product',
+      userPhone: user.phone, deliveryAddress: deliveryAddress || 'Not provided', date: new Date().toISOString(), type: 'product',
     };
 
     // Create pending transaction (handle race: unique idempotency_key)
