@@ -17,7 +17,6 @@ type Transaction = {
 type Deposit = { id: string; amount: number; senderName: string; createdAt: string; narration: string; };
 type Plan = { id: string; network: string; networkId: number; planId: number; dataSize: string; validity: string; price: number; };
 type Product = { id: string; name: string; description: string; price: number; imageUrl: string; imageBase64?: string; inStock: boolean; shippingTerms: string; pickupTerms: string; category: string; deliveryAddress?: string; };
-type ChatMsg = { id: string; sender: string; message: string; created_at: string; delivered_at?: string; read_at?: string; };
 type SimActivation = { id: string; status: string; createdAt: string; serialNumber?: string; };
 
 /* ─────────────── CONSTANTS ─────────────── */
@@ -389,7 +388,7 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
 
 /* ─────────────── MAIN APP ─────────────── */
 export default function AppPage() {
-  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'chat'|'sim-activation'|'notifications'|'about'|'transfer'>('splash');
+  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'>('splash');
   const [dark, setDark] = useState(false);
   const [user, setUser] = useState<User|null>(null);
   const [token, setToken] = useState('');
@@ -405,13 +404,6 @@ export default function AppPage() {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [chatSession, setChatSession] = useState<any|null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
-  const [chatTyping, setChatTyping] = useState(false);
-  const [aiTyping, setAiTyping] = useState(false);
-  const [chatBanner, setChatBanner] = useState('');
-  const [idlePrompted, setIdlePrompted] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement|null>(null);
   const [simActivations, setSimActivations] = useState<SimActivation[]>([]);
 
   // Selection
@@ -443,11 +435,6 @@ export default function AppPage() {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryCity, setDeliveryCity] = useState('');
   const [deliveryPostalCode, setDeliveryPostalCode] = useState('');
-  const [chatInput, setChatInput] = useState('');
-  const [simSerial, setSimSerial] = useState('');
-  const [simFront, setSimFront] = useState<string|null>(null);
-  const [simBack, setSimBack] = useState<string|null>(null);
-  const [purchaseIdempotencyKey, setPurchaseIdempotencyKey] = useState<string|null>(null);
   const [newPin, setNewPin] = useState('');
   const [confirmNewPin, setConfirmNewPin] = useState('');
   const [storedPhone, setStoredPhone] = useState('');
@@ -571,20 +558,6 @@ export default function AppPage() {
     setProducts(Array.isArray(data) ? data : []);
   }, []);
 
-  /* ── CHAT SESSION ── */
-  const loadChatSession = useCallback(async (forceNew = false) => {
-    if (!token) return;
-    try {
-      const res = await fetch(`/api/chat${forceNew ? '?new=true' : ''}`, { headers: authHeader(), cache: 'no-store' as RequestCache });
-      if (!res.ok) return;
-      const data = await res.json();
-      setChatSession(data.session || null);
-      setChatMessages(Array.isArray(data.messages) ? data.messages : []);
-      setIdlePrompted(false);
-      setChatBanner('');
-    } catch { /* silent */ }
-  }, [token, authHeader]);
-
 
   useEffect(() => {
     if (screen === 'home') { loadHomeData(); refreshUser(); }
@@ -645,101 +618,7 @@ export default function AppPage() {
     }
   }, [screen, selectedNetwork?.name, loadPlans]);
 
-  // Real-time chat via Server-Sent Events with fallback polling
-  useEffect(() => {
-    if (screen !== 'chat' || !token) return;
-
-    // Initial load
-    loadChatSession();
-    let isMounted = true;
-    let pollInterval: NodeJS.Timeout | null = null;
-
-    // Try SSE first, fallback to polling if it fails
-    try {
-      const url = `/api/chat/stream?token=${encodeURIComponent(token)}`;
-      const source = new EventSource(url);
-
-      source.addEventListener('init', (event: MessageEvent) => {
-        if (!isMounted) return;
-        try {
-          const data = JSON.parse(event.data);
-          if (data.session) setChatSession(data.session);
-          if (Array.isArray(data.messages)) setChatMessages(data.messages);
-          console.log('[SSE] init received:', data.messages?.length || 0, 'messages');
-        } catch (err) {
-          console.error('[SSE] init parse error:', err);
-        }
-      });
-
-      source.addEventListener('session', (event: MessageEvent) => {
-        if (!isMounted) return;
-        try {
-          const data = JSON.parse(event.data);
-          setChatSession(data);
-        } catch (err) {
-          console.error('[SSE] session parse error:', err);
-        }
-      });
-
-      source.addEventListener('messages', (event: MessageEvent) => {
-        if (!isMounted) return;
-        try {
-          const msgs = JSON.parse(event.data) as ChatMsg[];
-          console.log('[SSE] messages received:', msgs.length);
-          setChatMessages(prev => {
-            const existingIds = new Set(prev.map(m => m.id));
-            const additional = msgs.filter(m => !existingIds.has(m.id));
-            return additional.length > 0 ? [...prev, ...additional] : prev;
-          });
-        } catch (err) {
-          console.error('[SSE] messages parse error:', err);
-        }
-      });
-
-      source.onerror = () => {
-        console.warn('[SSE] Connection error, falling back to polling');
-        source.close();
-        // Fallback to polling if SSE fails
-        if (pollInterval === null && isMounted) {
-          pollInterval = setInterval(() => loadChatSession(), 3000);
-        }
-      };
-
-      return () => {
-        isMounted = false;
-        source.close();
-        if (pollInterval) clearInterval(pollInterval);
-      };
-    } catch (err) {
-      console.error('[SSE] Setup error, using polling:', err);
-      // Fallback to polling if SSE setup fails
-      if (isMounted) {
-        pollInterval = setInterval(() => loadChatSession(), 3000);
-      }
-      return () => {
-        isMounted = false;
-        if (pollInterval) clearInterval(pollInterval);
-      };
-    }
-  }, [screen, token, loadChatSession]);
-
-  // Scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-  }, [chatMessages.length]);
-
-  // Idle prompt after 5 minutes of inactivity
-  useEffect(() => {
-    if (!chatSession || !screen || screen !== 'chat') return;
-    setIdlePrompted(false);
-    const timer = setTimeout(() => {
-      setChatBanner('Still there? An agent will respond soon.');
-      setIdlePrompted(true);
-    }, 300000);
-    return () => clearTimeout(timer);
-  }, [chatSession, chatMessages.length, screen]);
+  // Note: Chat system removed. Will be replaced with alternative solution.
 
   /* ── REGISTER ── */
   const handleRegister = async () => {
@@ -909,49 +788,8 @@ export default function AppPage() {
   };
 
   const sendChat = useCallback(async () => {
-    if (!chatInput.trim() || !token) return;
-    
-    const messageToSend = chatInput.trim();
-    setChatInput(''); // Clear input immediately
-    setAiTyping(true);
-    
-    try {
-      const res = await fetch('/api/chat', { 
-        method: 'POST', 
-        headers: authHeader(), 
-        body: JSON.stringify({ message: messageToSend }),
-        cache: 'no-store' as RequestCache
-      });
-      
-      if (!res.ok) {
-        const text = await res.text();
-        try {
-          const errData = JSON.parse(text);
-          showError(errData.error || `Error (${res.status})`);
-        } catch {
-          showError(`Error ${res.status}: ${text.substring(0, 100)}`);
-        }
-        return;
-      }
-      
-      const text = await res.text();
-      if (!text) {
-        showError('Empty response from server');
-        return;
-      }
-      
-      const data = JSON.parse(text);
-      if (data.session) setChatSession(data.session);
-      if (Array.isArray(data.messages)) setChatMessages(data.messages);
-    } catch (err: unknown) { 
-      const msg = err instanceof Error ? err.message : 'Error sending message';
-      console.error('Chat send error:', msg);
-      showError(msg);
-    }
-    finally {
-      setTimeout(() => setAiTyping(false), 600);
-    }
-  }, [chatInput, token, authHeader, showError]);
+    // Chat system removed - placeholder
+  }, []);
 
 
   /* ── CHANGE PIN ── */
@@ -1027,12 +865,49 @@ export default function AppPage() {
   if (screen === 'splash') return (
     <>
       <GlobalStyle dark={dark} />
-      <div style={{ height:'100dvh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'var(--bg)' }}>
-        <p style={{ color:'var(--text)',fontWeight:800,fontSize:32,letterSpacing:-0.8,marginBottom:8 }}>SaukiMart</p>
-        <p style={{ color:'var(--text-secondary)',fontSize:15,marginBottom:40 }}>Data & Devices</p>
-        <div style={{ position:'absolute',bottom:60,display:'flex',gap:6 }}>
-          {[0,1,2].map(i=><div key={i} style={{ width:6,height:6,borderRadius:3,background:'var(--text-secondary)',opacity:.3,animation:`pulse 1.2s ${i*0.2}s infinite` }} />)}
+      <div style={{ height:'100dvh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:`linear-gradient(135deg, ${BLUE} 0%, ${PURPLE} 50%, ${ORANGE} 100%)`,position:'relative',overflow:'hidden' }}>
+        {/* Animated background shapes */}
+        <div style={{ position:'absolute',top:'-20%',left:'-10%',width:'600px',height:'600px',borderRadius:'50%',background:'rgba(255,255,255,.1)',backdropFilter:'blur(40px)',animation:'float 20s ease-in-out infinite' }} />
+        <div style={{ position:'absolute',bottom:'-15%',right:'-5%',width:'500px',height:'500px',borderRadius:'50%',background:'rgba(255,255,255,.08)',backdropFilter:'blur(30px)',animation:'float 25s ease-in-out infinite reverse' }} />
+        
+        <div style={{ position:'relative',zIndex:10,textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center' }}>
+          {/* Animated logo container */}
+          <div style={{ width:100,height:100,borderRadius:24,background:'rgba(255,255,255,.95)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 20px 60px rgba(0,0,0,.3)',marginBottom:40,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) both' }}>
+            <div style={{ fontSize:56 }}>💳</div>
+          </div>
+          
+          <h1 style={{ fontSize:44,fontWeight:900,color:'#fff',letterSpacing:-1,marginBottom:16,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .1s both',textShadow:'0 2px 8px rgba(0,0,0,.2)' }}>SaukiMart</h1>
+          
+          <p style={{ fontSize:18,color:'rgba(255,255,255,.9)',marginBottom:8,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .2s both',fontWeight:600 }}>Data & Devices at Your Fingertips</p>
+          <p style={{ fontSize:14,color:'rgba(255,255,255,.7)',marginBottom:60,maxWidth:300,lineHeight:'1.5',animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .3s both' }}>Fast, secure, and seamless mobile services</p>
+          
+          {/* Floating icons */}
+          <div style={{ display:'flex',gap:32,marginBottom:60,justifyContent:'center',animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .4s both' }}>
+            {[
+              { icon: '📱', label: 'Data' },
+              { icon: '🛒', label: 'Shop' },
+              { icon: '💰', label: 'Transfer' }
+            ].map((item, i) => (
+              <div key={i} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:8 }}>
+                <div style={{ width:56,height:56,borderRadius:14,background:'rgba(255,255,255,.15)',backdropFilter:'blur(20px)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,animation:`float ${3+(i*0.5)}s ease-in-out infinite`,animationDelay:`${i*0.2}s` }}>
+                  {item.icon}
+                </div>
+                <p style={{ fontSize:12,color:'rgba(255,255,255,.7)',fontWeight:500 }}>{item.label}</p>
+              </div>
+            ))}
+          </div>
+          
+          {/* Loading indicator */}
+          <div style={{ display:'flex',gap:6,justifyContent:'center' }}>
+            {[0,1,2].map(i=>(
+              <div key={i} style={{ width:8,height:8,borderRadius:4,background:'rgba(255,255,255,.6)',animation:`pulse 1.2s ease-in-out ${i*0.2}s infinite`,boxShadow:'0 4px 12px rgba(0,0,0,.15)' }} />
+            ))}
+          </div>
         </div>
+        
+        {/* Decorative elements */}
+        <div style={{ position:'absolute',bottom:40,left:0,right:0,textAlign:'center',color:'rgba(255,255,255,.6)',fontSize:12,fontWeight:500 }}>
+          Initializing...</div>
       </div>
     </>
   );
@@ -1042,70 +917,80 @@ export default function AppPage() {
     <>
       <GlobalStyle dark={dark} />
       {showPin && <PinKeyboard title="Enter your PIN" onComplete={handleLogin} onClose={()=>setShowPin(false)} />}
-      <div style={{ height:'100dvh',display:'flex',flexDirection:'column',background:`linear-gradient(135deg, ${dark?'#0a0a0a':'#fafafa'} 0%, ${dark?'#1a1a2e':'#f5f5f7'} 100%)`,position:'relative',overflow:'hidden' }}>
-        {/* Background subtle decoration */}
-        <div style={{ position:'absolute',top:'-50%',right:'-20%',width:'400px',height:'400px',borderRadius:'50%',background:`radial-gradient(circle, ${BLUE}08, transparent)`,pointerEvents:'none' }} />
-        <div style={{ position:'absolute',bottom:'-30%',left:'-10%',width:'350px',height:'350px',borderRadius:'50%',background:`radial-gradient(circle, ${PURPLE}06, transparent)`,pointerEvents:'none' }} />
+      <div style={{ height:'100dvh',display:'flex',flexDirection:'column',background:`linear-gradient(135deg, ${BLUE} 0%, ${PURPLE} 50%, ${dark?'#1a1a2e':'#f5f5f7'} 100%)`,position:'relative',overflow:'hidden' }}>
+        {/* Animated background elements */}
+        <div style={{ position:'absolute',top:'-20%',right:'-10%',width:'500px',height:'500px',borderRadius:'50%',background:'rgba(255,255,255,.08)',backdropFilter:'blur(40px)',pointerEvents:'none',animation:'float 20s ease-in-out infinite' }} />
+        <div style={{ position:'absolute',bottom:'-10%',left:'-15%',width:'400px',height:'400px',borderRadius:'50%',background:'rgba(90,200,250,.08)',backdropFilter:'blur(30px)',pointerEvents:'none',animation:'float 25s ease-in-out infinite reverse' }} />
         
         <div style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'0 24px',position:'relative',zIndex:1 }}>
-          {/* Logo */}
-          <div style={{ marginBottom:32,textAlign:'center' }}>
-            <img src="/images/logo.png" alt="SaukiMart" style={{ width:64,height:64,borderRadius:16,objectFit:'cover',boxShadow:`0 8px 24px ${BLUE}40` }} />
+          {/* Logo with animation */}
+          <div style={{ marginBottom:40,textAlign:'center' }}>
+            <div style={{ width:80,height:80,borderRadius:20,background:'rgba(255,255,255,.95)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 20px 60px rgba(0,0,0,.2)',marginBottom:16,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) both',fontSize:48 }}>💳</div>
+            <h1 style={{ fontSize:36,fontWeight:900,color:'#fff',letterSpacing:-0.8,marginBottom:12,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .1s both',textShadow:'0 2px 8px rgba(0,0,0,.2)' }}>SaukiMart</h1>
+            <p style={{ color:'rgba(255,255,255,.85)',fontSize:15,fontWeight:500,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .2s both' }}>Data, Devices, Transfers</p>
           </div>
           
           {isReturningUserPIN ? (
-            <>
-              <h1 style={{ fontSize:32,fontWeight:800,color:'var(--text)',letterSpacing:-0.6,marginBottom:12,textAlign:'center' }}>Welcome Back!</h1>
-              <p style={{ color:'var(--text-secondary)',fontSize:16,marginBottom:40,textAlign:'center',maxWidth:340 }}>Enter your 4-digit PIN to access your account</p>
+            <div style={{ width:'100%',maxWidth:380,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .2s both' }}>
+              <div style={{ marginBottom:36,textAlign:'center' }}>
+                <h2 style={{ fontSize:28,fontWeight:800,color:'#fff',marginBottom:12,textShadow:'0 2px 8px rgba(0,0,0,.15)' }}>Welcome Back!</h2>
+                <p style={{ color:'rgba(255,255,255,.8)',fontSize:15 }}>Enter your PIN to continue</p>
+              </div>
               
-              <div style={{ width:'100%',maxWidth:340,marginBottom:28,background:'var(--card)',borderRadius:16,padding:20,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
-                <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',marginBottom:10,textTransform:'uppercase',letterSpacing:.5 }}>Phone Number</p>
-                <p style={{ fontSize:16,fontWeight:600,color:'var(--text)',padding:'14px 0' }}>{loginPhone}</p>
+              <div style={{ width:'100%',marginBottom:28,background:'rgba(255,255,255,.95)',backdropFilter:'blur(20px)',borderRadius:20,padding:24,border:'1px solid rgba(255,255,255,.2)',boxShadow:'0 8px 32px rgba(0,0,0,.1)' }}>
+                <p style={{ fontSize:12,fontWeight:700,color:'#6C6C70',marginBottom:10,textTransform:'uppercase',letterSpacing:.5 }}>📱 Phone Number</p>
+                <p style={{ fontSize:18,fontWeight:700,color:'#1D1D1F',padding:'0' }}>{loginPhone}</p>
               </div>
 
               <button onClick={()=>{ setShowPin(true); }}
-                style={{ width:'100%',maxWidth:340,padding:'16px',borderRadius:12,background:`linear-gradient(135deg, ${BLUE}, ${TEAL})`,color:'#fff',fontSize:16,fontWeight:700,transition:'all .3s cubic-bezier(.16,.1,0,1)',marginBottom:20,boxShadow:`0 12px 32px ${BLUE}40`,cursor:'pointer',border:'none' }}>
-                Enter PIN
+                style={{ width:'100%',padding:'18px',borderRadius:16,background:(`linear-gradient(135deg, ${BLUE}, ${TEAL})`),color:'#fff',fontSize:16,fontWeight:700,transition:'all .3s cubic-bezier(.16,.1,0,1)',marginBottom:16,boxShadow:`0 12px 32px ${BLUE}60`,cursor:'pointer',border:'none',textShadow:'0 1px 2px rgba(0,0,0,.1)' }}>
+                🔐 Enter PIN
               </button>
 
               <button onClick={()=>{ setStoredPhone(''); setLoginPhone(''); setIsReturningUserPIN(false); localStorage.removeItem('sm_phone'); localStorage.removeItem('sm_token'); localStorage.removeItem('sm_user'); setToken(''); setUser(null); }}
-                style={{ fontSize:14,color:BLUE,fontWeight:600,background:'none',border:'none',cursor:'pointer' }}>
-                Use different phone number
+                style={{ fontSize:14,color:'#fff',fontWeight:600,background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.3)',cursor:'pointer',width:'100%',padding:'14px',borderRadius:12,transition:'all .2s' }}>
+                Use Different Number
               </button>
-            </>
+            </div>
           ) : (
-            <>
-              <h1 style={{ fontSize:32,fontWeight:800,color:'var(--text)',letterSpacing:-0.6,marginBottom:12,textAlign:'center' }}>Welcome Back</h1>
-              <p style={{ color:'var(--text-secondary)',fontSize:16,marginBottom:40,textAlign:'center',maxWidth:340 }}>Sign in to your SaukiMart account and manage your data and purchases seamlessly</p>
+            <div style={{ width:'100%',maxWidth:380,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .2s both' }}>
+              <div style={{ marginBottom:32,textAlign:'center' }}>
+                <h2 style={{ fontSize:28,fontWeight:800,color:'#fff',marginBottom:12,textShadow:'0 2px 8px rgba(0,0,0,.15)' }}>Sign In</h2>
+                <p style={{ color:'rgba(255,255,255,.8)',fontSize:15 }}>Fast, secure access to your account</p>
+              </div>
               
-              {error && <div style={{ width:'100%',maxWidth:340,padding:'12px 16px',borderRadius:14,background:'rgba(255,59,48,.12)',border:`1px solid ${RED}30`,color:RED,fontSize:15,marginBottom:24,animation:'fadeUpScale .3s ease' }}>{error}</div>}
+              {error && <div style={{ width:'100%',padding:'14px 18px',borderRadius:14,background:'rgba(255,59,48,.2)',border:`1.5px solid ${RED}50`,color:'#fff',fontSize:14,fontWeight:600,marginBottom:24,animation:'fadeUpScale .3s ease',backdropFilter:'blur(10px)' }}>{error}</div>}
               
-              <div style={{ width:'100%',maxWidth:340,marginBottom:20,background:'var(--card)',borderRadius:16,padding:20,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
-                <label style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',marginBottom:10,display:'block',textTransform:'uppercase',letterSpacing:.5 }}>Phone Number</label>
+              <div style={{ width:'100%',marginBottom:24,background:'rgba(255,255,255,.95)',backdropFilter:'blur(20px)',borderRadius:20,padding:24,border:'1px solid rgba(255,255,255,.2)',boxShadow:'0 8px 32px rgba(0,0,0,.1)' }}>
+                <label style={{ fontSize:12,fontWeight:700,color:'#6C6C70',marginBottom:12,display:'block',textTransform:'uppercase',letterSpacing:.5 }}>📱 Phone Number</label>
                 <input value={loginPhone} onChange={e=>setLoginPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
-                  placeholder="08012345678" inputMode="numeric"
-                  style={{ width:'100%',padding:'14px 14px',borderRadius:10,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:600,transition:'all .2s',outline:'none',boxSizing:'border-box' }} 
-                  onFocus={e=>{ e.currentTarget.style.borderColor = BLUE; e.currentTarget.style.background = dark?'#2a2a3e':'#fff'; }}
-                  onBlur={e=>{ e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-secondary)'; }}
+                  placeholder="08000000000" inputMode="numeric"
+                  style={{ width:'100%',padding:'16px 0',borderRadius:0,background:'transparent',border:'none',color:'#1D1D1F',fontSize:18,fontWeight:700,transition:'all .2s',outline:'none',boxSizing:'border-box',borderBottom:`2px solid ${loginPhone.length > 0 ? BLUE : '#E5E5EA'}` }} 
+                  onFocus={e=>{ e.currentTarget.style.borderBottomColor = BLUE; }}
+                  onBlur={e=>{ e.currentTarget.style.borderBottomColor = loginPhone.length > 0 ? BLUE : '#E5E5EA'; }}
                 />
               </div>
               
               <button onClick={()=>{ if(loginPhone.length===11){ setShowPin(true); } else showError('Enter 11-digit phone number'); }}
                 disabled={loginPhone.length !== 11}
-                style={{ width:'100%',maxWidth:340,padding:'16px',borderRadius:12,background: loginPhone.length===11 ? `linear-gradient(135deg, ${BLUE}, ${TEAL})` : 'var(--card2)',color: loginPhone.length===11 ? '#fff' : 'var(--text-secondary)',fontSize:16,fontWeight:700,transition:'all .3s cubic-bezier(.16,.1,0,1)',marginBottom:20,boxShadow: loginPhone.length===11 ? `0 12px 32px ${BLUE}40` : 'none',cursor:loginPhone.length===11?'pointer':'not-allowed',transform: loginPhone.length===11?'translateY(0)':'translateY(0)',border:'none' }}>
-                Continue
+                style={{ width:'100%',padding:'16px',borderRadius:14,background: loginPhone.length===11 ? `linear-gradient(135deg, ${BLUE}, ${TEAL})` : 'rgba(255,255,255,.2)',color: loginPhone.length===11 ? '#fff' : 'rgba(255,255,255,.5)',fontSize:16,fontWeight:700,transition:'all .3s',marginBottom:16,boxShadow: loginPhone.length===11 ? `0 12px 32px ${BLUE}60` : 'none',cursor:loginPhone.length===11?'pointer':'not-allowed',border:'none',textShadow:'0 1px 2px rgba(0,0,0,.1)',backdropFilter:'blur(20px)' }}>
+                Continue →
               </button>
               
-              <p style={{ fontSize:15,color:'var(--text-secondary)' }}>
-                New to SaukiMart?{' '}
-                <button onClick={()=>setScreen('register')} style={{ color:BLUE,fontWeight:600,background:'none',border:'none',cursor:'pointer',fontSize:15 }}>Create Account</button>
-              </p>
-            </>
+              <button onClick={()=>setScreen('register')}
+                style={{ width:'100%',padding:'14px',borderRadius:14,background:'rgba(255,255,255,.15)',color:'#fff',fontSize:15,fontWeight:600,border:'1px solid rgba(255,255,255,.3)',cursor:'pointer',transition:'all .2s',backdropFilter:'blur(20px)' }}>
+                Create New Account
+              </button>
+              
+              <div style={{ display:'flex',alignItems:'center',gap:8,marginTop:24,justifyContent:'center',fontSize:12,color:'rgba(255,255,255,.7)' }}>
+                <span>🔒 Secure & Encrypted</span>
+              </div>
+            </div>
           )}
         </div>
         
-        <p style={{ textAlign:'center',fontSize:13,color:'var(--text-secondary)',padding:'0 24px 32px',position:'relative',zIndex:1 }}>
-          <a href="/privacy" style={{ color:BLUE }}>Privacy</a> · <a href="/privacy" style={{ color:BLUE }}>Terms</a>
+        <p style={{ textAlign:'center',fontSize:12,color:'rgba(255,255,255,.6)',padding:'0 24px 32px',position:'relative',zIndex:1,fontWeight:500 }}>
+          <a href="/privacy" style={{ color:'rgba(255,255,255,.8)',textDecoration:'underline' }}>Privacy</a> · <a href="/privacy" style={{ color:'rgba(255,255,255,.8)',textDecoration:'underline' }}>Terms</a> · <a href="/privacy" style={{ color:'rgba(255,255,255,.8)',textDecoration:'underline' }}>Support</a>
         </p>
       </div>
     </>
@@ -2083,7 +1968,7 @@ export default function AppPage() {
           {/* Balance Info */}
           <div style={{ background:'linear-gradient(135deg, #0071E3, #5AC8FA)',borderRadius:16,padding:'20px',marginBottom:28,color:'#fff',boxShadow:'0 8px 20px rgba(0,113,227,.2)' }}>
             <p style={{ fontSize:13,fontWeight:600,opacity:0.9,marginBottom:6 }}>Available Balance</p>
-            <p style={{ fontSize:28,fontWeight:800 }}>₦{(user?.walletBalance || 0).toLocaleString('en-NG', {maximumFractionDigits:0})}</p>
+            <p style={{ fontSize:28,fontWeight:800 }}>₦{(user?.walletBalance || 0).toLocaleString('en-NG', {minimumFractionDigits:2})}</p>
           </div>
 
           {/* Recipient Lookup */}
@@ -2127,7 +2012,7 @@ export default function AppPage() {
                 style={{ width:'100%',padding:'14px 16px',borderRadius:12,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:15 }}
               />
               {transferAmount && (
-                <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:8 }}>You have ₦{(user?.walletBalance || 0).toLocaleString('en-NG',{maximumFractionDigits:0})}</p>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:8 }}>You have ₦{(user?.walletBalance || 0).toLocaleString('en-NG',{minimumFractionDigits:2})}</p>
               )}
             </div>
           )}
@@ -2137,7 +2022,7 @@ export default function AppPage() {
             <div style={{ background:'var(--card)',borderRadius:16,padding:'16px',marginBottom:24,border:'1px solid var(--border)' }}>
               <div style={{ display:'flex',justifyContent:'space-between',marginBottom:12 }}>
                 <span style={{ color:'var(--text-secondary)',fontSize:14 }}>Amount</span>
-                <span style={{ color:'var(--text)',fontWeight:700,fontSize:14 }}>₦{parseFloat(transferAmount || '0').toLocaleString('en-NG',{maximumFractionDigits:0})}</span>
+                <span style={{ color:'var(--text)',fontWeight:700,fontSize:14 }}>₦{parseFloat(transferAmount || '0').toLocaleString('en-NG',{minimumFractionDigits:2})}</span>
               </div>
               <div style={{ display:'flex',justifyContent:'space-between' }}>
                 <span style={{ color:'var(--text-secondary)',fontSize:14 }}>To</span>

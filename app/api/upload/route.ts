@@ -21,19 +21,22 @@ export async function POST(req: NextRequest) {
     const buffer = await file.arrayBuffer();
     const base64 = Buffer.from(buffer).toString('base64');
 
-    // Try to upload to Blob, but continue even if it fails
-    let blobUrl = '';
+    // Try to upload to Blob, fallback to base64 data URL
+    let imageUrl = '';
     try {
       if (process.env.BLOB_READ_WRITE_TOKEN) {
         const blob = await put(filename, file, { access: 'public', token: process.env.BLOB_READ_WRITE_TOKEN });
-        blobUrl = blob.url;
+        imageUrl = blob.url;
       }
     } catch (e) {
       console.warn('Blob upload failed, using base64 fallback:', e);
     }
 
+    // Use base64 data URL as fallback
+    const dataUrl = `data:${file.type};base64,${base64}`;
+    
     return NextResponse.json({ 
-      url: blobUrl,
+      url: imageUrl || dataUrl,
       base64: base64 
     });
   } catch (e: unknown) {

@@ -6,7 +6,7 @@ const BLUE = '#007AFF'; const GREEN = '#34C759'; const RED = '#FF3B30'; const GO
 type User = { id: string; first_name: string; last_name: string; phone: string; wallet_balance: number; cashback_balance: number; is_banned: boolean; created_at: string; flw_account_number: string; };
 type Plan = { id: string; network: string; network_id: number; plan_id: number; data_size: string; validity: string; selling_price: number; cost_price: number; is_active: boolean; };
 type Product = { id: string; name: string; description: string; price: number; cost_price: number; image_url: string; image_base64?: string; in_stock: boolean; shipping_terms: string; pickup_terms: string; category: string; };
-type Transaction = { id: string; user_id: string; type: string; description: string; amount: number; status: string; created_at: string; network: string; phone_number: string; product_name: string; receipt_data: Record<string,unknown>; };
+type Transaction = { id: string; user_id: string; type: string; description: string; amount: number; status: string; created_at: string; network: string; phone_number: string; product_name: string; receipt_data: Record<string,unknown>; first_name?: string; last_name?: string; phone?: string; };
 type Broadcast = { id: string; message: string; is_active: boolean; created_at: string; };
 type Webhook = { id: string; event: string; payload: Record<string,unknown>; created_at: string; };
 type SimAct = { id: string; user_id: string; serial_number: string; front_image_url: string; back_image_url: string; status: string; created_at: string; first_name?: string; last_name?: string; phone?: string; };
@@ -60,7 +60,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [adminToken, setAdminToken] = useState('');
-  const [tab, setTab] = useState<'overview'|'users'|'plans'|'products'|'transactions'|'broadcasts'|'sim'|'chat'|'webhooks'|'console'|'analytics'>('overview');
+  const [tab, setTab] = useState<'overview'|'users'|'plans'|'products'|'transactions'|'orders'|'broadcasts'|'sim'|'webhooks'|'console'|'analytics'>('overview');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
   const [error, setError] = useState('');
@@ -87,14 +87,6 @@ export default function AdminPage() {
   const [consoleEndpoint, setConsoleEndpoint] = useState('amigo');
   const [consoleLogs, setConsoleLogs] = useState<{dir:'sent'|'received';payload:string;ts:string}[]>([]);
   const [chatReply, setChatReply] = useState('');
-  const [chatSessions, setChatSessions] = useState<any[]>([]);
-  const [chatFilter, setChatFilter] = useState<'all'|'needs_agent'|'agent_active'|'resolved'|'flagged'>('all');
-  const [selectedSessionId, setSelectedSessionId] = useState<string>('');
-  const [selectedSession, setSelectedSession] = useState<any|null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
-  const [chatNotes, setChatNotes] = useState<{id:string;created_by:string;note:string;created_at:string}[]>([]);
-  const [customerTyping, setCustomerTyping] = useState(false);
-  const [pendingChatUserId, setPendingChatUserId] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [analyticsFilter, setAnalyticsFilter] = useState('all');
   const [receiptModal, setReceiptModal] = useState<Record<string,unknown>|null>(null);
@@ -144,78 +136,13 @@ export default function AdminPage() {
     if (tab === 'broadcasts') load('broadcasts').then(d => setBroadcasts(Array.isArray(d)?d:[]));
     if (tab === 'webhooks') load('webhooks').then(d => setWebhooks(Array.isArray(d)?d:[]));
     if (tab === 'sim') load('sim-activations').then(d => setSimActs(Array.isArray(d)?d:[]));
-    if (tab === 'chat') {
-      load('chat/sessions').then(d => {
-        const sessions = Array.isArray(d) ? d : [];
-        setChatSessions(sessions);
-
-        if (pendingChatUserId) {
-          const matched = sessions.find((s:any) => s.user_id === pendingChatUserId);
-          if (matched) {
-            setSelectedSessionId(matched.id);
-          }
-          setPendingChatUserId('');
-        }
-      });
-      setSelectedSessionId('');
-      setSelectedSession(null);
-      setChatMessages([]);
-      setChatNotes([]);
-      setCustomerTyping(false);
-    }
     if (tab === 'analytics') load('analytics').then(d => setAnalytics(d?.overview || d || {}));
   }, [tab, authed, load, pendingChatUserId]);
 
-  // Real-time chat updates via Server-Sent Events
+  // Real-time wallet updates when needed
   useEffect(() => {
-    if (!authed || tab !== 'chat' || !adminToken) return;
-
-    const base = `/api/admin/chat/stream?token=${encodeURIComponent(adminToken)}`;
-    const url = selectedSessionId ? `${base}&sessionId=${encodeURIComponent(selectedSessionId)}` : base;
-    const source = new EventSource(url);
-
-    source.addEventListener('sessions', (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data);
-        setChatSessions(Array.isArray(data) ? data : []);
-      } catch {
-        // ignore
-      }
-    });
-
-    source.addEventListener('session', (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data);
-        setSelectedSession(data.session);
-        setChatMessages(Array.isArray(data.messages) ? data.messages : []);
-        setChatNotes(Array.isArray(data.notes) ? data.notes : []);
-        setCustomerTyping(Boolean(data.session?.is_typing));
-      } catch {
-        // ignore
-      }
-    });
-
-    source.onerror = () => {
-      // Connection errors are usually auto-recovered by EventSource.
-      // Optionally, we could fallback to polling if needed.
-    };
-
-    return () => source.close();
-  }, [authed, tab, adminToken, selectedSessionId]);
-
-  // Load selected session details immediately when chosen
-  useEffect(() => {
-    if (!authed || tab !== 'chat' || !selectedSessionId) return;
-    (async () => {
-      const res = await fetch(`/api/admin/chat/session?sessionId=${selectedSessionId}`, { headers: authH() });
-      if (!res.ok) return;
-      const data = await res.json();
-      setSelectedSession(data.session);
-      setChatMessages(Array.isArray(data.messages) ? data.messages : []);
-      setChatNotes(Array.isArray(data.notes) ? data.notes : []);
-      setCustomerTyping(Boolean(data.session?.is_typing));
-    })();
-  }, [authed, tab, selectedSessionId, authH]);
+    // Placeholder for future real-time updates
+  }, [authed, tab, adminToken]);
 
   const api = async (path: string, method: string, body?: unknown) => {
     const res = await fetch(`/api/admin/${path}`, { method, headers: authH(), body: body ? JSON.stringify(body) : undefined });
@@ -254,10 +181,10 @@ export default function AdminPage() {
     { id:'plans', label:'Data Plans', icon:'📶' },
     { id:'products', label:'Products', icon:'📦' },
     { id:'transactions', label:'Transactions', icon:'💳' },
+    { id:'orders', label:'Orders', icon:'🛒' },
     { id:'analytics', label:'Analytics', icon:'📈' },
     { id:'broadcasts', label:'Broadcasts', icon:'📢' },
     { id:'sim', label:'SIM Activations', icon:'📡' },
-    { id:'chat', label:'Support Chat', icon:'💬' },
     { id:'webhooks', label:'Webhooks', icon:'🔗' },
     { id:'console', label:'API Console', icon:'⚙️' },
   ];
@@ -623,7 +550,7 @@ export default function AdminPage() {
                     </tr></thead>
                     <tbody>{transactions.map(tx=>(
                       <tr key={tx.id} style={{ borderBottom:'1px solid #F9F9F9' }}>
-                        <td style={{ padding:'12px 14px',fontSize:13 }}>{tx.phone_number||'—'}</td>
+                        <td style={{ padding:'12px 14px',fontSize:13 }}>{tx.first_name && tx.last_name ? `${tx.first_name} ${tx.last_name}` : tx.phone_number||'—'}</td>
                         <td style={{ padding:'12px 14px',fontSize:13 }}><span style={{ background:tx.type==='data'?'rgba(0,122,255,.1)':'rgba(52,199,89,.1)',color:tx.type==='data'?BLUE:GREEN,padding:'3px 9px',borderRadius:20,fontSize:11,fontWeight:700 }}>{tx.type}</span></td>
                         <td style={{ padding:'12px 14px',fontSize:13,maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{tx.description}</td>
                         <td style={{ padding:'12px 14px',fontSize:14,fontWeight:800,color:GREEN }}>₦{Number(tx.amount).toLocaleString()}</td>
@@ -758,169 +685,22 @@ export default function AdminPage() {
           )}
 
           {/* ─── CHAT ─── */}
-          {tab === 'chat' && (
+          {tab === 'orders' && (
             <div className="fade-in">
-              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12 }}>
-                <div>
-                  <h1 style={{ fontSize:22,fontWeight:900,margin:0 }}>Support Chat</h1>
-                  <p style={{ fontSize:13,color:'#6E6E73',marginTop:6 }}>Real-time sessions, AI + agent handoff, and full audit trail.</p>
+              <h1 style={{ fontSize:22,fontWeight:900,marginBottom:20 }}>Orders Management</h1>
+              <Card>
+                <div style={{ overflowX:'auto' }}>
+                  <table style={{ width:'100%',borderCollapse:'collapse' }}>
+                    <thead><tr style={{ background:'#F9F9F9' }}>
+                      {['Order ID','Customer','Product','Amount','Status','Date','Actions'].map(h=><th key={h} style={{ padding:'10px 14px',fontSize:12,fontWeight:700,color:'#8E8E93',textAlign:'left',borderBottom:'1px solid #F2F2F7',whiteSpace:'nowrap' }}>{h}</th>)}
+                    </tr></thead>
+                    <tbody><tr><td colSpan={7} style={{ padding:'40px',textAlign:'center',color:'#8E8E93' }}>
+                      <div style={{ fontSize:36,marginBottom:12 }}>📦</div>
+                      <p>Order management system coming soon. Currently tracking orders via transactions table.</p>
+                    </td></tr></tbody>
+                  </table>
                 </div>
-                <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
-                  {['all','needs_agent','agent_active','resolved','flagged'].map(f => (
-                    <button key={f} onClick={()=>setChatFilter(f as any)}
-                      style={{ padding:'8px 12px',borderRadius:12,border:chatFilter===f?'1px solid rgba(0,122,255,.35)':'1px solid rgba(0,0,0,0.12)',background:chatFilter===f?'rgba(0,122,255,.12)':'rgba(0,0,0,0.04)',color:'#1C1C1E',fontSize:12,fontWeight:700,cursor:'pointer' }}>
-                      {f === 'all' ? 'All' : f === 'needs_agent' ? 'Needs Agent' : f === 'agent_active' ? 'Agent Active' : f === 'resolved' ? 'Resolved' : 'Flagged'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display:'grid',gridTemplateColumns:'320px 1fr',gap:16,height:'calc(100vh - 160px)' }}>
-                {/* Sessions list */}
-                <Card style={{ overflow:'hidden',display:'flex',flexDirection:'column',padding:0 }}>
-                  <div style={{ padding:'16px',borderBottom:'1px solid rgba(0,0,0,0.08)',display:'flex',alignItems:'center',justifyContent:'space-between' }}>
-                    <p style={{ fontWeight:700,fontSize:15,margin:0 }}>Conversations</p>
-                    <button onClick={()=>load('chat/sessions').then(d=>setChatSessions(Array.isArray(d)?d:[]))} style={{ fontSize:12,fontWeight:700,color:BLUE,background:'rgba(0,113,227,.12)',border:'1px solid rgba(0,113,227,.2)',borderRadius:14,padding:'6px 12px' }}>Refresh</button>
-                  </div>
-                  <div style={{ padding:'12px 16px',borderBottom:'1px solid rgba(0,0,0,0.08)' }}>
-                    <input value={userSearch} onChange={e=>setUserSearch(e.target.value)} placeholder="Search by name, phone" style={{ width:'100%',padding:'10px 12px',borderRadius:12,border:'1px solid rgba(0,0,0,0.15)',fontSize:13 }} />
-                  </div>
-                  <div style={{ flex:1,overflowY:'auto',padding:8 }}>
-                    {chatSessions.filter(s=>{
-                      if (chatFilter !== 'all' && s.status !== chatFilter) return false;
-                      if (!userSearch) return true;
-                      const term = userSearch.toLowerCase();
-                      return `${s.first_name} ${s.last_name}`.toLowerCase().includes(term) || (s.phone||'').includes(term);
-                    }).map(session => {
-                      const isActive = session.id === selectedSessionId;
-                      const lastMsg = session.last_message || 'No messages yet';
-                      const badge = session.status === 'needs_agent' || session.agent_required ? { text:'Needs Agent', color:GOLD } : session.status === 'agent_active' ? { text:'Agent Active', color:GREEN } : session.status === 'resolved' ? { text:'Resolved', color:'#8E8E93' } : session.status === 'flagged' ? { text:'Flagged', color:RED } : { text:'AI', color:BLUE };
-
-                      return (
-                        <button key={session.id} onClick={async()=>{
-                          setSelectedSessionId(session.id);
-                          const res = await fetch(`/api/admin/chat/session?sessionId=${session.id}`, { headers: authH() });
-                          if (res.ok) {
-                            const data = await res.json();
-                            setSelectedSession(data.session);
-                            setChatMessages(Array.isArray(data.messages)?data.messages:[]);
-                            setChatNotes(Array.isArray(data.notes)?data.notes:[]);
-                            setCustomerTyping(Boolean(data.session?.is_typing));
-                          }
-                        }}
-                          style={{ width:'100%',padding:'12px',borderRadius:14,background:isActive?'rgba(0,122,255,.08)':'transparent',border:isActive?'1px solid rgba(0,122,255,.15)':'1px solid transparent',display:'flex',gap:10,alignItems:'center',marginBottom:6,textAlign:'left',cursor:'pointer' }}>
-                          <div style={{ width:42,height:42,borderRadius:12,background:'linear-gradient(135deg,#007AFF,#0040FF)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:14,flexShrink:0 }}>
-                            {(session.first_name || 'U')[0]?.toUpperCase()}
-                          </div>
-                          <div style={{ flex:1,overflow:'hidden' }}>
-                            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:12 }}>
-                              <p style={{ fontWeight:700,fontSize:13,margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{`${session.first_name} ${session.last_name}`.trim() || session.phone || 'User'}</p>
-                              <span style={{ fontSize:11,color:'#8E8E93' }}>{new Date(session.last_activity).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</span>
-                            </div>
-                            <p style={{ fontSize:12,color:'#6E6E73',margin:'4px 0 0',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{lastMsg}</p>
-                          </div>
-                          <span style={{ fontSize:11,fontWeight:700,color:badge.color,background:`${badge.color}22`,padding:'4px 10px',borderRadius:12,whiteSpace:'nowrap' }}>{badge.text}</span>
-                        </button>
-                      );
-                    })}
-                    {chatSessions.filter(s=>{
-                      if (chatFilter !== 'all' && s.status !== chatFilter) return false;
-                      if (!userSearch) return true;
-                      const term = userSearch.toLowerCase();
-                      return `${s.first_name} ${s.last_name}`.toLowerCase().includes(term) || (s.phone||'').includes(term);
-                    }).length === 0 && (
-                      <div style={{ textAlign:'center',padding:40,color:'#8E8E93' }}>
-                        <p style={{ fontSize:40,marginBottom:12 }}>💬</p>
-                        <p>No conversations match your filter.</p>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-
-                {/* Chat window */}
-                <Card style={{ overflow:'hidden',display:'flex',flexDirection:'column',padding:0 }}>
-                  {!selectedSession ? (
-                    <div style={{ flex:1,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:12,padding:24 }}>
-                      <span style={{ fontSize:46 }}>🗨️</span>
-                      <p style={{ fontSize:16,color:'#8E8E93',margin:0 }}>Select a conversation to view messages and respond.</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div style={{ padding:'16px',borderBottom:'1px solid rgba(0,0,0,0.08)',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12 }}>
-                        <div>
-                          <p style={{ fontWeight:700,fontSize:15,margin:0 }}>{`${selectedSession.first_name} ${selectedSession.last_name}`.trim() || selectedSession.phone}</p>
-                          <p style={{ fontSize:12,color:'#6E6E73',margin:4 }}>Customer ID: {selectedSession.user_id}</p>
-                        </div>
-                        <div style={{ display:'flex',gap:8,alignItems:'center' }}>
-                          <span style={{ fontSize:11,fontWeight:700,color:selectedSession.status==='needs_agent'?GOLD:selectedSession.status==='agent_active'?GREEN:selectedSession.status==='resolved'?'#8E8E93':BLUE,background:(selectedSession.status==='needs_agent'?GOLD:selectedSession.status==='agent_active'?GREEN:selectedSession.status==='resolved'?'rgba(142,142,147,0.2)':BLUE)+'22',padding:'4px 10px',borderRadius:12 }}>{selectedSession.status === 'needs_agent' ? 'Needs Agent' : selectedSession.status === 'agent_active' ? 'Agent Active' : selectedSession.status === 'resolved' ? 'Resolved' : selectedSession.status === 'flagged' ? 'Flagged' : 'AI'}</span>
-                          <button onClick={async()=>{ await api('chat/session','POST',{ sessionId:selectedSessionId, action:'take_over' }); const res = await fetch(`/api/admin/chat/session?sessionId=${selectedSessionId}`,{ headers: authH() }); const data = await res.json(); setSelectedSession(data.session); setChatMessages(data.messages); }} style={{ fontSize:12,fontWeight:700,color:BLUE,background:'rgba(0,113,227,.12)',border:'1px solid rgba(0,113,227,.2)',borderRadius:14,padding:'6px 10px' }}>Take over</button>
-                        </div>
-                      </div>
-
-                      <div style={{ flex:1,overflowY:'auto',padding:'18px',display:'flex',flexDirection:'column',gap:12 }}>
-                        {customerTyping && (
-                          <div style={{ alignSelf:'flex-start',background:'rgba(0,122,255,0.15)',padding:'10px 14px',borderRadius:16,color:BLUE,fontSize:13,display:'flex',alignItems:'center',gap:10 }}>
-                            <span style={{ width:8,height:8,borderRadius:4,background:BLUE,animation:'pulse 1.2s infinite' }} />
-                            <span>Customer is typing…</span>
-                          </div>
-                        )}
-
-                        {chatMessages.map(msg => {
-                          const isUser = msg.sender === 'user';
-                          const isAgent = msg.sender === 'agent';
-                          const isAI = msg.sender === 'ai';
-                          const bg = isUser ? 'linear-gradient(135deg, #00C6FF, #0071E3)' : isAgent ? 'linear-gradient(135deg, #00D1B2, #0E7F61)' : 'rgba(255,255,255,0.08)';
-                          const color = isUser ? '#fff' : '#F5F5F7';
-                          const align = isUser ? 'flex-end' : 'flex-start';
-                          const border = isUser ? 'none' : '1px solid rgba(255,255,255,0.12)';
-                          const delivered = !!msg.delivered_at;
-                          const read = !!msg.read_at;
-
-                          return (
-                            <div key={msg.id} style={{ display:'flex',justifyContent:align,animation:'fadeIn .2s ease',opacity:1 }}>
-                              <div style={{ maxWidth:'75%',padding:'14px 16px',borderRadius:18,background:bg,color,boxShadow:isUser?'0 12px 32px rgba(0,0,0,0.25)':'0 6px 18px rgba(0,0,0,0.12)',border }}>
-                                {msg.message}
-                                <div style={{ marginTop:8,display:'flex',justifyContent:'space-between',alignItems:'center' }}>
-                                  <span style={{ fontSize:11,opacity:0.7 }}>{new Date(msg.created_at).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</span>
-                                  {isUser && <span style={{ fontSize:11,opacity:0.7 }}>{read ? 'Read' : delivered ? 'Delivered' : 'Sent'}</span>}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div style={{ padding:'12px 16px',borderTop:'1px solid rgba(0,0,0,0.08)',display:'flex',flexDirection:'column',gap:10,background:'rgba(255,255,255,0.04)' }}>
-                        <div style={{ display:'flex',gap:10 }}>
-                          <input value={chatReply} onChange={e=>setChatReply(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter') { if(!chatReply.trim()) return; api('chat/session','POST',{ sessionId:selectedSessionId, action:'send_message', message:chatReply }).then(()=>{ setChatReply(''); }); } }}
-                            placeholder="Write a reply…" style={{ flex:1,padding:'12px 14px',borderRadius:16,border:'1px solid rgba(0,0,0,0.12)',fontSize:14,background:'rgba(255,255,255,0.08)',color:'#fff' }} />
-                          <Btn variant="success" onClick={async()=>{ if(!chatReply.trim()) return; await api('chat/session','POST',{ sessionId:selectedSessionId, action:'send_message', message:chatReply }); setChatReply(''); }} style={{ height:44 }}>Send</Btn>
-                        </div>
-                        <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
-                          <Btn variant="ghost" size="sm" onClick={async()=>{ await api('chat/session','POST',{ sessionId:selectedSessionId, action:'resolve' }); const res = await fetch(`/api/admin/chat/session?sessionId=${selectedSessionId}`, { headers: authH() }); const data = await res.json(); setSelectedSession(data.session); }} style={{ color:'#6E6E73' }}>Mark Resolved</Btn>
-                          <Btn variant="danger" size="sm" onClick={async()=>{ await api('chat/session','POST',{ sessionId:selectedSessionId, action:'flag' }); const res = await fetch(`/api/admin/chat/session?sessionId=${selectedSessionId}`, { headers: authH() }); const data = await res.json(); setSelectedSession(data.session); }} style={{ color:'#FF3B30' }}>Flag</Btn>
-                        </div>
-                        <div>
-                          <p style={{ fontSize:12,fontWeight:700,color:'#6E6E73',margin:'0 0 6px' }}>Internal notes</p>
-                          <div style={{ display:'flex',gap:8,flexWrap:'wrap',marginBottom:8 }}>
-                            <Btn variant="ghost" size="sm" onClick={async()=>{ const note = prompt('Add a note (internal only)'); if(!note) return; await api('chat/session','POST',{ sessionId:selectedSessionId, action:'note', note }); const res = await fetch(`/api/admin/chat/session?sessionId=${selectedSessionId}`, { headers: authH() }); const data = await res.json(); setChatNotes(data.notes); }} style={{ color:'#6E6E73' }}>Add Note</Btn>
-                            <span style={{ fontSize:12,color:'#8E8E93',alignSelf:'center' }}>{chatNotes.length} note{chatNotes.length===1?'':'s'}</span>
-                          </div>
-                          {chatNotes.length > 0 && (
-                            <div style={{ marginTop:0,background:'rgba(0,0,0,0.06)',borderRadius:12,padding:10,overflowY:'auto',maxHeight:140 }}>
-                              {chatNotes.map(n => (
-                                <div key={n.id} style={{ marginBottom:8 }}>
-                                  <div style={{ fontSize:12,color:'#8E8E93' }}>{new Date(n.created_at).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})} · {n.created_by}</div>
-                                  <div style={{ fontSize:13,color:'#F5F5F7',marginTop:2 }}>{n.note}</div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </Card>
-              </div>
+              </Card>
             </div>
           )}
 
