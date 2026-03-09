@@ -133,22 +133,12 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', su
     const np = pin + d;
     setPin(np);
     if (np.length === 4) {
-      // Auto-dismiss keyboard immediately on 4th digit
+      // Blur keyboard on 4th digit
       if (typeof window !== 'undefined') {
         const activeElement = document.activeElement as HTMLElement;
-        if (activeElement) {
-          activeElement.blur();
-          // Force keyboard dismissal on mobile
-          setTimeout(() => {
-            if (activeElement instanceof HTMLInputElement) {
-              activeElement.style.display = 'none';
-              activeElement.style.display = '';
-            }
-          }, 10);
-        }
+        if (activeElement) activeElement.blur();
       }
-      // Call complete immediately after setting pin
-      setTimeout(() => onComplete(np), 60);
+      setTimeout(() => onComplete(np), 120);
     }
   };
   const del = () => setPin(p => p.slice(0, -1));
@@ -828,17 +818,6 @@ export default function AppPage() {
     
     const messageToSend = chatInput.trim();
     setChatInput(''); // Clear input immediately
-    
-    // Optimistic update - show user message immediately
-    const optimisticUserMsg = {
-      id: `temp-${Date.now()}`,
-      sender: 'user',
-      message: messageToSend,
-      created_at: new Date().toISOString(),
-      delivered_at: null,
-      read_at: null
-    };
-    setChatMessages(prev => [...prev, optimisticUserMsg as ChatMsg]);
     setAiTyping(true);
     
     try {
@@ -850,26 +829,19 @@ export default function AppPage() {
       });
       if (!res.ok) {
         const errData = await res.json();
-        // Remove optimistic message on error
-        setChatMessages(prev => prev.filter(m => m.id !== optimisticUserMsg.id));
         showError(errData.error || 'Failed to send message');
         return;
       }
       const data = await res.json();
       if (data.session) setChatSession(data.session);
-      // Replace with actual messages from API
-      if (Array.isArray(data.messages)) {
-        setChatMessages(data.messages);
-      }
+      if (Array.isArray(data.messages)) setChatMessages(data.messages);
     } catch (err: unknown) { 
       const msg = err instanceof Error ? err.message : 'Error sending message';
       console.error('Chat send error:', msg);
-      // Remove optimistic message on error
-      setChatMessages(prev => prev.filter(m => m.id !== optimisticUserMsg.id));
       showError(msg);
     }
     finally {
-      setTimeout(() => setAiTyping(false), 800);
+      setTimeout(() => setAiTyping(false), 600);
     }
   }, [chatInput, token, authHeader, showError]);
 
@@ -1172,56 +1144,56 @@ export default function AppPage() {
         
         {/* Wallet Card with Enhanced Styling */}
         <div style={{ margin:'0 auto',maxWidth:980 }}>
-          <div style={{ position:'relative', margin:'0 16px',background:'var(--card)',borderRadius:20,padding:'20px 16px',border:'1px solid var(--border)',boxShadow:'0 8px 32px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.07)',backdropFilter:'blur(20px)' }}>
+          <div style={{ position:'relative', margin:'0 16px',background:'var(--card)',borderRadius:20,padding:'28px 24px',border:'1px solid var(--border)',boxShadow:'0 8px 32px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.07)',backdropFilter:'blur(20px)' }}>
           {cashbackToast && (
-            <div className="fade-in" style={{ position:'absolute',top:12,right:12,background:'rgba(255,159,10,0.95)',color:'#1A1A1A',padding:'8px 12px',borderRadius:12,fontSize:12,fontWeight:700,boxShadow:'0 8px 24px rgba(0,0,0,0.22)',zIndex:10,whiteSpace:'nowrap' }}>
+            <div className="fade-in" style={{ position:'absolute',top:16,right:16,background:'rgba(255,159,10,0.95)',color:'#1A1A1A',padding:'10px 14px',borderRadius:14,fontSize:13,fontWeight:700,boxShadow:'0 8px 24px rgba(0,0,0,0.22)',zIndex:10,whiteSpace:'nowrap' }}>
               {cashbackToast}
             </div>
           )}
-            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16 }}>
+            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20 }}>
               <div>
-                <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:600,letterSpacing:.5,marginBottom:6 }}>AVAILABLE BALANCE</p>
-                <div style={{ display:'flex',alignItems:'flex-start',gap:'0px' }}>
-                  <span style={{ fontSize:'24px',fontWeight:900,letterSpacing:-1.2,color:'var(--text)' }}>₦</span>
-                  <span style={{ fontSize:'24px',fontWeight:900,letterSpacing:-1.2,color:'var(--text)' }}>{(user.walletBalance/1).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                <p style={{ color:'var(--text-secondary)',fontSize:13,fontWeight:600,letterSpacing:.5,marginBottom:8 }}>AVAILABLE BALANCE</p>
+                <div style={{ display:'flex',alignItems:'flex-start',gap:'2px' }}>
+                  <span style={{ fontSize:'28px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>₦</span>
+                  <span style={{ fontSize:'28px',fontWeight:900,letterSpacing:-1.5,color:'var(--text)' }}>{(user.walletBalance/1).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                 </div>
               </div>
-              <button onClick={refreshUser} style={{ background:'rgba(0,113,227,.10)',border:'1px solid rgba(0,113,227,.2)',borderRadius:10,padding:'10px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:6,transition:'all .2s',fontSize:12,fontWeight:600,color:BLUE }} onMouseEnter={e=>{e.currentTarget.style.background='rgba(0,113,227,.15)'; e.currentTarget.style.borderColor='rgba(0,113,227,.3)'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(0,113,227,.10)'; e.currentTarget.style.borderColor='rgba(0,113,227,.2)'}}>
+              <button onClick={refreshUser} style={{ background:'rgba(0,113,227,.10)',border:'1px solid rgba(0,113,227,.2)',borderRadius:12,padding:'12px 16px',cursor:'pointer',display:'flex',alignItems:'center',gap:8,transition:'all .2s',fontSize:13,fontWeight:600,color:BLUE }} onMouseEnter={e=>{e.currentTarget.style.background='rgba(0,113,227,.15)'; e.currentTarget.style.borderColor='rgba(0,113,227,.3)'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(0,113,227,.10)'; e.currentTarget.style.borderColor='rgba(0,113,227,.2)'}}>
                 {Icons.wallet(BLUE, 20)}
                 Refresh
               </button>
             </div>
-            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14 }}>
-              <div style={{ background:'rgba(255,159,10,.08)',borderRadius:12,padding:'12px 14px',border:'1px solid rgba(255,159,10,.2)' }}>
-                <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:600 }}>CASHBACK</p>
-                <p style={{ color:ORANGE,fontWeight:700,fontSize:16,marginTop:3 }}>₦{user.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
-                <p style={{ color:'var(--text-secondary)',fontSize:10,fontWeight:600,marginTop:4 }}>2% on purchases</p>
+            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16 }}>
+              <div style={{ background:'rgba(255,159,10,.08)',borderRadius:12,padding:'14px 16px',border:'1px solid rgba(255,159,10,.2)' }}>
+                <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:600 }}>CASHBACK</p>
+                <p style={{ color:ORANGE,fontWeight:700,fontSize:18,marginTop:4 }}>₦{user.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:600,marginTop:6 }}>2% cashback on every purchase</p>
               </div>
-              <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'12px 14px',border:'1px solid var(--border)' }}>
-                <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:600 }}>REFERRAL BONUS</p>
-                <p style={{ color:PURPLE,fontWeight:700,fontSize:16,marginTop:3 }}>₦{user.referralBonus.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+              <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'14px 16px',border:'1px solid var(--border)' }}>
+                <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:600 }}>REFERRAL BONUS</p>
+                <p style={{ color:PURPLE,fontWeight:700,fontSize:18,marginTop:4 }}>₦{user.referralBonus.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
               </div>
             </div>
-            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,flexWrap:'wrap',marginBottom:14 }}>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginBottom:16 }}>
               <button onClick={() => setRedeemOpen(true)}
                 disabled={user.cashbackBalance <= 0}
                 title={user.cashbackBalance > 0 ? 'Redeem to main wallet' : 'No cashback balance to redeem yet'}
                 style={{
-                  padding:'10px 16px',borderRadius:12,border:'none',background: user.cashbackBalance > 0 ? ORANGE : 'rgba(142,142,147,.2)',
-                  color: user.cashbackBalance > 0 ? '#1A1A1A' : 'rgba(28,28,30,.5)',fontWeight:700,fontSize:13,cursor: user.cashbackBalance > 0 ? 'pointer' : 'not-allowed',transition:'all .2s'
+                  padding:'12px 18px',borderRadius:14,border:'none',background: user.cashbackBalance > 0 ? ORANGE : 'rgba(142,142,147,.2)',
+                  color: user.cashbackBalance > 0 ? '#1A1A1A' : 'rgba(28,28,30,.5)',fontWeight:700,cursor: user.cashbackBalance > 0 ? 'pointer' : 'not-allowed',transition:'all .2s'
                 }}>
-                Redeem
+                Redeem Cashback
               </button>
-              <p style={{ color:'var(--text-secondary)',fontSize:11,margin:0 }}>Move cashback to main wallet</p>
+              <p style={{ color:'var(--text-secondary)',fontSize:12,margin:0 }}>Move your cashback to your main balance instantly.</p>
             </div>
             {user.accountNumber && (
-              <div style={{ background:'var(--bg-secondary)',borderRadius:12,padding:'10px 14px',border:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+              <div style={{ background:'var(--bg-secondary)',borderRadius:14,padding:'12px 16px',border:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
                 <div>
-                  <p style={{ color:'var(--text-secondary)',fontSize:11 }}>{user.bankName}</p>
-                  <p style={{ color:'var(--text)',fontWeight:700,fontSize:13,letterSpacing:.3,marginTop:2 }}>{user.accountNumber}</p>
+                  <p style={{ color:'var(--text-secondary)',fontSize:12 }}>{user.bankName}</p>
+                  <p style={{ color:'var(--text)',fontWeight:700,fontSize:15,letterSpacing:.3,marginTop:2 }}>{user.accountNumber}</p>
                 </div>
                 <button onClick={()=>{ navigator.clipboard.writeText(user.accountNumber); showToast('Copied'); }}
-                  style={{ background:BLUE,color:'#fff',fontSize:11,fontWeight:600,padding:'4px 12px',borderRadius:6 }}>Copy</button>
+                  style={{ background:BLUE,color:'#fff',fontSize:12,fontWeight:600,padding:'6px 14px',borderRadius:8 }}>Copy</button>
               </div>
             )}
           </div>
@@ -1265,25 +1237,48 @@ export default function AppPage() {
           </div>
         </div>
 
-        {/* Recent Activity - Professional Banking UI */}
-        <div style={{ margin:'24px 16px 0' }}>
-          <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.5,marginBottom:12,marginLeft:4,textTransform:'uppercase' }}>Recent Activity</p>
+        {/* Recent Activity */}
+        <div style={{ margin:'28px 16px 0' }}>
+          <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.5,marginBottom:14,marginLeft:4,textTransform:'uppercase' }}>Recent Activity</p>
           {transactions.length === 0 ? (
-            <div style={{ textAlign:'center',padding:'40px 20px',background:'var(--card)',borderRadius:14,border:'1px dashed var(--border)' }}>
-              <div style={{ fontSize:38,marginBottom:10 }}>∿</div>
-              <p style={{ fontWeight:700,fontSize:14,color:'var(--text)',marginBottom:4 }}>No activity yet</p>
-              <p style={{ color:'var(--text-secondary)',fontSize:12,lineHeight:1.5 }}>Buy data or shop to see transactions here</p>
+            <div style={{ textAlign:'center',padding:'48px 20px',background:'var(--card)',borderRadius:16,border:'1px dashed var(--border)' }}>
+              <div style={{ fontSize:40,marginBottom:12 }}>∿</div>
+              <p style={{ fontWeight:700,fontSize:15,color:'var(--text)',marginBottom:6 }}>No activity yet</p>
+              <p style={{ color:'var(--text-secondary)',fontSize:13,lineHeight:1.5 }}>Buy data or shop to see transactions here</p>
             </div>
           ) : (
-            <div style={{ background:'var(--card)',borderRadius:14,overflow:'hidden',border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
+            <div style={{ background:'var(--card)',borderRadius:16,overflow:'hidden',border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
               {transactions.slice(0,10).map((tx,i) => {
                 const isDeposit = tx.type === 'deposit';
-                const isCashback = tx.type === 'cashback' || tx.type === 'cashback_redemption';
-                const isFailed = tx.status === 'failed';
-                const isCredit = isDeposit || isCashback;
-                const amountColor = isFailed ? RED : isCashback ? ORANGE : isDeposit ? GREEN : RED;
-                const amount = Number(tx.amount);
-                const displayAmount = isCredit ? `+₦${amount.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}` : `-₦${amount.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}`;\n                const typeLabel = tx.type === 'data' ? 'Data' : tx.type === 'product' ? 'Purchase' : tx.type === 'deposit' ? 'Deposit' : tx.type === 'cashback' ? 'Cashback' : 'Transaction';\n                const txIcon = isFailed ? Icons.alertCircle(RED, 18) : isCredit ? Icons.arrowUp(amountColor, 18) : Icons.arrowDown(amountColor, 18);\n                const bgColor = isFailed ? 'rgba(255,59,48,.09)' : isCashback ? 'rgba(255,159,10,.09)' : isCredit ? 'rgba(48,209,88,.09)' : 'rgba(0,113,227,.09)';\n                const date = new Date(tx.createdAt);\n                const timeStr = date.toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'});\n                const dateStr = date.toLocaleDateString('en-NG',{month:'short',day:'numeric'});\n                return (\n                  <button key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt(tx.receipt as Record<string,unknown>); } }} \n                    style={{ display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom: i<Math.min(transactions.length,10)-1?'1px solid var(--border)':'none',background:'none',border:'none',width:'100%',cursor:'pointer',transition:'all .3s',textAlign:'left' }} \n                    onMouseEnter={e=>{e.currentTarget.style.background='var(--bg-secondary)',e.currentTarget.style.opacity='1'}} \n                    onMouseLeave={e=>{e.currentTarget.style.background='none',e.currentTarget.style.opacity='1'}}>\n                    <div style={{ width:44,height:44,borderRadius:12,background:bgColor,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>\n                      {txIcon}\n                    </div>\n                    <div style={{ flex:1,minWidth:0 }}>\n                      <p style={{ fontWeight:700,fontSize:14,color:'var(--text)',marginBottom:4 }}>{tx.description}</p>\n                      <div style={{ display:'flex',alignItems:'center',gap:6 }}>\n                        <span style={{ display:'inline-block',background:'rgba(0,113,227,.1)',color:BLUE,fontSize:11,fontWeight:700,padding:'3px 8px',borderRadius:6 }}>{typeLabel}</span>\n                        <span style={{ fontSize:12,color:'var(--text-secondary)' }}>{dateStr} {timeStr}</span>\n                      </div>\n                    </div>\n                    <div style={{ textAlign:'right',flexShrink:0 }}>\n                      <p style={{ fontWeight:800,fontSize:15,color:amountColor,marginBottom:4 }}>{displayAmount}</p>\n                      <p style={{ fontSize:11,fontWeight:700,color: isFailed ? RED : GREEN,textTransform:'uppercase',letterSpacing:.3 }}>{isFailed ? '✕ Failed' : '✓ Done'}</p>\n                    </div>\n                  </button>\n                );\n              })}\n            </div>\n          )}\n        </div>
+                const isCashbackTx = tx.type === 'cashback' || tx.type === 'cashback_redemption';
+                const isCredit = isDeposit || isCashbackTx;
+                const color = isCashbackTx ? ORANGE : isDeposit ? GREEN : RED;
+                const icon = tx.type === 'data' ? Icons.arrowDown(color, 18) : tx.type === 'product' ? Icons.download(color, 18) : Icons.arrowUp(color, 18);
+                const bgColor = tx.type === 'data'
+                  ? 'rgba(0,113,227,.08)'
+                  : isCashbackTx
+                    ? 'rgba(255,159,10,.08)'
+                    : isDeposit
+                      ? 'rgba(48,209,88,.08)'
+                      : 'rgba(255,59,48,.08)';
+                const sign = isCredit ? '+' : '-';
+                return (
+                  <button key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt(tx.receipt as Record<string,unknown>); } }} style={{ display:'flex',alignItems:'center',gap:14,padding:'16px 16px',borderBottom: i<Math.min(transactions.length,10)-1?'1px solid var(--border)':undefined,background:'none',border:'none',width:'100%',cursor:'pointer',transition:'all .2s',textAlign:'left' }} onMouseEnter={e=>{e.currentTarget.style.opacity='0.8'}} onMouseLeave={e=>{e.currentTarget.style.opacity='1'}}>
+                    <IconBox icon={icon} bg={bgColor} />
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <p style={{ fontWeight:600,fontSize:14,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{tx.description}</p>
+                      <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:3 }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</p>
+                    </div>
+                    <div style={{ textAlign:'right',flexShrink:0 }}>
+                      <p style={{ fontWeight:700,fontSize:15,color }}>{sign}₦{Number(tx.amount).toLocaleString()}</p>
+                      <StatusPill label={tx.status} type={tx.status === 'success' ? 'success' : tx.status === 'pending' ? 'pending' : 'failed'} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
       <BottomNav active="home" />
     </>
@@ -1518,15 +1513,36 @@ export default function AppPage() {
               <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:8 }}>Your transactions will appear here</p>
             </div>
           ) : (
-            <div style={{ display:'grid',gap:8 }}>
+            <div style={{ display:'grid',gap:10 }}>
               {transactions.filter(tx => tx.status !== 'pending').map(tx => {
                 const isDeposit = tx.type === 'deposit';
-                const isCashback = tx.type === 'cashback' || tx.type === 'cashback_redemption';
+                const isCashbackTx = tx.type === 'cashback' || tx.type === 'cashback_redemption';
                 const isFailed = tx.status === 'failed';
-                const isCredit = isDeposit || isCashback;
-                const amountColor = isFailed ? RED : isCashback ? ORANGE : isDeposit ? GREEN : RED;
-                const amount = Number(tx.amount);
-                const displayAmount = isCredit ? `+₦${amount.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}` : `-₦${amount.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}`;\n                const typeLabel = tx.type === 'data' ? 'Data' : tx.type === 'product' ? 'Purchase' : tx.type === 'deposit' ? 'Deposit' : tx.type === 'cashback' ? 'Cashback' : 'Transaction';\n                const txIcon = isFailed ? Icons.alertCircle(RED, 20) : isCredit ? Icons.arrowUp(amountColor, 20) : Icons.arrowDown(amountColor, 20);\n                const bgColor = isFailed ? 'rgba(255,59,48,.09)' : isCashback ? 'rgba(255,159,10,.09)' : isCredit ? 'rgba(48,209,88,.09)' : 'rgba(0,113,227,.09)';\n                const date = new Date(tx.createdAt);\n                const timeStr = date.toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'});\n                const dateStr = date.toLocaleDateString('en-NG',{month:'short',day:'numeric'});\n                return (\n                  <button key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt(tx.receipt as Record<string,unknown>); } }}\n                    style={{ background:'var(--card)',borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,border:'1px solid var(--border)',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}\n                    onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)';e.currentTarget.style.transform='translateY(-1px)'}}\n                    onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.04)';e.currentTarget.style.transform='translateY(0)'}}>\n                    <div style={{ width:48,height:48,borderRadius:12,background:bgColor,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>\n                      {txIcon}\n                    </div>\n                    <div style={{ flex:1,textAlign:'left' }}>\n                      <p style={{ fontWeight:700,fontSize:14,color:'var(--text)',marginBottom:4 }}>{tx.description}</p>\n                      <div style={{ display:'flex',alignItems:'center',gap:6 }}>\n                        <span style={{ display:'inline-block',background:'rgba(0,113,227,.1)',color:BLUE,fontSize:11,fontWeight:700,padding:'3px 8px',borderRadius:6 }}>{typeLabel}</span>\n                        <span style={{ fontSize:12,color:'var(--text-secondary)' }}>{dateStr} {timeStr}</span>\n                      </div>\n                    </div>\n                    <div style={{ textAlign:'right',flexShrink:0 }}>\n                      <p style={{ fontWeight:800,fontSize:15,color:amountColor,marginBottom:4 }}>{displayAmount}</p>\n                      <p style={{ fontSize:11,fontWeight:700,color: isFailed ? RED : GREEN,textTransform:'uppercase',letterSpacing:.3 }}>{isFailed ? '✕ Failed' : '✓ Done'}</p>\n                    </div>\n                  </button>\n                );\n              })}\n            </div>\n          )}\n        </div>
+                const isCredit = isDeposit || isCashbackTx;
+                const color = isFailed ? RED : isCashbackTx ? ORANGE : isDeposit ? GREEN : RED;
+                const icon = isFailed ? Icons.alertCircle(RED, 20) : isCredit ? Icons.arrowUp(color, 20) : Icons.arrowDown(color, 20);
+                const bgColor = isFailed ? 'rgba(255,59,48,.08)' : isCashbackTx ? 'rgba(255,159,10,.08)' : isDeposit ? 'rgba(48,209,88,.08)' : 'rgba(255,59,48,.08)';
+                const sign = isCredit ? '+' : '-';
+                return (
+                  <button key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt(tx.receipt as Record<string,unknown>); } }}
+                    style={{ background:'var(--card)',borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,border:'1px solid var(--border)',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
+                    onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)';e.currentTarget.style.transform='translateY(-1px)'}}
+                    onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.04)';e.currentTarget.style.transform='translateY(0)'}}>
+                    <IconBox icon={icon} bg={bgColor} />
+                    <div style={{ flex:1,textAlign:'left' }}>
+                      <p style={{ fontWeight:600,fontSize:14,color:'var(--text)' }}>{tx.description}</p>
+                      <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:3 }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</p>
+                    </div>
+                    <div style={{ textAlign:'right',flexShrink:0 }}>
+                      <p style={{ fontWeight:700,fontSize:15,color }}>{sign}₦{Number(tx.amount).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                      <div style={{ fontSize:11,fontWeight:700,color,marginTop:2,textTransform:'uppercase' }}>{isFailed ? '✕ Failed' : '✓ Success'}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
       <BottomNav active="transactions" />
     </>
@@ -1774,19 +1790,19 @@ export default function AppPage() {
       <>
         <GlobalStyle dark={dark} />
         <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
-          <div style={{ padding:'56px 16px 14px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,background:'var(--card)',backdropFilter:'blur(10px)' }}>
+          <div style={{ padding:'56px 16px 14px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12 }}>
             <div style={{ display:'flex',alignItems:'center',gap:12 }}>
-              <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:600,background:'none',border:'none',cursor:'pointer',padding:'6px 8px' }}>← Back</button>
+              <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:600,background:'none',border:'none',cursor:'pointer' }}>← Back</button>
               <div>
-                <p style={{ fontSize:16,fontWeight:800,color:'var(--text)',letterSpacing:-0.3 }}>Sauki Support</p>
-                <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:2,fontWeight:600 }}>{sessionStatus === 'agent_active' ? '🟢 Agent is here' : agentRequired ? '🟠 Connecting...' : '💬 Ready to help'}</p>
+                <p style={{ fontSize:16,fontWeight:700,color:'var(--text)' }}>Sauki Support</p>
+                <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:3,fontWeight:600 }}>{sessionStatus === 'agent_active' ? 'Agent is here' : 'Sauki AI is ready to assist'}</p>
               </div>
             </div>
-            <button onClick={()=>loadChatSession(true)} style={{ fontSize:12,fontWeight:700,color:'#fff',background:BLUE,border:'none',borderRadius:12,padding:'10px 14px',cursor:'pointer',transition:'all .2s' }} onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}} onMouseLeave={e=>{e.currentTarget.style.opacity='1'}}>New Chat</button>
+            <button onClick={()=>loadChatSession(true)} style={{ fontSize:12,fontWeight:700,color:BLUE,background:'rgba(0,113,227,.12)',border:'1px solid rgba(0,113,227,.2)',borderRadius:14,padding:'8px 12px',cursor:'pointer' }}>New Session</button>
           </div>
 
           {statusBanner && (
-            <div style={{ padding:'12px 16px',background:agentRequired?'rgba(255,152,0,.1)':'rgba(52,199,89,.1)',borderBottom:'1px solid var(--border)',textAlign:'center',fontSize:13,fontWeight:700,color:'var(--text)' }}>
+            <div style={{ padding:'10px 16px',background:'rgba(255,255,255,.06)',borderBottom:'1px solid var(--border)',textAlign:'center',fontSize:13,fontWeight:700,color:'var(--text)',position:'relative' }}>
               {statusBanner}
             </div>
           )}
@@ -1845,7 +1861,7 @@ export default function AppPage() {
           </div>
 
           <div style={{ padding:'16px',borderTop:'1px solid rgba(255,255,255,.08)',display:'flex',gap:12,background:'rgba(0,0,0,.05)',alignItems:'flex-end' }}>
-            <input ref={inputRef} value={chatInput} onChange={e=>{
+            <input value={chatInput} onChange={e=>{
                 setChatInput(e.target.value);
                 setChatTyping(true);
                 setTimeout(()=>setChatTyping(false), 1200);
