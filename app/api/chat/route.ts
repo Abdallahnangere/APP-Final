@@ -215,71 +215,122 @@ If your account appears locked or you're still unable to access it after resetti
 }
 
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const payload = await verifyToken(auth.slice(7));
-  if (!payload?.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const auth = req.headers.get('authorization');
+    if (!auth?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    const payload = await verifyToken(auth.slice(7));
+    if (!payload?.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const url = new URL(req.url);
-  const forceNew = url.searchParams.get('new') === 'true';
-  const session = await getOrCreateSession(payload.userId as string, forceNew);
+    const url = new URL(req.url);
+    const forceNew = url.searchParams.get('new') === 'true';
+    
+    const session = await getOrCreateSession(payload.userId as string, forceNew);
+    if (!session) return NextResponse.json({ error: 'Failed to get session' }, { status: 500 });
 
-  // Mark system/agent messages as delivered/read
-  await markDeliveredAndRead(session.id);
+    // Mark system/agent messages as delivered/read
+    await markDeliveredAndRead(session.id);
 
-  const messages = await fetchSessionMessages(session.id);
+    const messages = await fetchSessionMessages(session.id);
 
-  const response = NextResponse.json({ session, messages });
-  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
-  return response;
+    const response = NextResponse.json({ session, messages: Array.isArray(messages) ? messages : [] });
+    response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+    return response;
+  } catch (err: unknown) {
+    console.error('[Chat GET Error]', err);
+    const message = err instanceof Error ? err.message : 'Internal server error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const auth = req.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const payload = await verifyToken(auth.slice(7));
-  if (!payload?.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const auth = req.headers.get('authorization');
+    if (!auth?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    const payload = await verifyToken(auth.slice(7));
+    if (!payload?.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { message } = await req.json();
-  if (!message?.trim()) return NextResponse.json({ error: 'Message required' }, { status: 400 });
+    const body = await req.json();
+    const { message } = body;
+    
+    if (!message?.trim()) return NextResponse.json({ error: 'Message required' }, { status: 400 });
 
-  const userId = payload.userId as string;
-  const session = await getOrCreateSession(userId);
+    const userId = payload.userId as string;
+    const session = await getOrCreateSession(userId);
+    if (!session) return NextResponse.json({ error: 'Failed to get session' }, { status: 500 });
 
-  // If escalated, do not respond with AI (unless user says 'HI SAUKI AI')
-  const userMsg = await insertChatMessage(session.id, userId, 'user', message);
-  await sql`UPDATE chat_sessions SET last_message = ${message.trim()}, last_activity = NOW(), updated_at = NOW() WHERE id = ${session.id}`;
+    // Insert user message
+    const userMsg = await insertChatMessage(session.id, userId, 'user', message);
+    if (!userMsg) return NextResponse.json({ error: 'Failed to save message' }, { status: 500 });
 
-  // Determine AI response
-  const behavior = generateSaukiResponse(message, session);
+    // Update session
+    await sql`
+      UPDATE chat_sessions 
+      SET last_message = ${message.trim()},
+          last_activity = NOW(),
+          updated_at = NOW()
+      WHERE id = ${session.id}
+    `;
 
-  const updatedStatus = behavior.update?.status ?? session.status;
-  const updatedAgentRequired = behavior.update?.agent_required ?? session.agent_required;
-  const updatedAbusiveWarned = behavior.update?.abusive_warned ?? session.abusive_warned;
+    // Generate AI response
+    const behavior = generateSaukiResponse(message, session);
 
-  await sql`
-    UPDATE chat_sessions
-    SET last_message = ${message.trim()},
-        last_activity = NOW(),
-        updated_at = NOW(),
-        status = ${updatedStatus},
-        agent_required = ${updatedAgentRequired},
-        abusive_warned = ${updatedAbusiveWarned}
-    WHERE id = ${session.id}
-  `;
+    if (behavior.response) {
+      // Save AI response
+      const aiMsg = await insertChatMessage(session.id, userId, 'ai', behavior.response);
+      if (!aiMsg) {
+        console.warn('Failed to save AI message');
+      }
+    }
 
-  if (behavior.escalateNote) {
-    await sql`INSERT INTO chat_notes (session_id, created_by, note) VALUES (${session.id}, 'AI', ${behavior.escalateNote})`;
+    // Update session status if needed
+    if (behavior.update && Object.keys(behavior.update).length > 0) {
+      const updates: Record<string, unknown> = { ...behavior.update, updated_at: new Date() };
+      const setClause = Object.entries(updates)
+        .map(([key]) => `${key} = $${Object.keys(updates).indexOf(key) + 1}`)
+        .join(', ');
+      
+      const values = Object.values(updates);
+      
+      await sql`
+        UPDATE chat_sessions
+        SET ${sql(setClause.replace(/\$\d+/g, () => {
+          let i = 0;
+          return () => `$${++i}`;
+        }))}
+        WHERE id = ${session.id}
+      `.catch(() => {
+        // Fallback to individual updates
+        Object.entries(behavior.update).forEach(async ([key, value]) => {
+          await sql`UPDATE chat_sessions SET ${sql(key)} = ${value} WHERE id = ${session.id}`;
+        });
+      });
+    }
+
+    if (behavior.escalateNote) {
+      await sql`
+        INSERT INTO chat_notes (session_id, created_by, note) 
+        VALUES (${session.id}, 'AI', ${behavior.escalateNote})
+      `.catch(err => console.warn('Failed to save note:', err));
+    }
+
+    // Fetch updated session and messages
+    const updatedSessionRows = await sql`
+      SELECT * FROM chat_sessions WHERE id = ${session.id}
+    `;
+    const updatedSession = updatedSessionRows[0] || session;
+    const messages = await fetchSessionMessages(session.id);
+
+    const response = NextResponse.json({ 
+      session: updatedSession, 
+      messages: Array.isArray(messages) ? messages : [] 
+    });
+    response.headers.set('Cache-Control', 'no-store');
+    return response;
+  } catch (err: unknown) {
+    console.error('[Chat POST Error]', err);
+    const message = err instanceof Error ? err.message : 'Internal server error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  let aiMsg = null;
-  if (behavior.response) {
-    aiMsg = await insertChatMessage(session.id, userId, 'ai', behavior.response);
-  }
-
-  const updatedSession = await sql`SELECT * FROM chat_sessions WHERE id = ${session.id}`;
-  const messages = await fetchSessionMessages(session.id);
-  const response = NextResponse.json({ session: updatedSession[0], messages });
-  response.headers.set('Cache-Control', 'no-store');
-  return response;
 }
