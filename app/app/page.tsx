@@ -435,6 +435,7 @@ export default function AppPage() {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryCity, setDeliveryCity] = useState('');
   const [deliveryPostalCode, setDeliveryPostalCode] = useState('');
+  const [purchaseIdempotencyKey, setPurchaseIdempotencyKey] = useState<string|null>(null);
   const [newPin, setNewPin] = useState('');
   const [confirmNewPin, setConfirmNewPin] = useState('');
   const [storedPhone, setStoredPhone] = useState('');
