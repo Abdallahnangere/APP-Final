@@ -436,6 +436,9 @@ export default function AppPage() {
   const [deliveryCity, setDeliveryCity] = useState('');
   const [deliveryPostalCode, setDeliveryPostalCode] = useState('');
   const [purchaseIdempotencyKey, setPurchaseIdempotencyKey] = useState<string|null>(null);
+  const [simSerial, setSimSerial] = useState('');
+  const [simFront, setSimFront] = useState<string|null>(null);
+  const [simBack, setSimBack] = useState<string|null>(null);
   const [newPin, setNewPin] = useState('');
   const [confirmNewPin, setConfirmNewPin] = useState('');
   const [storedPhone, setStoredPhone] = useState('');
