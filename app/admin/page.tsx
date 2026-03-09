@@ -355,7 +355,6 @@ export default function AdminPage() {
                           <Btn variant={selectedUser.is_banned?'success':'danger'} size="sm" onClick={async()=>{
                             try { await api('users', 'PATCH', { userId: selectedUser.id, action: selectedUser.is_banned?'unban':'ban' }); showToast(`✅ User ${selectedUser.is_banned?'unbanned':'banned'}`); load('users').then(d=>setUsers(Array.isArray(d)?d:[])); setSelectedUser(null); } catch(e:unknown){ showError(e instanceof Error?e.message:'Failed'); }
                           }}>{selectedUser.is_banned?'Unban User':'Ban User'}</Btn>
-                          <Btn variant="ghost" size="sm" onClick={()=>{ setPendingChatUserId(selectedUser.id); setTab('chat'); }}>View Chat</Btn>
                         </div>
                       </Card>
                     </div>
