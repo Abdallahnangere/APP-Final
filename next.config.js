@@ -8,7 +8,7 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
   experimental: {
-    serverComponentsExternalPackages: ['bcryptjs'],
+    serverComponentsExternalPackages: ['bcryptjs', '@google/generative-ai'],
   },
   compress: true,
   poweredByHeader: false,
