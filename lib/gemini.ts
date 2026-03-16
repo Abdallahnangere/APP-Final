@@ -2,6 +2,30 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
+const MODEL_CANDIDATES = Array.from(
+  new Set([
+    process.env.GEMINI_MODEL?.trim(),
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-flash-8b',
+    'gemini-2.0-flash-lite',
+    'gemini-2.0-flash',
+  ].filter(Boolean) as string[])
+);
+
+function isUnavailableModelError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+
+  const maybeErr = err as { status?: number; message?: string };
+  const message = (maybeErr.message || '').toLowerCase();
+
+  return (
+    maybeErr.status === 404 ||
+    message.includes('not found') ||
+    message.includes('is not found') ||
+    message.includes('not supported for generatecontent')
+  );
+}
+
 // ─────────────────────────────────────────────────────────────
 // SAUKI AI — COMPLETE SYSTEM PROMPT
 // ─────────────────────────────────────────────────────────────
@@ -181,21 +205,43 @@ export async function getSaukiAIResponse(
   history: ChatHistoryItem[],
   userMessage: string
 ): Promise<GeminiResult> {
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
-    systemInstruction: SYSTEM_PROMPT,
-  });
+  let rawText = '';
+  let lastError: unknown;
 
-  const chat = model.startChat({
-    history,
-    generationConfig: {
-      maxOutputTokens: 400,
-      temperature: 0.4,
-    },
-  });
+  for (const modelName of MODEL_CANDIDATES) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        systemInstruction: SYSTEM_PROMPT,
+      });
 
-  const result = await chat.sendMessage(userMessage);
-  const rawText = result.response.text();
+      const chat = model.startChat({
+        history,
+        generationConfig: {
+          maxOutputTokens: 400,
+          temperature: 0.4,
+        },
+      });
+
+      const result = await chat.sendMessage(userMessage);
+      rawText = result.response.text();
+      break;
+    } catch (err) {
+      lastError = err;
+
+      if (isUnavailableModelError(err)) {
+        continue;
+      }
+
+      throw err;
+    }
+  }
+
+  if (!rawText) {
+    throw lastError instanceof Error
+      ? lastError
+      : new Error('No compatible Gemini model available for this API key');
+  }
 
   const shouldEscalate = rawText.includes('[ESCALATE]');
   const text = rawText.replace('[ESCALATE]', '').trim();
