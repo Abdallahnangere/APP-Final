@@ -424,6 +424,7 @@ export default function AppPage() {
   const [showPin, setShowPin] = useState(false);
   const [pinAction, setPinAction] = useState<'buy-data'|'buy-product'|'sim-pay'|'transfer'|null>(null);
   const [receipt, setReceipt] = useState<Record<string,unknown>|null>(null);
+  const [chatModalOpen, setChatModalOpen] = useState(false);
 
   // Transfer states
   const [transferPhone, setTransferPhone] = useState('');
@@ -1124,8 +1125,9 @@ export default function AppPage() {
         { id:'home', label:'Home', icon: Icons.bolt(BLUE, 24) },
         { id:'transactions', label:'Activity', icon: Icons.arrowDown(BLUE, 24) },
         { id:'profile', label:'Account', icon: Icons.user(BLUE, 24) },
+        { id:'chat', label:'Chat', icon: Icons.messageSquare(BLUE, 24) },
       ].map(item => (
-        <button key={item.id} onClick={()=>{ setScreen(item.id as typeof screen); }}
+        <button key={item.id} onClick={()=>{ if(item.id==='chat'){ setChatModalOpen(true); } else { setScreen(item.id as typeof screen); } }}
           style={{ padding:'12px 0 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,background:'none',borderTop: active===item.id ? `3px solid ${BLUE}` : 'none',paddingTop: active===item.id ? '9px' : '12px',transition:'all .2s',opacity: active===item.id ? 1 : 0.65,cursor:'pointer' }}
           onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}}
           onMouseLeave={e=>{e.currentTarget.style.opacity = active===item.id ? '1' : '0.65'}}>
@@ -1171,6 +1173,27 @@ export default function AppPage() {
                 style={{ flex:1,padding:'12px 16px',borderRadius:14,border:'none',background:redeemLoading||!redeemAmount||Number(redeemAmount)<=0||Number(redeemAmount)>(user?.cashbackBalance||0)?'rgba(142,142,147,.35)':ORANGE,color:redeemLoading||!redeemAmount||Number(redeemAmount)<=0||Number(redeemAmount)>(user?.cashbackBalance||0)?'rgba(28,28,30,.6)':'#1A1A1A',fontWeight:700,cursor:redeemLoading||!redeemAmount||Number(redeemAmount)<=0||Number(redeemAmount)>(user?.cashbackBalance||0)?'not-allowed':'pointer' }}>
                 {redeemLoading ? 'Processing…' : 'Redeem'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {chatModalOpen && (
+        <div style={{ position:'fixed',top:0,right:0,bottom:0,left:0,zIndex:200,background:'rgba(0,0,0,.4)',display:'flex',alignItems:'flex-end',backdropFilter:'blur(8px)' }} onClick={()=>setChatModalOpen(false)}>
+          <div onClick={e=>e.stopPropagation()} className="slide-up" style={{ width:'100%',background:'var(--card)',borderRadius:'28px 28px 0 0',padding:'24px 20px 32px',position:'relative',maxHeight:'80dvh',display:'flex',flexDirection:'column' }}>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20 }}>
+              <h2 style={{ fontSize:20,fontWeight:800,color:'var(--text)',margin:0 }}>Chat</h2>
+              <button onClick={()=>setChatModalOpen(false)} style={{ width:40,height:40,borderRadius:12,background:'var(--bg-secondary)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,cursor:'pointer',transition:'all .2s' }}
+                onMouseEnter={e=>{e.currentTarget.style.background='var(--border)'}}
+                onMouseLeave={e=>{e.currentTarget.style.background='var(--bg-secondary)'}}>
+                ✕
+              </button>
+            </div>
+            <div style={{ flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-secondary)',textAlign:'center',padding:'40px 20px' }}>
+              <div>
+                <div style={{ fontSize:48,marginBottom:16,opacity:0.5 }}>💬</div>
+                <p style={{ fontSize:16,fontWeight:600,color:'var(--text)',marginBottom:8 }}>Chat Coming Soon</p>
+                <p style={{ fontSize:14,color:'var(--text-secondary)',lineHeight:1.6 }}>Chat feature will be available soon. Stay tuned!</p>
+              </div>
             </div>
           </div>
         </div>
