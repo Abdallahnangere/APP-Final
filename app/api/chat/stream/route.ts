@@ -1,101 +1,82 @@
 import { NextRequest } from 'next/server';
-import sql from '@/lib/db';
-import { verifyToken } from '@/lib/auth';
+import { db } from '@/lib/db';
 
-function normalize(text: string) {
-  return text.trim().toLowerCase();
-}
-
-async function getOrCreateSession(userId: string) {
-  const [session] = await sql`
-    SELECT * FROM chat_sessions
-    WHERE user_id = ${userId}
-    ORDER BY updated_at DESC
-    LIMIT 1
-  `;
-
-  if (session) {
-    await sql`
-      UPDATE chat_sessions SET last_activity = NOW(), updated_at = NOW() WHERE id = ${session.id}
-    `;
-    return { ...session };
-  }
-
-  const [newSession] = await sql`
-    INSERT INTO chat_sessions (user_id, last_activity, last_message) VALUES (${userId}, NOW(), '')
-    RETURNING *
-  `;
-  return newSession;
-}
-
-async function fetchSessionMessages(sessionId: string, since?: Date) {
-  if (since) {
-    return sql`
-      SELECT id, sender, message, created_at, delivered_at, read_at
-      FROM chats
-      WHERE session_id = ${sessionId} AND created_at > ${since}
-      ORDER BY created_at ASC
-    `;
-  }
-  return sql`
-    SELECT id, sender, message, created_at, delivered_at, read_at
-    FROM chats
-    WHERE session_id = ${sessionId}
-    ORDER BY created_at ASC
-  `;
-}
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  // Allow token via query param for EventSource (no custom headers)
-  const token = req.nextUrl.searchParams.get('token');
-  if (!token) return new Response('Unauthorized', { status: 401 });
+  const sessionId = req.nextUrl.searchParams.get('sessionId');
+  const lastId = req.nextUrl.searchParams.get('lastId') || null;
 
-  const payload = await verifyToken(token);
-  if (!payload?.userId) return new Response('Unauthorized', { status: 401 });
-
-  const session = await getOrCreateSession(payload.userId as string);
+  if (!sessionId) {
+    return new Response('sessionId required', { status: 400 });
+  }
 
   const encoder = new TextEncoder();
+  let closed = false;
+
   const stream = new ReadableStream({
-    async start(controller) {
-      const send = (event: string, data: unknown) => {
-        controller.enqueue(encoder.encode(`event: ${event}\n`));
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+    start(controller) {
+      // Send initial ping to confirm connection
+      controller.enqueue(encoder.encode('event: ping\ndata: connected\n\n'));
+
+      let lastMessageId = lastId;
+
+      const poll = async () => {
+        if (closed) return;
+
+        try {
+          // Fetch new messages
+          const messagesQuery = lastMessageId
+            ? `SELECT * FROM chat_messages 
+               WHERE session_id = $1 AND created_at > (
+                 SELECT created_at FROM chat_messages WHERE id = $2
+               )
+               ORDER BY created_at ASC`
+            : `SELECT * FROM chat_messages 
+               WHERE session_id = $1 
+               ORDER BY created_at ASC`;
+
+          const params = lastMessageId ? [sessionId, lastMessageId] : [sessionId];
+          const messages = await db.query(messagesQuery, params);
+
+          if (messages.rows.length > 0) {
+            lastMessageId = (messages.rows.at(-1) as Record<string, string>).id;
+            const event = `event: messages\ndata: ${JSON.stringify(messages.rows)}\n\n`;
+            controller.enqueue(encoder.encode(event));
+          }
+
+          // Fetch session state (for status banner updates)
+          const session = await db.query(
+            `SELECT status, agent_required, agent_mode FROM chat_sessions WHERE id = $1`,
+            [sessionId]
+          );
+          if (session.rows.length > 0) {
+            const sessionEvent = `event: session\ndata: ${JSON.stringify(session.rows[0])}\n\n`;
+            controller.enqueue(encoder.encode(sessionEvent));
+          }
+
+          // Fetch typing indicators (expires after 3 seconds)
+          const typing = await db.query(
+            `SELECT sender, is_typing FROM typing_indicators 
+             WHERE session_id = $1 AND updated_at > NOW() - INTERVAL '3 seconds'`,
+            [sessionId]
+          );
+          const typingEvent = `event: typing\ndata: ${JSON.stringify(typing.rows)}\n\n`;
+          controller.enqueue(encoder.encode(typingEvent));
+        } catch (err) {
+          console.error('SSE poll error:', err);
+          if (!closed) controller.close();
+          return;
+        }
+
+        if (!closed) setTimeout(poll, 1000);
       };
 
-      // Send initial payload
-      const initialMessages = await fetchSessionMessages(session.id);
-      send('init', { session, messages: initialMessages });
-
-      let lastMessageTime = initialMessages.length
-        ? new Date(initialMessages[initialMessages.length - 1].created_at)
-        : new Date(0);
-
-      const interval = setInterval(async () => {
-        try {
-          const [latestSession] = await sql`SELECT * FROM chat_sessions WHERE id = ${session.id}`;
-          const newMessages = await fetchSessionMessages(session.id, lastMessageTime);
-
-          if (newMessages.length) {
-            lastMessageTime = new Date(newMessages[newMessages.length - 1].created_at);
-            send('messages', newMessages);
-          }
-
-          if (latestSession) {
-            const updatedAt = new Date(latestSession.updated_at);
-            const currentAt = new Date(session.updated_at);
-            if (updatedAt > currentAt) {
-              Object.assign(session, latestSession);
-              send('session', latestSession);
-            }
-          }
-        } catch (error) {
-          // ignore transient errors
-        }
-      }, 2000);
+      poll();
 
       req.signal.addEventListener('abort', () => {
-        clearInterval(interval);
+        closed = true;
         controller.close();
       });
     },
@@ -106,6 +87,7 @@ export async function GET(req: NextRequest) {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
     },
   });
 }

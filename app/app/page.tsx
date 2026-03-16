@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { generateIdempotencyKey } from '@/lib/utils';
+import SupportChat from '@/app/support/page';
 
 /* ─────────────── TYPES ─────────────── */
 type User = {
@@ -1178,8 +1179,8 @@ export default function AppPage() {
         </div>
       )}
       {chatModalOpen && (
-        <div style={{ position:'fixed',top:0,right:0,bottom:0,left:0,zIndex:200,background:'rgba(0,0,0,.4)',display:'flex',alignItems:'flex-end',backdropFilter:'blur(8px)' }} onClick={()=>setChatModalOpen(false)}>
-          <div onClick={e=>e.stopPropagation()} className="slide-up" style={{ width:'100%',background:'var(--card)',borderRadius:'28px 28px 0 0',padding:'24px 20px 32px',position:'relative',maxHeight:'80dvh',display:'flex',flexDirection:'column' }}>
+        <div className="fade-in" style={{ position:'fixed',top:0,right:0,bottom:0,left:0,zIndex:200,background:'rgba(0,0,0,.42)',display:'flex',alignItems:'flex-end',backdropFilter:'blur(8px)' }} onClick={()=>setChatModalOpen(false)}>
+          <div onClick={e=>e.stopPropagation()} className="slide-up" style={{ width:'100%',background:'var(--card)',borderRadius:'28px 28px 0 0',padding:'20px 16px 14px',position:'relative',height:'85dvh',display:'flex',flexDirection:'column',willChange:'transform',boxShadow:'0 -10px 30px rgba(0,0,0,.22)' }}>
             <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20 }}>
               <h2 style={{ fontSize:20,fontWeight:800,color:'var(--text)',margin:0 }}>Chat</h2>
               <button onClick={()=>setChatModalOpen(false)} style={{ width:40,height:40,borderRadius:12,background:'var(--bg-secondary)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,cursor:'pointer',transition:'all .2s' }}
@@ -1188,12 +1189,8 @@ export default function AppPage() {
                 ✕
               </button>
             </div>
-            <div style={{ flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-secondary)',textAlign:'center',padding:'40px 20px' }}>
-              <div>
-                <div style={{ fontSize:48,marginBottom:16,opacity:0.5 }}>💬</div>
-                <p style={{ fontSize:16,fontWeight:600,color:'var(--text)',marginBottom:8 }}>Chat Coming Soon</p>
-                <p style={{ fontSize:14,color:'var(--text-secondary)',lineHeight:1.6 }}>Chat feature will be available soon. Stay tuned!</p>
-              </div>
+            <div style={{ flex:1,minHeight:0,display:'flex',justifyContent:'center',overflow:'hidden',borderRadius:18 }}>
+              <SupportChat />
             </div>
           </div>
         </div>
