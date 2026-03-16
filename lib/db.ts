@@ -2,6 +2,7 @@ import { neon } from '@neondatabase/serverless';
 
 const sql = neon(process.env.DATABASE_URL!);
 export default sql;
+export const db = sql;
 
 export async function initDB() {
   await sql`
