@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { generateIdempotencyKey } from '@/lib/utils';
 import SupportChat from '@/app/support/page';
