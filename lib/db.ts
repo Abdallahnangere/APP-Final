@@ -1,8 +1,38 @@
 import { neon } from '@neondatabase/serverless';
 
-const sql = neon(process.env.DATABASE_URL!);
+type SqlClient = {
+  <T = Record<string, any>>(queryOrTemplate: TemplateStringsArray | string, ...values: unknown[]): Promise<T[]>;
+};
+
+function getSqlClient(): SqlClient {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is not set');
+  }
+
+  return neon(databaseUrl) as unknown as SqlClient;
+}
+
+const sql: SqlClient = (queryOrTemplate, ...values) => getSqlClient()(queryOrTemplate, ...values);
+
 export default sql;
-export const db = sql;
+
+type QueryResult<T> = {
+  rows: T[];
+  rowCount: number;
+};
+
+export const db = {
+  async query<T = Record<string, any>>(text: string, params: unknown[] = []): Promise<QueryResult<T>> {
+    const execute = getSqlClient() as unknown as (queryText: string, queryParams?: unknown[]) => Promise<T[]>;
+    const rows = await execute(text, params);
+    return {
+      rows,
+      rowCount: rows.length,
+    };
+  },
+};
 
 export async function initDB() {
   await sql`
