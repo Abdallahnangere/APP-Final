@@ -28,9 +28,18 @@ export async function POST(req: NextRequest) {
     const session = sessionResult.rows[0] as Record<string, unknown>;
 
     // Save customer message
-    await db.query(
+    const customerInsert = await db.query<{
+      id: string;
+      session_id: string;
+      sender: 'customer';
+      content: string;
+      read: boolean;
+      delivered: boolean;
+      created_at: string;
+    }>(
       `INSERT INTO chat_messages (session_id, sender, content, delivered, read)
-       VALUES ($1, 'customer', $2, true, false)`,
+       VALUES ($1, 'customer', $2, true, false)
+       RETURNING id, session_id, sender, content, read, delivered, created_at`,
       [sessionId, content]
     );
 
@@ -67,7 +76,11 @@ export async function POST(req: NextRequest) {
       );
     } else if (agentRequired || agentMode) {
       // AI is silent — only agent can respond
-      return NextResponse.json({ ok: true, aiSilent: true });
+      return NextResponse.json({
+        ok: true,
+        aiSilent: true,
+        customerMessage: customerInsert.rows[0],
+      });
     }
 
     // Set AI typing indicator
@@ -109,9 +122,18 @@ export async function POST(req: NextRequest) {
     );
 
     // Save AI response
-    await db.query(
+    const aiInsert = await db.query<{
+      id: string;
+      session_id: string;
+      sender: 'ai';
+      content: string;
+      read: boolean;
+      delivered: boolean;
+      created_at: string;
+    }>(
       `INSERT INTO chat_messages (session_id, sender, content, delivered, read)
-       VALUES ($1, 'ai', $2, true, false)`,
+       VALUES ($1, 'ai', $2, true, false)
+       RETURNING id, session_id, sender, content, read, delivered, created_at`,
       [sessionId, aiResult.text]
     );
 
@@ -136,6 +158,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       escalated: aiResult.shouldEscalate,
+      customerMessage: customerInsert.rows[0],
+      aiMessage: aiInsert.rows[0],
     });
   } catch (err) {
     console.error('Message send error:', err);

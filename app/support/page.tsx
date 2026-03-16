@@ -228,7 +228,7 @@ export default function SupportChat() {
     setMessages((prev) => [...prev, tempMsg]);
 
     try {
-      await fetch('/api/chat/message', {
+      const res = await fetch('/api/chat/message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -237,6 +237,33 @@ export default function SupportChat() {
           customerId: getOrCreateCustomerId(),
         }),
       });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (data?.customerMessage) {
+        setMessages((prev) => {
+          const withoutTemp = prev.filter((m) => m.id !== tempMsg.id);
+          const ids = new Set(withoutTemp.map((m) => m.id));
+          if (!ids.has(data.customerMessage.id)) {
+            withoutTemp.push(data.customerMessage as Message);
+          }
+          return withoutTemp;
+        });
+      }
+
+      if (data?.aiMessage) {
+        setMessages((prev) => {
+          const ids = new Set(prev.map((m) => m.id));
+          if (!ids.has(data.aiMessage.id)) {
+            return [...prev, data.aiMessage as Message];
+          }
+          return prev;
+        });
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to process message');
+      }
     } catch {
       // silently fail — SSE will sync
     } finally {
