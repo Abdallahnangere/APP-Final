@@ -226,11 +226,13 @@ export async function getSaukiAIResponse(
 
       const result = await chat.sendMessage(userMessage);
       rawText = result.response.text();
+      console.info('[gemini] response generated', { model: modelName });
       break;
     } catch (err) {
       lastError = err;
 
       if (isUnavailableModelError(err)) {
+        console.warn('[gemini] model unavailable, trying fallback', { model: modelName });
         continue;
       }
 

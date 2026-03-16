@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSaukiAIResponse, ChatHistoryItem } from '@/lib/gemini';
 
+function isGreetingMessage(text: string): boolean {
+  const normalized = text.trim().toLowerCase();
+  return /^(hi|hello|hey|good morning|good afternoon|good evening|howdy|yo|sup|salam|ina kwana)\b/.test(normalized);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { sessionId, content, customerId } = await req.json();
@@ -45,19 +50,22 @@ export async function POST(req: NextRequest) {
       [sessionId]
     );
 
-    // If agent is active or AI is escalated, don't run Gemini
-    // Exception: customer types "hi sauki ai" to restart
-    const isRestart = content.toLowerCase().includes('hi sauki ai');
+    // If agent is active or AI is escalated, don't run Gemini.
+    // Allow either "hi sauki ai" or a normal greeting to restart when no live agent has taken over.
+    const normalizedContent = content.toLowerCase();
+    const isRestart = normalizedContent.includes('hi sauki ai');
+    const isGreeting = isGreetingMessage(content);
+    const agentRequired = Boolean(session.agent_required);
+    const agentMode = Boolean(session.agent_mode);
 
-    if (isRestart) {
-      // Reset escalation flags
+    if (isRestart || (agentRequired && !agentMode && isGreeting)) {
       await db.query(
         `UPDATE chat_sessions 
          SET agent_required = false, agent_mode = false, status = 'active'
          WHERE id = $1`,
         [sessionId]
       );
-    } else if (session.agent_required || session.agent_mode) {
+    } else if (agentRequired || agentMode) {
       // AI is silent — only agent can respond
       return NextResponse.json({ ok: true, aiSilent: true });
     }
