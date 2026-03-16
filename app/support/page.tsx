@@ -130,9 +130,9 @@ export default function SupportChat() {
   // ── SSE connection ──────────────────────────────────────────
   useEffect(() => {
     if (!sessionId) return;
-    const lastMsg = messages.at(-1);
+    const lastPersistedMsg = [...messages].reverse().find((m) => !m.id.startsWith('temp_'));
     const es = new EventSource(
-      `/api/chat/stream?sessionId=${sessionId}${lastMsg ? `&lastId=${lastMsg.id}` : ''}`
+      `/api/chat/stream?sessionId=${sessionId}${lastPersistedMsg ? `&lastId=${lastPersistedMsg.id}` : ''}`
     );
     eventSourceRef.current = es;
 
