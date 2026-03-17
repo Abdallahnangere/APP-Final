@@ -95,7 +95,8 @@ export default function AdminPage() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''), 3000); };
   const showError = (msg: string) => { setError(msg); setTimeout(()=>setError(''), 5000); };
 
-  const authH = useCallback(() => ({ Authorization: `Bearer ${adminToken}`, 'Content-Type':'application/json' }), [adminToken]);
+  // Always read straight from localStorage so authH is never stale after login
+  const authH = useCallback(() => ({ Authorization: `Bearer ${localStorage.getItem('sm_admin_token') || adminToken}`, 'Content-Type':'application/json' }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = async () => {
     setLoading(true);
@@ -149,7 +150,8 @@ export default function AdminPage() {
       setTimeout(() => setError(''), 5000);
       return [];
     }
-  }, [authH, setAdminToken, setAuthed]);
+  // authH is stable (reads from localStorage), so load is also stable
+  }, [authH]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!authed) return;
