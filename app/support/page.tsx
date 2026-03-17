@@ -97,6 +97,7 @@ export default function SupportChat() {
   const idleTimer = useRef<ReturnType<typeof setTimeout>>();
   const typingTimer = useRef<ReturnType<typeof setTimeout>>();
   const eventSourceRef = useRef<EventSource | null>(null);
+  const initialScrollDoneRef = useRef(false);
 
   // ── Init session ────────────────────────────────────────────
   useEffect(() => {
@@ -122,6 +123,7 @@ export default function SupportChat() {
         if (data.session) setSession(data.session);
       }
 
+      initialScrollDoneRef.current = false;
       setSessionId(sid);
     };
     init();
@@ -176,6 +178,17 @@ export default function SupportChat() {
   }, [sessionId, sseRetryTick]);
 
   // ── Auto scroll ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!messages.length || initialScrollDoneRef.current) return;
+
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      setUnreadCount(0);
+      setShowScrollBtn(false);
+      initialScrollDoneRef.current = true;
+    });
+  }, [messages]);
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -268,7 +281,6 @@ export default function SupportChat() {
       // silently fail — SSE will sync
     } finally {
       setSending(false);
-      inputRef.current?.focus();
     }
   };
 
@@ -307,6 +319,7 @@ export default function SupportChat() {
     setMessages([]);
     setSession(null);
     setSessionId(null);
+    initialScrollDoneRef.current = false;
     setNewSession((v) => !v);
   };
 
