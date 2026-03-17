@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/admin/sessions?filter=all|needs_agent|active|resolved|flagged&sessionId=xxx
 export async function GET(req: NextRequest) {
   try {

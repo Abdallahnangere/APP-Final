@@ -112,16 +112,44 @@ export default function AdminPage() {
 
   useEffect(() => {
     const t = localStorage.getItem('sm_admin_token');
-    if (t) { setAdminToken(t); setAuthed(true); }
+    if (t) {
+      // Quick client-side expiry check (JWT payload is base64, no secret needed)
+      try {
+        const payload = JSON.parse(atob(t.split('.')[1]));
+        if (payload.exp && payload.exp * 1000 > Date.now()) {
+          setAdminToken(t);
+          setAuthed(true);
+        } else {
+          localStorage.removeItem('sm_admin_token');
+        }
+      } catch {
+        localStorage.removeItem('sm_admin_token');
+      }
+    }
   }, []);
 
   const load = useCallback(async (endpoint: string) => {
     try {
       const res = await fetch(`/api/admin/${endpoint}`, { headers: authH() });
-      if (!res.ok) return [];
+      if (res.status === 401 || res.status === 403) {
+        // Token expired or invalid — clear session and show login
+        localStorage.removeItem('sm_admin_token');
+        setAdminToken('');
+        setAuthed(false);
+        return [];
+      }
+      if (!res.ok) {
+        setError(`Failed to load ${endpoint} (${res.status})`);
+        setTimeout(() => setError(''), 5000);
+        return [];
+      }
       return res.json();
-    } catch { return []; }
-  }, [authH]);
+    } catch {
+      setError(`Network error loading ${endpoint}`);
+      setTimeout(() => setError(''), 5000);
+      return [];
+    }
+  }, [authH, setAdminToken, setAuthed]);
 
   useEffect(() => {
     if (!authed) return;

@@ -24,7 +24,7 @@ export async function verifyToken(token: string): Promise<Record<string, unknown
 export async function signAdminToken(): Promise<string> {
   return new SignJWT({ admin: true, role: 'superadmin' })
     .setProtectedHeader({ alg: 'HS256' })
-    .setExpirationTime('8h')
+    .setExpirationTime('24h')
     .setIssuedAt()
     .sign(secret);
 }

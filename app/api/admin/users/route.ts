@@ -3,6 +3,8 @@ import sql from '@/lib/db';
 import { verifyAdminToken } from '@/lib/auth';
 import { hashPin } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 async function auth(req: NextRequest) {
   const h = req.headers.get('authorization');
   return h?.startsWith('Bearer ') && await verifyAdminToken(h.slice(7));
