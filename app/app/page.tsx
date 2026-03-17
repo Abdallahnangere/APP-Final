@@ -880,7 +880,7 @@ export default function AppPage() {
         <div style={{ position:'relative',zIndex:10,textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center' }}>
           {/* Animated logo container */}
           <div style={{ width:100,height:100,borderRadius:24,background:'rgba(255,255,255,.95)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 20px 60px rgba(0,0,0,.3)',marginBottom:40,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) both' }}>
-            <div style={{ fontSize:56 }}>💳</div>
+            <img src="/images/logo.png" alt="SaukiMart" style={{ width:72,height:72,borderRadius:20,objectFit:'cover',filter:'drop-shadow(0 10px 18px rgba(0,113,227,.18))' }} />
           </div>
           
           <h1 style={{ fontSize:44,fontWeight:900,color:'#fff',letterSpacing:-1,marginBottom:16,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .1s both',textShadow:'0 2px 8px rgba(0,0,0,.2)' }}>SaukiMart</h1>
@@ -932,7 +932,9 @@ export default function AppPage() {
         <div style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'0 24px',position:'relative',zIndex:1 }}>
           {/* Logo with animation */}
           <div style={{ marginBottom:40,textAlign:'center' }}>
-            <div style={{ width:80,height:80,borderRadius:20,background:'rgba(255,255,255,.95)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 20px 60px rgba(0,0,0,.2)',marginBottom:16,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) both',fontSize:48 }}>💳</div>
+            <div style={{ width:80,height:80,borderRadius:20,background:'rgba(255,255,255,.95)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 20px 60px rgba(0,0,0,.2)',marginBottom:16,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) both' }}>
+              <img src="/images/logo.png" alt="SaukiMart" style={{ width:58,height:58,borderRadius:16,objectFit:'cover',filter:'drop-shadow(0 10px 18px rgba(0,113,227,.18))' }} />
+            </div>
             <h1 style={{ fontSize:36,fontWeight:900,color:'#fff',letterSpacing:-0.8,marginBottom:12,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .1s both',textShadow:'0 2px 8px rgba(0,0,0,.2)' }}>SaukiMart</h1>
             <p style={{ color:'rgba(255,255,255,.85)',fontSize:15,fontWeight:500,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .2s both' }}>Data, Devices, Transfers</p>
           </div>
@@ -1100,10 +1102,38 @@ export default function AppPage() {
   /* ─── MAIN HOME ─── */
   if (!user) return null;
   const getInitials = (u: User) => `${u.firstName[0]}${u.lastName[0]}`.toUpperCase();
+  const displayName = user.firstName.trim() || user.lastName.trim() || 'There';
 
   const Header = () => (
     <div style={{ padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--bg)',borderBottom:'1px solid var(--border)',position:'fixed',top:0,left:0,right:0,zIndex:100,backdropFilter:'blur(10px)',backgroundImage: dark ? 'radial-gradient(ellipse at 50% 100%, rgba(0,113,227,0.05) 0%, transparent 80%)' : 'none' }}>
-      <img src="/images/logo-sm.png" alt="SaukiMart" style={{ height:36,width:'auto',borderRadius:8 }} />
+      <div style={{ display:'flex',alignItems:'center',gap:12,minWidth:0 }}>
+        <img src="/images/logo-sm.png" alt="SaukiMart" style={{ height:36,width:'auto',borderRadius:8,flexShrink:0 }} />
+        <div style={{ display:'flex',flexDirection:'column',minWidth:0,lineHeight:1 }}>
+          <span style={{ fontSize:10,fontWeight:800,letterSpacing:'0.28em',color:'var(--text-secondary)',textTransform:'uppercase',marginBottom:4 }}>
+            HI
+          </span>
+          <span
+            style={{
+              fontSize:26,
+              fontWeight:700,
+              fontFamily:'"Segoe Script", "Brush Script MT", "Apple Chancery", "Snell Roundhand", cursive',
+              color:'transparent',
+              backgroundImage: dark
+                ? 'linear-gradient(135deg, #F5F5F7 0%, #8ED6FF 48%, #5AC8FA 100%)'
+                : 'linear-gradient(135deg, #0F172A 0%, #0071E3 55%, #0EA5E9 100%)',
+              WebkitBackgroundClip:'text',
+              backgroundClip:'text',
+              textShadow: dark ? '0 10px 24px rgba(0,113,227,.18)' : '0 10px 24px rgba(0,113,227,.12)',
+              whiteSpace:'nowrap',
+              overflow:'hidden',
+              textOverflow:'ellipsis',
+              maxWidth:'34vw'
+            }}
+          >
+            {displayName}
+          </span>
+        </div>
+      </div>
       <div style={{ display:'flex',alignItems:'center',gap:10 }}>
         <button onClick={()=>updatePref('theme', dark?'light':'dark')} style={{ width:40,height:40,borderRadius:12,background:'var(--card2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,border:'1px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
           onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'}}
