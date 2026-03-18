@@ -1450,16 +1450,35 @@ export default function AppPage() {
         <div style={{ flex:1,overflowY:'auto',padding:'18px 16px 40px' }}>
           <div style={{ background:dark ? 'linear-gradient(145deg,rgba(0,113,227,.22),rgba(0,113,227,.08))' : 'linear-gradient(145deg,rgba(0,113,227,.12),rgba(0,113,227,.04))',border:'1px solid rgba(0,113,227,.18)',borderRadius:22,padding:18,marginBottom:16 }}>
             <p style={{ fontSize:12,fontWeight:800,color:'var(--text-secondary)',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8 }}>Step 1</p>
-            <p style={{ fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:'-0.03em' }}>Select your network provider</p>
-            <p style={{ fontSize:13,color:'var(--text-secondary)',lineHeight:1.7,marginTop:8 }}>We support affordable bundles across MTN, Airtel, Glo and 9mobile with a cleaner checkout path and clear confirmation state.</p>
+            <p style={{ fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:'-0.03em' }}>Choose network and recipient number</p>
+            <p style={{ fontSize:13,color:'var(--text-secondary)',lineHeight:1.7,marginTop:8 }}>Complete network selection and number entry on one screen for a smoother data checkout flow.</p>
           </div>
+
+          <div style={{ width:'100%',background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:'16px',boxShadow:dark ? '0 12px 26px rgba(0,0,0,.22)' : '0 12px 26px rgba(12,28,54,.08)',marginBottom:14 }}>
+            <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:10 }}>Step 2</p>
+            <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:8,letterSpacing:'0.06em',textTransform:'uppercase' }}>Recipient Number</label>
+            <input
+              value={buyPhone}
+              onChange={e=>setBuyPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
+              placeholder="Enter 11-digit phone number"
+              inputMode="numeric"
+              maxLength={11}
+              style={{ width:'100%',padding:'15px 14px',borderRadius:14,background:'var(--bg-secondary)',border:'1.5px solid var(--border)',color:'var(--text)',fontSize:17,fontWeight:700,letterSpacing:'0.04em' }}
+            />
+            <div style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text-secondary)',marginTop:8 }}>
+              <span>Format: 08012345678</span>
+              <span>{buyPhone.length}/11</span>
+            </div>
+          </div>
+
           <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginTop:12 }}>
             {NETWORKS.map(net => {
-              const networkLogos = { 'MTN': '/images/mtn.png', 'GLO': '/images/glo.png', 'AIRTEL': '/images/airtel.png', '9MOBILE': '/images/mtn.png' };
+              const networkLogos = { 'MTN': '/images/mtn.png', 'GLO': '/images/glo.png', 'AIRTEL': '/images/airtel.png', '9MOBILE': '/images/oip.jpg' };
+              const selected = selectedNetwork?.name === net.name;
               return (
-                <button key={net.name} onClick={()=>{ setSelectedNetwork(net); setScreen('data-phone'); }}
+                <button key={net.name} onClick={()=>setSelectedNetwork(net)}
                   className="ledger-card"
-                  style={{ background:'var(--card)',borderRadius:20,padding:'22px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:14,border:'1px solid var(--border)',boxShadow:dark ? '0 12px 28px rgba(0,0,0,.22)' : '0 12px 28px rgba(12,28,54,.08)',transition:'all .3s',cursor:'pointer',textAlign:'left' }}
+                  style={{ background:'var(--card)',borderRadius:20,padding:'22px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:14,border:selected ? `1.5px solid ${BLUE}` : '1px solid var(--border)',boxShadow:selected ? (dark ? '0 14px 30px rgba(0,113,227,.35)' : '0 14px 30px rgba(0,113,227,.18)') : (dark ? '0 12px 28px rgba(0,0,0,.22)' : '0 12px 28px rgba(12,28,54,.08)'),transition:'all .3s',cursor:'pointer',textAlign:'left' }}
                   onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)';e.currentTarget.style.boxShadow=dark ? '0 18px 34px rgba(0,0,0,.28)' : '0 18px 34px rgba(12,28,54,.14)';}}
                   onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow=dark ? '0 12px 28px rgba(0,0,0,.22)' : '0 12px 28px rgba(12,28,54,.08)';}}>
                   <div style={{ width:58,height:58,borderRadius:16,background:'linear-gradient(145deg,rgba(0,113,227,.12),rgba(90,200,250,.05))',display:'flex',alignItems:'center',justifyContent:'center' }}>
@@ -1473,8 +1492,22 @@ export default function AppPage() {
               );
             })}
           </div>
+
+          <button
+            onClick={()=>{
+              if (!selectedNetwork) { showError('Select a network first'); return; }
+              if (buyPhone.length !== 11) { showError('Enter 11-digit phone number'); return; }
+              loadPlans(selectedNetwork.name);
+              setScreen('data-plans');
+            }}
+            disabled={!selectedNetwork || buyPhone.length !== 11}
+            className="tactile-btn"
+            style={{ width:'100%',marginTop:16,padding:'16px',background:selectedNetwork && buyPhone.length===11 ? 'linear-gradient(135deg,#0047CC,#0071E3)' : 'rgba(142,142,147,.35)',color:'#fff',borderRadius:14,fontWeight:800,fontSize:16,border:'none',cursor:selectedNetwork && buyPhone.length===11 ? 'pointer' : 'not-allowed',opacity:selectedNetwork && buyPhone.length===11 ? 1 : 0.72,boxShadow:selectedNetwork && buyPhone.length===11 ? '0 12px 26px rgba(0,113,227,.32)' : 'none' }}>
+            Continue to Plans
+          </button>
         </div>
       </div>
+      {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
     </>
   );
 
@@ -1532,10 +1565,10 @@ export default function AppPage() {
       <GlobalStyle dark={dark} />
       <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#050A13 0%,#08101B 100%)' : 'linear-gradient(180deg,#F4F8FF 0%,#EFF4FB 100%)',display:'flex',flexDirection:'column' }}>
         <div style={{ padding:'58px 20px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
-          <button onClick={()=>setScreen('data-phone')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+          <button onClick={()=>setScreen('data-networks')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
           <div>
             <h2 style={{ fontSize:22,fontWeight:900,color:'var(--text)',letterSpacing:-0.4 }}>{selectedNetwork?.name} Plans</h2>
-            <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>Step 3 of 3 · Choose the most suitable bundle for {buyPhone}</p>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>Step 2 of 2 · Choose the most suitable bundle for {buyPhone}</p>
           </div>
         </div>
         <div style={{ flex:1,overflowY:'auto',padding:'18px 16px 40px' }}>
