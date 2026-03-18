@@ -222,7 +222,7 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', su
                   (e.currentTarget as HTMLElement).style.transform = 'scale(0.92)';
                 }}
                 onMouseUp={e => {
-                  (e.currentTarget as HTMLElement).style.background = isEmpty ? 'transparent' : 'var(--card2)';
+                  (e.currentTarget as HTMLElement).style.background = isEmpty ? 'transparent' : 'linear-gradient(180deg,var(--card2),var(--bg-secondary))';
                   (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
                 }}
                 onTouchStart={e => {
@@ -231,7 +231,7 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', su
                   (e.currentTarget as HTMLElement).style.transform = 'scale(0.92)';
                 }}
                 onTouchEnd={e => {
-                  (e.currentTarget as HTMLElement).style.background = isEmpty ? 'transparent' : 'var(--card2)';
+                  (e.currentTarget as HTMLElement).style.background = isEmpty ? 'transparent' : 'linear-gradient(180deg,var(--card2),var(--bg-secondary))';
                   (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
                 }}
                 onClick={() => {
@@ -257,27 +257,14 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', su
                 }}
               >
                 {k}
-              <button 
+              </button>
             );
-                style={{ width:'100%',padding:'14px',background:'var(--bg-secondary)',color:'var(--text-secondary)',borderRadius:14,fontWeight:700,fontSize:15,border:'1px solid var(--border)',cursor:'pointer',position:'relative',zIndex:1 }}
+          })}
         </div>
         
         <button 
           onClick={onClose}
-          style={{
-            width:'100%',
-            padding:'14px',
-            borderRadius:14,
-            background:'var(--bg-secondary)',
-            color:'var(--text)',
-            fontSize:15,
-            fontWeight:700,
-            border:'1px solid var(--border)',
-            cursor:'pointer',
-            transition:'all .2s'
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--border)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+          style={{ width:'100%',padding:'14px',background:'var(--bg-secondary)',color:'var(--text-secondary)',borderRadius:14,fontWeight:700,fontSize:15,border:'1px solid var(--border)',cursor:'pointer',position:'relative',zIndex:1 }}
         >
           Cancel
         </button>
