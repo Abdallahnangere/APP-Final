@@ -1993,6 +1993,7 @@ export default function AppPage() {
           <p style={{ textAlign:'center',fontSize:18,fontWeight:700,color:'var(--text)',letterSpacing:-0.4,marginBottom:4 }}>SaukiMart</p>
           <p style={{ textAlign:'center',fontSize:13,color:'var(--text-secondary)',marginBottom:32 }}>v1.0.0 · Data & Devices</p>
         </div>
+        </div>
       </div>
       <BottomNav active="profile" />
     </>
