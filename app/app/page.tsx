@@ -447,7 +447,7 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
 
 /* ─────────────── MAIN APP ─────────────── */
 export default function AppPage() {
-  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'>('splash');
+  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'|'chat'>('splash');
   const [dark, setDark] = useState(false);
   const [user, setUser] = useState<User|null>(null);
   const [token, setToken] = useState('');
@@ -483,7 +483,6 @@ export default function AppPage() {
   const [showPin, setShowPin] = useState(false);
   const [pinAction, setPinAction] = useState<'buy-data'|'buy-product'|'sim-pay'|'transfer'|null>(null);
   const [receipt, setReceipt] = useState<Record<string,unknown>|null>(null);
-  const [chatModalOpen, setChatModalOpen] = useState(false);
 
   // Transfer states
   const [transferPhone, setTransferPhone] = useState('');
@@ -625,7 +624,10 @@ export default function AppPage() {
 
 
   useEffect(() => {
-    if (screen === 'home') { loadHomeData(); refreshUser(); }
+    if (screen === 'home' || screen === 'transactions') {
+      loadHomeData();
+      refreshUser();
+    }
   }, [screen, loadHomeData, refreshUser]);
 
   // Real-time wallet balance refresh (no caching)
@@ -1228,7 +1230,7 @@ export default function AppPage() {
         { id:'profile', label:'Account', icon: Icons.user(BLUE, 24) },
         { id:'chat', label:'Chat', icon: Icons.messageSquare(BLUE, 24) },
       ].map(item => (
-        <button key={item.id} onClick={()=>{ if(item.id==='chat'){ setChatModalOpen(true); } else { setScreen(item.id as typeof screen); } }}
+        <button key={item.id} onClick={()=>setScreen(item.id as typeof screen)}
           style={{ padding:'12px 0 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,background:'none',borderTop: active===item.id ? `3px solid ${BLUE}` : 'none',paddingTop: active===item.id ? '9px' : '12px',transition:'all .2s',opacity: active===item.id ? 1 : 0.65,cursor:'pointer' }}
           onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}}
           onMouseLeave={e=>{e.currentTarget.style.opacity = active===item.id ? '1' : '0.65'}}>
@@ -1274,23 +1276,6 @@ export default function AppPage() {
                 style={{ flex:1,padding:'12px 16px',borderRadius:14,border:'none',background:redeemLoading||!redeemAmount||Number(redeemAmount)<=0||Number(redeemAmount)>(user?.cashbackBalance||0)?'rgba(142,142,147,.35)':ORANGE,color:redeemLoading||!redeemAmount||Number(redeemAmount)<=0||Number(redeemAmount)>(user?.cashbackBalance||0)?'rgba(28,28,30,.6)':'#1A1A1A',fontWeight:700,cursor:redeemLoading||!redeemAmount||Number(redeemAmount)<=0||Number(redeemAmount)>(user?.cashbackBalance||0)?'not-allowed':'pointer' }}>
                 {redeemLoading ? 'Processing…' : 'Redeem'}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {chatModalOpen && (
-        <div className="fade-in" style={{ position:'fixed',top:0,right:0,bottom:0,left:0,zIndex:200,background:'rgba(0,0,0,.42)',display:'flex',alignItems:'flex-end',backdropFilter:'blur(8px)' }} onClick={()=>setChatModalOpen(false)}>
-          <div onClick={e=>e.stopPropagation()} className="slide-up" style={{ width:'100%',background:'var(--card)',borderRadius:'28px 28px 0 0',padding:'20px 16px 14px',position:'relative',height:'85dvh',display:'flex',flexDirection:'column',willChange:'transform',boxShadow:'0 -10px 30px rgba(0,0,0,.22)' }}>
-            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20 }}>
-              <h2 style={{ fontSize:20,fontWeight:800,color:'var(--text)',margin:0 }}>Chat</h2>
-              <button onClick={()=>setChatModalOpen(false)} style={{ width:40,height:40,borderRadius:12,background:'var(--bg-secondary)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,cursor:'pointer',transition:'all .2s' }}
-                onMouseEnter={e=>{e.currentTarget.style.background='var(--border)'}}
-                onMouseLeave={e=>{e.currentTarget.style.background='var(--bg-secondary)'}}>
-                ✕
-              </button>
-            </div>
-            <div style={{ flex:1,minHeight:0,display:'flex',justifyContent:'center',overflow:'hidden',borderRadius:18 }}>
-              <SupportChat />
             </div>
           </div>
         </div>
@@ -1746,7 +1731,7 @@ export default function AppPage() {
             </div>
           ) : (
             <div style={{ display:'grid',gap:12 }}>
-              {transactions.filter(tx => tx.status !== 'pending').map((tx, idx) => {
+              {transactions.map((tx, idx) => {
                 const isDeposit = tx.type === 'deposit';
                 const isCashbackTx = tx.type === 'cashback' || tx.type === 'cashback_redemption';
                 const isTransferIn = tx.type === 'transfer_in';
@@ -2182,6 +2167,25 @@ export default function AppPage() {
           ))}
         </div>
       </div>
+    </>
+  );
+
+  /* CHAT */
+  if (screen === 'chat') return (
+    <>
+      <GlobalStyle dark={dark} />
+      {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500,whiteSpace:'nowrap' }}>{toast}</div>}
+      {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#05070D 0%,#090E1A 42%,#0A101B 100%)' : 'linear-gradient(180deg,#F6F8FC 0%,#EDF2FB 38%,#F4F6FA 100%)',display:'flex',flexDirection:'column',paddingBottom:100 }}>
+        <div style={{ padding:'60px 20px 16px',borderBottom:`1px solid ${dark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)'}` }}>
+          <h2 style={{ fontSize:28,fontWeight:900,color:'var(--text)',letterSpacing:-0.7 }}>Support Chat</h2>
+          <p style={{ color:'var(--text-secondary)',fontSize:13,marginTop:6,letterSpacing:'0.02em' }}>Talk with SaukiMart support in real-time</p>
+        </div>
+        <div style={{ flex:1,minHeight:0,overflow:'hidden' }}>
+          <SupportChat />
+        </div>
+      </div>
+      <BottomNav active="chat" />
     </>
   );
 
