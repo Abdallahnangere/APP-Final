@@ -390,14 +390,14 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
               <>
                 <Row label="Type" value={(data.productName || 'Wallet Transfer') as string} />
                 <Row label="Recipient" value={(data.userName || '—') as string} />
-                <Row label="Recipient Email" value={(data.userEmail || '—') as string} mono />
+                <Row label="Recipient Phone" value={(data.userPhone || '—') as string} mono />
                 <Row label="Narration" value={(data.deliveryAddress || 'Instant wallet transfer') as string} />
               </>
             ) : (
               <>
                 <Row label="Item"      value={(data.productName || data.itemName || '—') as string} />
                 <Row label="Customer"  value={(data.userName  || '—') as string} />
-                <Row label="Email"     value={(data.userEmail || '—') as string} mono />
+                <Row label="Phone"     value={(data.userPhone || '—') as string} mono />
                 {data.deliveryAddress && <Row label="Delivery" value={data.deliveryAddress as string} />}
               </>
             )}
@@ -415,7 +415,7 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
               <div style={{ height:1,flex:1,background:'linear-gradient(to left,transparent,#D0D0D8)' }} />
             </div>
             <div style={{ fontSize:10,color:'#AEAEB2',lineHeight:1.8,marginBottom:4 }}>
-              support@saukimart.online &nbsp;·&nbsp; +234 704 464 7081
+              support@saukimart.online
             </div>
             <div style={{ fontSize:9,color:'#C8C8CC',letterSpacing:'0.05em' }}>© SaukiMart 2026 · All rights reserved</div>
           </div>
@@ -928,7 +928,7 @@ export default function AppPage() {
         amount,
         productName: 'Wallet Transfer',
         userName: transferRecipient.name,
-        userEmail: transferRecipient.email || transferRecipient.phone,
+        userPhone: transferRecipient.phone,
         deliveryAddress: transferNote.trim() || 'Instant wallet transfer',
         ref: `TRF-${Date.now()}`,
         date: new Date().toISOString(),
