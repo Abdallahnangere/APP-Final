@@ -113,6 +113,9 @@ const GlobalStyle = ({ dark }: { dark: boolean }) => (
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
     @keyframes fadeUpScale{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+    @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    @keyframes breathe{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.06);opacity:1}}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
     @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
     @keyframes floatUp{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-20px);opacity:0}}
     @keyframes typing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-10px)}}
@@ -483,6 +486,8 @@ export default function AppPage() {
   const [showPin, setShowPin] = useState(false);
   const [pinAction, setPinAction] = useState<'buy-data'|'buy-product'|'sim-pay'|'transfer'|null>(null);
   const [receipt, setReceipt] = useState<Record<string,unknown>|null>(null);
+  const [isBuyingData, setIsBuyingData] = useState(false);
+  const [buyDataProgressStage, setBuyDataProgressStage] = useState(0);
 
   // Transfer states
   const [transferPhone, setTransferPhone] = useState('');
@@ -685,6 +690,18 @@ export default function AppPage() {
     }
   }, [screen, selectedNetwork?.name, loadPlans]);
 
+  useEffect(() => {
+    if (!isBuyingData) {
+      setBuyDataProgressStage(0);
+      return;
+    }
+    setBuyDataProgressStage(0);
+    const stageInterval = setInterval(() => {
+      setBuyDataProgressStage(prev => (prev + 1) % 3);
+    }, 1200);
+    return () => clearInterval(stageInterval);
+  }, [isBuyingData]);
+
   // Note: Chat system removed. Will be replaced with alternative solution.
 
   /* ── REGISTER ── */
@@ -729,6 +746,7 @@ export default function AppPage() {
   /* ── BUY DATA ── */
   const handleBuyData = async (pin: string) => {
     if (!selectedPlan || !buyPhone) return;
+    setIsBuyingData(true);
     setLoading(true);
     try {
       // Generate idempotency key on first attempt, reuse on retry
@@ -753,7 +771,7 @@ export default function AppPage() {
       console.error('Data purchase error:', msg);
       showError(msg); 
     }
-    finally { setLoading(false); }
+    finally { setLoading(false); setIsBuyingData(false); }
   };
 
   /* ── BUY PRODUCT ── */
@@ -1611,6 +1629,37 @@ export default function AppPage() {
           title={`Confirm ${selectedPlan.dataSize} Purchase`}
           subtitle={`Authorize ₦${selectedPlan.price.toLocaleString('en-NG',{minimumFractionDigits:2})} for ${selectedNetwork?.name} on ${buyPhone}`}
           onComplete={handlePinComplete} onClose={()=>setShowPin(false)} />
+      )}
+      {isBuyingData && selectedPlan && !receipt && (
+        <div style={{ position:'fixed',inset:0,zIndex:320,background:dark?'rgba(2,8,18,.8)':'rgba(7,20,39,.64)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px',backdropFilter:'blur(10px)' }}>
+          <div className="fade-up-scale" style={{ width:'100%',maxWidth:420,background:dark?'linear-gradient(180deg,rgba(17,22,30,.98),rgba(10,14,20,.98))':'linear-gradient(180deg,rgba(255,255,255,.97),rgba(246,250,255,.96))',border:'1px solid var(--border)',borderRadius:24,padding:'24px 22px',boxShadow:dark?'0 28px 70px rgba(0,0,0,.48)':'0 28px 70px rgba(12,28,54,.24)',textAlign:'center',position:'relative',overflow:'hidden' }}>
+            <div style={{ position:'absolute',top:-80,right:-70,width:220,height:220,borderRadius:'50%',background:'rgba(0,113,227,.14)',filter:'blur(24px)',animation:'breathe 2.2s ease-in-out infinite' }} />
+            <div style={{ position:'absolute',bottom:-90,left:-80,width:200,height:200,borderRadius:'50%',background:'rgba(90,200,250,.14)',filter:'blur(24px)',animation:'breathe 2.4s ease-in-out .2s infinite' }} />
+            <div style={{ position:'relative',zIndex:1 }}>
+              <div style={{ width:82,height:82,borderRadius:'50%',margin:'0 auto 16px',display:'grid',placeItems:'center',background:'linear-gradient(145deg,rgba(0,113,227,.22),rgba(90,200,250,.12))',boxShadow:'inset 0 1px 0 rgba(255,255,255,.35), 0 14px 34px rgba(0,113,227,.25)' }}>
+                <div style={{ width:42,height:42,borderRadius:'50%',border:'4px solid rgba(255,255,255,.34)',borderTopColor:'#fff',animation:'spin .9s linear infinite' }} />
+              </div>
+              <h3 style={{ fontSize:22,fontWeight:900,color:'var(--text)',letterSpacing:-0.3,marginBottom:8 }}>Processing your purchase</h3>
+              <p style={{ fontSize:14,color:'var(--text-secondary)',lineHeight:1.55,marginBottom:14 }}>
+                Buying {selectedPlan.dataSize} on {selectedNetwork?.name} for {buyPhone}. Please keep this screen open.
+              </p>
+              <div style={{ height:8,borderRadius:999,background:dark?'rgba(255,255,255,.08)':'rgba(0,113,227,.12)',margin:'0 8px 14px',overflow:'hidden' }}>
+                <div style={{ width:'100%',height:'100%',background:'linear-gradient(90deg,rgba(0,113,227,.25),rgba(0,113,227,.95),rgba(90,200,250,.35),rgba(0,113,227,.25))',backgroundSize:'200% 100%',animation:'shimmer 1.3s linear infinite' }} />
+              </div>
+              <div style={{ display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:8,marginBottom:14 }}>
+                {['Validating PIN','Contacting Network','Finalizing Receipt'].map((stage, idx)=>(
+                  <div key={stage} style={{ borderRadius:10,padding:'8px 6px',fontSize:10,fontWeight:800,letterSpacing:'0.05em',textTransform:'uppercase',border:'1px solid var(--border)',background:idx<=buyDataProgressStage?'rgba(0,113,227,.14)':'transparent',color:idx<=buyDataProgressStage?BLUE:'var(--text-secondary)',transition:'all .25s ease' }}>
+                    {stage}
+                  </div>
+                ))}
+              </div>
+              <div style={{ margin:'0 auto',display:'inline-flex',alignItems:'center',gap:7,padding:'8px 12px',borderRadius:999,background:'rgba(0,113,227,.12)',color:BLUE,fontSize:12,fontWeight:800,letterSpacing:'0.06em',textTransform:'uppercase' }}>
+                <span style={{ width:7,height:7,borderRadius:'50%',background:BLUE,animation:'pulse 1.1s ease-in-out infinite' }} />
+                <span>{buyDataProgressStage === 0 ? 'Validating pin' : buyDataProgressStage === 1 ? 'Contacting network' : 'Finalizing receipt'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
       {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>{ setReceipt(null); setScreen('home'); }} dark={dark} />}
