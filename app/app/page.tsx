@@ -294,95 +294,136 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
   const date = new Date(data.date as string).toLocaleString('en-NG', { dateStyle:'short', timeStyle:'short' });
   const isDataPurchase = data.type === 'data' || data.network;
   const amount = Number(data.price || data.amount || 0);
+  const refNum = ((data.ref || data.amigoRef || '—') as string).toUpperCase();
+
+  /* compact label/value row */
+  const Row = ({ label, value, mono }: { label: string; value: string; mono?: boolean }) => (
+    <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:20,padding:'11px 0',borderBottom:'1px solid #F0F0F5' }}>
+      <span style={{ fontSize:10,color:'#9898A0',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',flexShrink:0 }}>{label}</span>
+      <span style={{ fontSize:13,color:'#1A1A2E',fontWeight:700,textAlign:'right',lineHeight:1.4,maxWidth:'62%',
+        fontFamily: mono ? "'SF Mono','Menlo','Courier New',monospace" : 'inherit' }}>{value}</span>
+    </div>
+  );
 
   return (
-    <div style={{ position:'fixed',top:0,right:0,bottom:0,left:0,zIndex:300,background:'rgba(0,0,0,.6)',backdropFilter:'blur(12px)',display:'flex',alignItems:'center',justifyContent:'center',padding:16 }}>
-      <div className="slide-up" style={{ width:'100%',maxWidth:550,borderRadius:40,overflow:'hidden',boxShadow:'0 50px 100px rgba(0,0,0,.3), 0 0 1px rgba(0,0,0,.5)' }}>
-        {/* Fintech Receipt - Mobile Portrait */}
-        <div ref={ref} style={{ background:'linear-gradient(180deg, #FFFFFF 0%, #FAFBFC 100%)',width:'420px',padding:'24px 20px',display:'flex',flexDirection:'column',gap:'20px',boxSizing:'border-box',position:'relative' }}>
-          {/* Logo & Brand */}
-          <div style={{ textAlign:'center',paddingBottom:'12px',borderBottom:'1px solid #E8E8ED' }}>
-            <div style={{ width:'50px',height:'50px',background:'linear-gradient(135deg, #0071E3, #5AC8FA)',borderRadius:'12px',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto',marginBottom:'10px',boxShadow:'0 4px 12px rgba(0,113,227,0.15)' }}>
-              <img src="/images/logo-icon.png" alt="SaukiMart" style={{ width:'36px',height:'36px',borderRadius:'8px' }} />
+    <div style={{ position:'fixed',inset:0,zIndex:300,background:'rgba(0,8,20,.82)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',display:'flex',alignItems:'flex-end',justifyContent:'center' }}>
+      <div className="slide-up" style={{ width:'100%',maxWidth:420,borderRadius:'28px 28px 0 0',overflow:'hidden',boxShadow:'0 -24px 80px rgba(0,0,0,.5)' }}>
+
+        {/* ════ Downloadable receipt paper ════ */}
+        <div ref={ref} style={{ background:'#FFFFFF',fontFamily:'-apple-system,"SF Pro Display",BlinkMacSystemFont,sans-serif',overflow:'hidden' }}>
+
+          {/* ── Deep blue header ── */}
+          <div style={{ background:'linear-gradient(148deg,#011F5B 0%,#0047CC 55%,#0071E3 100%)',padding:'26px 22px 0',position:'relative',overflow:'hidden' }}>
+            {/* Decorative geometry – large circle top-right */}
+            <div style={{ position:'absolute',top:-70,right:-70,width:200,height:200,borderRadius:'50%',background:'rgba(255,255,255,.05)',pointerEvents:'none' }} />
+            {/* Medium circle mid-left */}
+            <div style={{ position:'absolute',top:10,left:-40,width:120,height:120,borderRadius:'50%',background:'rgba(0,180,255,.06)',pointerEvents:'none' }} />
+            {/* Small accent dot */}
+            <div style={{ position:'absolute',top:22,right:22,width:50,height:50,borderRadius:'50%',background:'rgba(255,255,255,.04)',pointerEvents:'none' }} />
+
+            {/* Brand row */}
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:22,position:'relative',zIndex:1 }}>
+              <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                <div style={{ width:38,height:38,borderRadius:11,overflow:'hidden',background:'rgba(255,255,255,.12)',display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid rgba(255,255,255,.2)' }}>
+                  <img src="/images/logo-icon.png" alt="SaukiMart" style={{ width:27,height:27,borderRadius:7 }} />
+                </div>
+                <div style={{ lineHeight:1 }}>
+                  <div style={{ fontSize:15,fontWeight:800,color:'#FFFFFF',letterSpacing:-0.4,marginBottom:4 }}>SaukiMart</div>
+                  <div style={{ fontSize:9,fontWeight:600,color:'rgba(255,255,255,.45)',letterSpacing:'0.12em',textTransform:'uppercase' }}>Transaction Receipt</div>
+                </div>
+              </div>
+              {/* Success badge */}
+              <div style={{ display:'flex',alignItems:'center',gap:5,background:'rgba(48,209,88,.14)',border:'1px solid rgba(48,209,88,.35)',borderRadius:20,padding:'5px 10px' }}>
+                <div style={{ width:6,height:6,borderRadius:'50%',background:'#30D158',boxShadow:'0 0 6px rgba(48,209,88,.7)' }} />
+                <span style={{ fontSize:10,fontWeight:800,color:'#30D158',letterSpacing:'0.06em' }}>SUCCESS</span>
+              </div>
             </div>
-            <p style={{ fontSize:'14px',fontWeight:700,color:'#1D1D1F',margin:'0' }}>SaukiMart</p>
-            <p style={{ fontSize:'11px',color:'#8E8E93',margin:'2px 0 0' }}>Transaction Receipt</p>
+
+            {/* Amount hero */}
+            <div style={{ textAlign:'center',paddingBottom:26,position:'relative',zIndex:1 }}>
+              <div style={{ fontSize:10,fontWeight:600,color:'rgba(255,255,255,.42)',marginBottom:10,textTransform:'uppercase',letterSpacing:'0.16em' }}>Total Amount Paid</div>
+              <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'center',gap:4,lineHeight:1 }}>
+                <span style={{ fontSize:22,fontWeight:800,color:'rgba(255,255,255,.55)',marginTop:8 }}>₦</span>
+                <span style={{ fontSize:56,fontWeight:900,color:'#FFFFFF',letterSpacing:-2.5 }}>
+                  {amount.toLocaleString('en-NG',{maximumFractionDigits:0})}
+                </span>
+              </div>
+              {/* Ref pill */}
+              <div style={{ marginTop:14,display:'inline-flex',alignItems:'center',gap:6,background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.1)',borderRadius:8,padding:'5px 14px' }}>
+                <span style={{ fontSize:10,color:'rgba(255,255,255,.32)',fontFamily:"'SF Mono','Menlo',monospace",letterSpacing:'0.07em' }}>REF: {refNum}</span>
+              </div>
+            </div>
+
+            {/* Scalloped ticket edge — white semicircles punch into the base of the header */}
+            <div style={{
+              height:22, marginLeft:-1, marginRight:-1,
+              backgroundImage:`radial-gradient(circle at 11px 100%, #FFFFFF 11px, transparent 11px)`,
+              backgroundSize:'22px 22px', backgroundRepeat:'repeat-x', backgroundPosition:'0 0',
+            }} />
           </div>
 
-          {/* Amount & Status */}
-          <div style={{ textAlign:'center',paddingTop:'4px' }}>
-            <p style={{ fontSize:'13px',color:'#8E8E93',margin:'0 0 8px',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.3px' }}>Amount Paid</p>
-            <div style={{ display:'flex',alignItems:'baseline',justifyContent:'center',gap:'2px',marginBottom:'4px' }}>
-              <span style={{ fontSize:'32px',fontWeight:900,color:'#0071E3' }}>₦</span>
-              <span style={{ fontSize:'32px',fontWeight:900,color:'#1D1D1F' }}>{amount.toLocaleString('en-NG',{maximumFractionDigits:0})}</span>
-            </div>
-            <p style={{ fontSize:'12px',color:'#30D158',fontWeight:600,margin:'0' }}>✓ Successful</p>
-          </div>
-
-          {/* Details */}
-          <div style={{ paddingTop:'8px',paddingBottom:'8px',borderTop:'1px solid #E8E8ED',borderBottom:'1px solid #E8E8ED' }}>
+          {/* ── White paper body ── */}
+          <div style={{ background:'#FFFFFF',padding:'2px 22px 8px' }}>
             {isDataPurchase ? (
               <>
-                <div style={{ marginBottom:'10px' }}>
-                  <p style={{ fontSize:'11px',color:'#8E8E93',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.3px',margin:'0 0 4px' }}>Network</p>
-                  <p style={{ fontSize:'13px',fontWeight:600,color:'#1D1D1F',margin:'0' }}>{(data.network as string) || 'N/A'}</p>
-                </div>
-                <div style={{ marginBottom:'10px' }}>
-                  <p style={{ fontSize:'11px',color:'#8E8E93',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.3px',margin:'0 0 4px' }}>Data Plan</p>
-                  <p style={{ fontSize:'13px',fontWeight:600,color:'#1D1D1F',margin:'0' }}>{(data.dataSize as string) || 'N/A'} - {(data.validity as string) || ''}</p>
-                </div>
-                <div style={{ marginBottom:'0' }}>
-                  <p style={{ fontSize:'11px',color:'#8E8E93',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.3px',margin:'0 0 4px' }}>Recipient Number</p>
-                  <p style={{ fontSize:'13px',fontWeight:600,color:'#1D1D1F',margin:'0' }}>{(data.phoneNumber as string) || 'N/A'}</p>
-                </div>
+                <Row label="Network"   value={(data.network     as string) || '—'} />
+                <Row label="Data Plan" value={`${(data.dataSize as string)||'—'} · ${(data.validity as string)||'—'}`} />
+                <Row label="Recipient" value={(data.phoneNumber as string) || '—'} mono />
               </>
             ) : (
               <>
-                <div style={{ marginBottom:'10px' }}>
-                  <p style={{ fontSize:'11px',color:'#8E8E93',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.3px',margin:'0 0 4px' }}>Item</p>
-                  <p style={{ fontSize:'13px',fontWeight:600,color:'#1D1D1F',margin:'0' }}>{(data.productName || data.itemName || 'N/A') as string}</p>
-                </div>
-                <div style={{ marginBottom:'10px' }}>
-                  <p style={{ fontSize:'11px',color:'#8E8E93',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.3px',margin:'0 0 4px' }}>Customer</p>
-                  <p style={{ fontSize:'13px',fontWeight:600,color:'#1D1D1F',margin:'0' }}>{(data.userName || 'N/A') as string}</p>
-                </div>
-                <div style={{ marginBottom:data.deliveryAddress ? '10px' : '0' }}>
-                  <p style={{ fontSize:'11px',color:'#8E8E93',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.3px',margin:'0 0 4px' }}>Contact</p>
-                  <p style={{ fontSize:'13px',fontWeight:600,color:'#1D1D1F',margin:'0' }}>{(data.userPhone || 'N/A') as string}</p>
-                </div>
-                {data.deliveryAddress && (
-                  <div>
-                    <p style={{ fontSize:'11px',color:'#8E8E93',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.3px',margin:'0 0 4px' }}>Delivery Address</p>
-                    <p style={{ fontSize:'13px',fontWeight:600,color:'#1D1D1F',margin:'0',lineHeight:'1.5' }}>{(data.deliveryAddress as string) || 'N/A'}</p>
-                  </div>
-                )}
+                <Row label="Item"      value={(data.productName || data.itemName || '—') as string} />
+                <Row label="Customer"  value={(data.userName  || '—') as string} />
+                <Row label="Contact"   value={(data.userPhone || '—') as string} mono />
+                {data.deliveryAddress && <Row label="Delivery" value={data.deliveryAddress as string} />}
               </>
             )}
+            <Row label="Date & Time" value={date} />
           </div>
 
-          {/* Reference & Date */}
-          <div style={{ textAlign:'center',paddingTop:'8px' }}>
-            <p style={{ fontSize:'10px',color:'#A1A1A6',margin:'0 0 4px',fontFamily:"'Menlo', monospace",fontWeight:500 }}>Ref: {(data.ref || data.amigoRef || 'N/A') as string}</p>
-            <p style={{ fontSize:'11px',color:'#8E8E93',margin:'0' }}>{date}</p>
+          {/* Dashed perforation strip */}
+          <div style={{ margin:'4px 22px 0',height:1,backgroundImage:`repeating-linear-gradient(to right,#CFCFD8 0,#CFCFD8 6px,transparent 6px,transparent 14px)` }} />
+
+          {/* ── Footer band ── */}
+          <div style={{ background:'#F5F5F7',padding:'14px 22px 20px',textAlign:'center' }}>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:9 }}>
+              <div style={{ height:1,flex:1,background:'linear-gradient(to right,transparent,#D0D0D8)' }} />
+              <span style={{ fontSize:8,fontWeight:800,color:'#B4B4BC',letterSpacing:'0.14em',textTransform:'uppercase' }}>Secured by SaukiMart</span>
+              <div style={{ height:1,flex:1,background:'linear-gradient(to left,transparent,#D0D0D8)' }} />
+            </div>
+            <div style={{ fontSize:10,color:'#AEAEB2',lineHeight:1.8,marginBottom:4 }}>
+              support@saukimart.online &nbsp;·&nbsp; +234 704 464 7081
+            </div>
+            <div style={{ fontSize:9,color:'#C8C8CC',letterSpacing:'0.05em' }}>© SaukiMart 2026 · All rights reserved</div>
           </div>
 
-          {/* Footer */}
-          <div style={{ textAlign:'center',paddingTop:'12px',borderTop:'1px solid #E8E8ED',fontSize:'10px',color:'#A1A1A6',lineHeight:'1.4' }}>
-            <p style={{ margin:'0 0 3px' }}>support@saukimart.online</p>
-            <p style={{ margin:'0 0 6px' }}>+234 704 464 7081</p>
-            <p style={{ margin:'0',fontSize:'9px',color:'#C7C7CC' }}>© SaukiMart • Verified Receipt</p>
-          </div>
+        </div>{/* end downloadable paper */}
+
+        {/* ════ Action buttons — outside download area ════ */}
+        <div style={{ background:dark?'#1C1C1E':'#FFFFFF',padding:'12px 18px 30px',display:'flex',gap:10,borderTop:`1px solid ${dark?'rgba(255,255,255,.06)':'rgba(0,0,0,.07)'}` }}>
+          <button
+            onClick={downloadPng}
+            style={{ flex:1,height:52,borderRadius:16,background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontWeight:700,fontSize:15,border:'none',cursor:'pointer',transition:'all .25s cubic-bezier(.16,.1,0,1)',boxShadow:'0 8px 24px rgba(0,113,227,0.32)',display:'flex',alignItems:'center',justifyContent:'center',gap:8,letterSpacing:'-0.01em' }}
+            onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 14px 36px rgba(0,113,227,0.52)';e.currentTarget.style.transform='translateY(-2px)'}}
+            onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 8px 24px rgba(0,113,227,0.32)';e.currentTarget.style.transform='translateY(0)'}}
+            onMouseDown={e=>{e.currentTarget.style.transform='scale(0.97)'}}
+            onMouseUp={e=>{e.currentTarget.style.transform='translateY(-2px)'}}
+          >
+            <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download Receipt
+          </button>
+          <button
+            onClick={onClose}
+            style={{ width:52,height:52,borderRadius:16,background:dark?'#2C2C2E':'#F2F2F7',color:dark?'#EBEBF5':'#3A3A3C',fontWeight:700,fontSize:18,border:'none',cursor:'pointer',transition:'all .2s',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}
+            onMouseEnter={e=>{e.currentTarget.style.background=dark?'#3A3A3C':'#E5E5EA'}}
+            onMouseLeave={e=>{e.currentTarget.style.background=dark?'#2C2C2E':'#F2F2F7'}}
+          >
+            ✕
+          </button>
         </div>
 
-        {/* Actions - Fixed outside downloadable area */}
-        <div style={{ padding:'16px 20px 28px',display:'flex',gap:10,background:'var(--card)' }}>
-          <button onClick={downloadPng} style={{ flex:1,padding:'16px',borderRadius:16,background:BLUE,color:'#fff',fontWeight:700,fontSize:16,border:'none',cursor:'pointer',transition:'all .3s' }}>
-            ↓ Download
-          </button>
-          <button onClick={onClose} style={{ padding:'16px 20px',borderRadius:16,background:'var(--bg-secondary)',color:'var(--text)',fontWeight:600,fontSize:16,border:'1px solid var(--border)',cursor:'pointer',transition:'all .3s' }}>
-            Close
-          </button>
-        </div>
       </div>
     </div>
   );
