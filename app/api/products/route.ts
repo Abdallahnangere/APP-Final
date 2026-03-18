@@ -3,8 +3,13 @@ import sql from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+async function ensureProductSchema() {
+  await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS image_base64 TEXT`;
+}
+
 export async function GET(req: Request) {
   try {
+    await ensureProductSchema();
     const products = await sql`
       SELECT id, name, description, price, image_url, image_base64, category, in_stock, shipping_terms, pickup_terms, created_at, updated_at
       FROM products ORDER BY created_at DESC

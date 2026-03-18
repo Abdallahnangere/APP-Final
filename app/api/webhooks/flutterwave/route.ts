@@ -26,6 +26,50 @@ interface FlutterwaveWebhook {
   data: FlutterwaveWebhookData;
 }
 
+async function ensureDepositTransaction(params: {
+  userId: string;
+  flwTxId: string;
+  flwRef: string;
+  amount: number;
+  senderName: string;
+  narration: string;
+  createdAt: string;
+}) {
+  const receiptData = {
+    ref: params.flwRef || params.flwTxId,
+    amount: params.amount,
+    date: params.createdAt,
+    type: 'deposit',
+    productName: 'Wallet Deposit',
+    itemName: 'Wallet Deposit',
+    description: params.narration || 'Wallet deposit received',
+    userName: params.senderName || 'Bank Transfer',
+    userPhone: '',
+    deliveryAddress: params.narration || 'Flutterwave deposit',
+  };
+
+  await sql`
+    INSERT INTO transactions (user_id, type, description, amount, status, amigo_reference, receipt_data, idempotency_key, created_at)
+    VALUES (
+      ${params.userId},
+      'deposit',
+      ${params.narration || 'Wallet deposit'},
+      ${params.amount},
+      'success',
+      ${params.flwRef || params.flwTxId},
+      ${JSON.stringify(receiptData)},
+      ${`deposit:${params.flwTxId}`},
+      ${params.createdAt}
+    )
+    ON CONFLICT (idempotency_key) DO UPDATE
+    SET description = EXCLUDED.description,
+        amount = EXCLUDED.amount,
+        status = EXCLUDED.status,
+        amigo_reference = EXCLUDED.amigo_reference,
+        receipt_data = EXCLUDED.receipt_data
+  `;
+}
+
 export async function POST(req: NextRequest) {
   let webhookData: FlutterwaveWebhook | null = null;
   let flwTxId = '';
@@ -75,6 +119,15 @@ export async function POST(req: NextRequest) {
 
     if (existingDeposit) {
       console.log(`Duplicate deposit detected: ${flwTxId}, skipping`);
+      await ensureDepositTransaction({
+        userId: existingDeposit.user_id,
+        flwTxId,
+        flwRef: data.flw_ref || '',
+        amount: Number(data.amount) || 0,
+        senderName: data.customer?.name || data.customer?.email || 'Unknown',
+        narration: data.narration || '',
+        createdAt: data.created_at || new Date().toISOString(),
+      });
       await logWebhookProcessing(flwTxId, 'SKIPPED', 'Duplicate deposit');
       return NextResponse.json({ status: 'ok', message: 'Duplicate, already processed' });
     }
@@ -199,6 +252,16 @@ export async function POST(req: NextRequest) {
         SET wallet_balance = wallet_balance + ${amount}, updated_at = NOW()
         WHERE id = ${user.id}
       `;
+
+      await ensureDepositTransaction({
+        userId: user.id,
+        flwTxId,
+        flwRef,
+        amount,
+        senderName,
+        narration,
+        createdAt: data.created_at || new Date().toISOString(),
+      });
 
       const newBalance = (user.wallet_balance || 0) + amount;
       console.log(`✅ Deposit credited: User ${user.id} (${user.first_name} ${user.last_name}), Amount: ₦${amount}, New Balance: ₦${newBalance}`);

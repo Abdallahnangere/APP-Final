@@ -13,7 +13,44 @@ export async function GET(req: NextRequest) {
 
   const txns = await sql`
     SELECT id, type, description, amount, status, network, phone_number, product_name, amigo_reference, receipt_data, created_at
-    FROM transactions WHERE user_id = ${payload.userId as string}
+    FROM (
+      SELECT id, type, description, amount, status, network, phone_number, product_name, amigo_reference, receipt_data, created_at
+      FROM transactions
+      WHERE user_id = ${payload.userId as string}
+
+      UNION ALL
+
+      SELECT
+        d.id,
+        'deposit' AS type,
+        COALESCE(NULLIF(d.narration, ''), 'Wallet deposit') AS description,
+        d.amount,
+        d.status,
+        NULL AS network,
+        NULL AS phone_number,
+        NULL AS product_name,
+        d.flw_ref AS amigo_reference,
+        jsonb_build_object(
+          'ref', COALESCE(d.flw_ref, d.flw_transaction_id, d.id),
+          'amount', d.amount,
+          'date', d.created_at,
+          'type', 'deposit',
+          'productName', 'Wallet Deposit',
+          'itemName', 'Wallet Deposit',
+          'description', COALESCE(NULLIF(d.narration, ''), 'Wallet deposit'),
+          'userName', COALESCE(d.sender_name, 'Bank Transfer'),
+          'userPhone', '',
+          'deliveryAddress', COALESCE(NULLIF(d.narration, ''), 'Flutterwave deposit')
+        ) AS receipt_data,
+        d.created_at
+      FROM deposits d
+      WHERE d.user_id = ${payload.userId as string}
+        AND NOT EXISTS (
+          SELECT 1 FROM transactions t
+          WHERE t.user_id = d.user_id
+            AND t.idempotency_key = ('deposit:' || d.flw_transaction_id)
+        )
+    ) AS activity
     ORDER BY created_at DESC LIMIT ${limit}
   `;
 
@@ -24,6 +61,6 @@ export async function GET(req: NextRequest) {
     productName: t.product_name, amigoRef: t.amigo_reference,
     receipt: t.receipt_data, createdAt: t.created_at,
   })));
-  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  response.headers.set('Cache-Control', 'no-store');
   return response;
 }

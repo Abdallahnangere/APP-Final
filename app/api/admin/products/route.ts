@@ -9,8 +9,13 @@ async function auth(req: NextRequest) {
   return h?.startsWith('Bearer ') && await verifyAdminToken(h.slice(7));
 }
 
+async function ensureProductSchema() {
+  await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS image_base64 TEXT`;
+}
+
 export async function GET(req: NextRequest) {
   if (!await auth(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  await ensureProductSchema();
   const products = await sql`SELECT id, name, description, price, cost_price, image_url, image_base64, category, in_stock, shipping_terms, pickup_terms, created_at, updated_at FROM products ORDER BY created_at DESC`;
   const response = NextResponse.json(products);
   response.headers.set('Cache-Control', 'no-store');
@@ -19,6 +24,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   if (!await auth(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  await ensureProductSchema();
   const body = await req.json();
   const [product] = await sql`
     INSERT INTO products (name, description, price, cost_price, image_url, image_base64, category, in_stock, shipping_terms, pickup_terms)
@@ -38,6 +44,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   if (!await auth(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  await ensureProductSchema();
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
