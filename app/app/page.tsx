@@ -1558,47 +1558,6 @@ export default function AppPage() {
   if (screen === 'data-plans') return (
     <>
       <GlobalStyle dark={dark} />
-      <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
-        <div style={{ padding:'60px 20px 20px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
-          <button onClick={()=>setScreen('data-phone')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
-          <h2 style={{ fontSize:18,fontWeight:800,color:'var(--text)' }}>{selectedNetwork?.name} Data Plans</h2>
-        </div>
-        <div style={{ flex:1,overflowY:'auto',padding:'0 16px 40px' }}>
-          {plans.length === 0 ? (
-            <p style={{ textAlign:'center',color:'var(--text-secondary)',padding:40 }}>No plans available</p>
-          ) : (
-            <div style={{ display:'grid',gap:10,marginTop:12 }}>
-              {plans.map(plan => (
-                <button key={plan.id} onClick={()=>{ if(buyPhone.length!==11){showError('Enter 11-digit phone number');return;} setSelectedPlan(plan); setPinAction('buy-data'); setShowPin(true); }}
-                  style={{ background:'var(--card)',borderRadius:14,padding:'16px',display:'flex',justifyContent:'space-between',alignItems:'center',border:'1px solid var(--border)',width:'100%' }}>
-                  <div style={{ textAlign:'left' }}>
-                    <p style={{ fontWeight:700,fontSize:16,color:'var(--text)' }}>{plan.dataSize}</p>
-                    <p style={{ color:'var(--text-secondary)',fontSize:13,marginTop:2 }}>{plan.validity}</p>
-                  </div>
-                  <div style={{ textAlign:'right' }}>
-                    <p style={{ fontSize:18,fontWeight:800,color:BLUE }}>₦{plan.price.toLocaleString()}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-      {showPin && selectedPlan && (
-        <PinKeyboard
-          title={`Authorize ₦${selectedPlan.price.toLocaleString()}`}
-          subtitle={`${selectedPlan.dataSize} ${selectedNetwork?.name} to ${buyPhone}`}
-          onComplete={handlePinComplete} onClose={()=>setShowPin(false)} />
-      )}
-      {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
-      {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>{ setReceipt(null); setScreen('home'); }} dark={dark} />}
-    </>
-  );
-
-  /* STORE */
-  if (screen === 'data-plans') return (
-    <>
-      <GlobalStyle dark={dark} />
       <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#050A13 0%,#08101B 100%)' : 'linear-gradient(180deg,#F4F8FF 0%,#EFF4FB 100%)',display:'flex',flexDirection:'column' }}>
         <div style={{ padding:'58px 20px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
           <button onClick={()=>setScreen('data-phone')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
@@ -1615,12 +1574,12 @@ export default function AppPage() {
             </div>
             <div style={{ padding:'8px 12px',borderRadius:999,background:'rgba(0,113,227,.1)',color:BLUE,fontSize:12,fontWeight:800 }}>{selectedNetwork?.name}</div>
           </div>
-          {products.length === 0 ? (
+          {plans.length === 0 ? (
             <div style={{ textAlign:'center',color:'var(--text-secondary)',padding:40,background:'var(--card)',border:'1px solid var(--border)',borderRadius:20 }}>No plans available</div>
-              <IconBox icon={Icons.download(BLUE, 44)} bg={'rgba(0,113,227,.10)'} />
+          ) : (
             <div style={{ display:'grid',gap:12,marginTop:12 }}>
-              <p style={{ color:'var(--text-secondary)',marginTop:8 }}>Amazing products are being added</p>
-            </div>
+              {plans.map(plan => (
+                <button key={plan.id} onClick={()=>{ if(buyPhone.length!==11){showError('Enter 11-digit phone number');return;} setSelectedPlan(plan); setPinAction('buy-data'); setShowPin(true); }}
                   className="ledger-card"
                   style={{ background:'var(--card)',borderRadius:18,padding:'16px',display:'flex',justifyContent:'space-between',alignItems:'center',border:'1px solid var(--border)',width:'100%',boxShadow:dark ? '0 10px 20px rgba(0,0,0,.2)' : '0 10px 20px rgba(12,28,54,.06)' }}>
                   <div style={{ textAlign:'left',display:'flex',alignItems:'center',gap:12 }}>
@@ -1631,26 +1590,10 @@ export default function AppPage() {
                       <p style={{ fontWeight:800,fontSize:16,color:'var(--text)' }}>{plan.dataSize}</p>
                       <p style={{ color:'var(--text-secondary)',fontSize:13,marginTop:3 }}>{plan.validity}</p>
                     </div>
-                  style={{ background:'var(--card)',borderRadius:16,overflow:'hidden',textAlign:'left',border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)',transition:'all .3s',cursor:'pointer' }}
+                  </div>
                   <div style={{ textAlign:'right' }}>
                     <p style={{ fontSize:18,fontWeight:900,color:BLUE }}>₦{plan.price.toLocaleString()}</p>
                     <p style={{ fontSize:11,fontWeight:700,color:'var(--text-secondary)',marginTop:4 }}>Tap to authorize</p>
-                  <div style={{ height:160,background:'var(--bg-secondary)',position:'relative',overflow:'hidden' }}>
-                    {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : p.imageBase64 ? <img src={`data:image/jpeg;base64,${p.imageBase64}`} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',background:'var(--border)',display:'flex',alignItems:'center',justifyContent:'center' }}>
-                      {Icons.download(BLUE, 32)}
-                    </div>}
-                    {!p.inStock && <div style={{ position:'absolute',inset:0,background:'rgba(0,0,0,.5)',display:'flex',alignItems:'center',justifyContent:'center',backdropFilter:'blur(2px)' }}>
-                      <div style={{ background:'rgba(255,59,48,.95)',borderRadius:8,padding:'6px 12px' }}>
-                        <p style={{ color:'#fff',fontWeight:700,fontSize:12 }}>Out of Stock</p>
-                      </div>
-          title={`Confirm ${selectedPlan.dataSize} Purchase`}
-          subtitle={`Authorize ₦${selectedPlan.price.toLocaleString('en-NG',{minimumFractionDigits:2})} for ${selectedNetwork?.name} on ${buyPhone}`}
-                  <div style={{ padding:'14px' }}>
-                    <p style={{ fontWeight:700,fontSize:14,color:'var(--text)',lineHeight:1.4,marginBottom:8,minHeight:'2.8em' }}>{p.name}</p>
-                    <div style={{ display:'flex',alignItems:'baseline',gap:2 }}>
-                      <span style={{ fontSize:'24px',fontWeight:900,color:BLUE,lineHeight:1 }}>₦</span>
-                      <span style={{ fontWeight:800,fontSize:18,color:'var(--text)' }}>{(Number(p.price)/1).toLocaleString('en-NG',{maximumFractionDigits:0})}</span>
-                    </div>
                   </div>
                 </button>
               ))}
@@ -1658,15 +1601,69 @@ export default function AppPage() {
           )}
         </div>
       </div>
-      {showPin && selectedProduct && (
+      {showPin && selectedPlan && (
         <PinKeyboard
-          title={`Pay ₦${Number(selectedProduct.price).toLocaleString()}`}
-          subtitle={selectedProduct.name}
+          title={`Confirm ${selectedPlan.dataSize} Purchase`}
+          subtitle={`Authorize ₦${selectedPlan.price.toLocaleString('en-NG',{minimumFractionDigits:2})} for ${selectedNetwork?.name} on ${buyPhone}`}
           onComplete={handlePinComplete} onClose={()=>setShowPin(false)} />
       )}
+      {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
+      {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>{ setReceipt(null); setScreen('home'); }} dark={dark} />}
+    </>
+  );
+
+  /* STORE */
+  if (screen === 'store') return (
+    <>
+      <GlobalStyle dark={dark} />
       {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>{ setReceipt(null); setScreen('home'); }} dark={dark} />}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
       {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500 }}>{toast}</div>}
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#050A13 0%,#08101B 100%)' : 'linear-gradient(180deg,#F5F8FF 0%,#EEF3FB 100%)',display:'flex',flexDirection:'column' }}>
+        <div style={{ padding:'58px 20px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
+          <button onClick={()=>setScreen('home')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+          <div>
+            <h2 style={{ fontSize:24,fontWeight:900,color:'var(--text)',letterSpacing:-0.4 }}>Store</h2>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>Executive storefront for devices, MiFi, routers, and accessories</p>
+          </div>
+        </div>
+        <div style={{ flex:1,overflowY:'auto',padding:'18px 16px 40px' }}>
+          <div style={{ background:'linear-gradient(145deg,#011A4D 0%,#0047CC 70%,#0071E3 100%)',borderRadius:22,padding:'20px 18px',color:'#fff',marginBottom:16,position:'relative',overflow:'hidden' }}>
+            <div style={{ position:'absolute',right:-40,top:-50,width:150,height:150,borderRadius:'50%',background:'rgba(255,255,255,.08)' }} />
+            <p style={{ fontSize:11,fontWeight:700,opacity:.72,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8 }}>Curated Hardware</p>
+            <p style={{ fontSize:24,fontWeight:900,letterSpacing:'-0.03em' }}>Shop premium connectivity devices</p>
+            <p style={{ fontSize:13,opacity:.82,lineHeight:1.7,marginTop:8,maxWidth:480 }}>Browse routers, MiFi units, accessories, and other products with a cleaner retail experience and better purchase confidence.</p>
+          </div>
+          {products.length === 0 ? (
+            <div style={{ textAlign:'center',padding:'56px 20px',background:'var(--card)',borderRadius:20,border:'1px solid var(--border)' }}>
+              <div style={{ width:72,height:72,borderRadius:20,margin:'0 auto 16px',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(145deg,rgba(0,113,227,.16),rgba(90,200,250,.08))' }}>{Icons.download(BLUE, 34)}</div>
+              <p style={{ fontSize:17,fontWeight:800,color:'var(--text)' }}>Store inventory coming online</p>
+              <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:8,lineHeight:1.6 }}>Products will appear here as soon as they are published.</p>
+            </div>
+          ) : (
+            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14 }}>
+              {products.map(p => (
+                <button key={p.id} onClick={()=>{ setSelectedProduct(p); setScreen('product'); }}
+                  className="ledger-card"
+                  style={{ background:'var(--card)',borderRadius:20,overflow:'hidden',textAlign:'left',border:'1px solid var(--border)',boxShadow:dark ? '0 10px 28px rgba(0,0,0,.22)' : '0 12px 28px rgba(12,28,54,.08)',cursor:'pointer' }}>
+                  <div style={{ height:170,background:'var(--bg-secondary)',position:'relative',overflow:'hidden' }}>
+                    {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : p.imageBase64 ? <img src={`data:image/jpeg;base64,${p.imageBase64}`} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(145deg,rgba(0,113,227,.12),rgba(90,200,250,.04))' }}>{Icons.download(BLUE, 32)}</div>}
+                    <div style={{ position:'absolute',top:12,left:12,padding:'6px 10px',borderRadius:999,background:p.inStock?'rgba(48,209,88,.88)':'rgba(255,59,48,.88)',color:'#fff',fontSize:10,fontWeight:800,textTransform:'uppercase',letterSpacing:'0.05em' }}>{p.inStock ? 'In Stock' : 'Unavailable'}</div>
+                  </div>
+                  <div style={{ padding:'14px' }}>
+                    <p style={{ fontWeight:800,fontSize:14,color:'var(--text)',lineHeight:1.45,marginBottom:8,minHeight:'2.8em' }}>{p.name}</p>
+                    <div style={{ display:'flex',alignItems:'baseline',gap:2 }}>
+                      <span style={{ fontSize:24,fontWeight:900,color:BLUE,lineHeight:1 }}>₦</span>
+                      <span style={{ fontWeight:800,fontSize:18,color:'var(--text)' }}>{Number(p.price).toLocaleString('en-NG',{maximumFractionDigits:0})}</span>
+                    </div>
+                    <p style={{ marginTop:8,fontSize:12,color:'var(--text-secondary)' }}>{p.category || 'Devices'}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </>
   );
 
@@ -1674,72 +1671,72 @@ export default function AppPage() {
   if (screen === 'product' && selectedProduct) return (
     <>
       <GlobalStyle dark={dark} />
-      <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
-        <div style={{ padding:'60px 20px 16px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
-          <button onClick={()=>setScreen('store')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
-        </div>
-        <div style={{ flex:1,overflowY:'auto',paddingBottom:100 }}>
-          <div style={{ height:280,background:'var(--bg-secondary)',overflow:'hidden' }}>
-            {selectedProduct.imageUrl ? <img src={selectedProduct.imageUrl} alt={selectedProduct.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : selectedProduct.imageBase64 ? <img src={`data:image/jpeg;base64,${selectedProduct.imageBase64}`} alt={selectedProduct.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',background:'var(--border)' }} />}
+      {showPin && <PinKeyboard title={`Pay ₦${Number(selectedProduct.price).toLocaleString()}`} subtitle={selectedProduct.name} onComplete={handlePinComplete} onClose={()=>setShowPin(false)} />}
+      {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>{ setReceipt(null); setScreen('home'); }} dark={dark} />}
+      {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#050A13 0%,#08101B 100%)' : 'linear-gradient(180deg,#F5F8FF 0%,#EEF3FB 100%)',display:'flex',flexDirection:'column' }}>
+        <div style={{ padding:'58px 20px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
+          <button onClick={()=>setScreen('store')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+          <div>
+            <h2 style={{ fontSize:22,fontWeight:900,color:'var(--text)',letterSpacing:-0.4 }}>Product Details</h2>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>Premium product presentation and address confirmation</p>
           </div>
-          <div style={{ padding:'20px 20px 0' }}>
-            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8 }}>
-              <h1 style={{ fontSize:22,fontWeight:800,color:'var(--text)',flex:1,paddingRight:12 }}>{selectedProduct.name}</h1>
-              <p style={{ fontSize:24,fontWeight:800,color:BLUE,whiteSpace:'nowrap' }}>₦{Number(selectedProduct.price).toLocaleString()}</p>
-            </div>
-            <div style={{ background:selectedProduct.inStock?'rgba(52,199,89,.1)':'rgba(255,59,48,.1)',borderRadius:12,padding:'6px 12px',marginBottom:20,display:'inline-block' }}>
-              <p style={{ color:selectedProduct.inStock?GREEN:RED,fontSize:13,fontWeight:600 }}>{selectedProduct.inStock?'Available':'Out of Stock'}</p>
-            </div>
-            {selectedProduct.description && <p style={{ fontSize:15,color:'var(--text-secondary)',lineHeight:1.7,marginBottom:20 }}>{selectedProduct.description}</p>}
-            {selectedProduct.shippingTerms && (
-              <div style={{ background:'var(--card)',borderRadius:12,padding:'14px 16px',marginBottom:12,border:'1px solid var(--border)' }}>
-                <p style={{ fontWeight:700,fontSize:14,color:'var(--text)',marginBottom:6 }}>Shipping</p>
-                <p style={{ fontSize:14,color:'var(--text-secondary)',lineHeight:1.6 }}>{selectedProduct.shippingTerms}</p>
-              </div>
-            )}
-            {selectedProduct.pickupTerms && (
-              <div style={{ background:'var(--card)',borderRadius:12,padding:'14px 16px',border:'1px solid var(--border)' }}>
-                <p style={{ fontWeight:700,fontSize:14,color:'var(--text)',marginBottom:6 }}>Pickup</p>
-                <p style={{ fontSize:14,color:'var(--text-secondary)',lineHeight:1.6 }}>{selectedProduct.pickupTerms}</p>
-              </div>
-            )}
-
-            {/* Delivery Address Form */}
-            <div style={{ background:'var(--bg-secondary)',borderRadius:14,padding:'16px',marginTop:16,border:'1px solid var(--border)' }}>
-              <p style={{ fontWeight:700,fontSize:14,color:'var(--text)',marginBottom:12 }}>Delivery Address</p>
-              <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Street Address *</label>
-              <input value={deliveryAddress} onChange={e=>setDeliveryAddress(e.target.value)}
-                placeholder="123 Main Street" maxLength={100}
-                style={{ width:'100%',padding:'12px 14px',borderRadius:10,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:14,marginBottom:12,boxSizing:'border-box' }} />
-              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10 }}>
-                <div>
-                  <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>City *</label>
-                  <input value={deliveryCity} onChange={e=>setDeliveryCity(e.target.value)}
-                    placeholder="Lagos"
-                    style={{ width:'100%',padding:'12px 14px',borderRadius:10,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:14,boxSizing:'border-box' }} />
+        </div>
+        <div style={{ flex:1,overflowY:'auto',paddingBottom:110 }}>
+          <div style={{ height:320,background:'var(--bg-secondary)',overflow:'hidden',borderBottom:'1px solid var(--border)' }}>
+            {selectedProduct.imageUrl ? <img src={selectedProduct.imageUrl} alt={selectedProduct.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : selectedProduct.imageBase64 ? <img src={`data:image/jpeg;base64,${selectedProduct.imageBase64}`} alt={selectedProduct.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(145deg,rgba(0,113,227,.12),rgba(90,200,250,.04))' }}>{Icons.download(BLUE, 42)}</div>}
+          </div>
+          <div style={{ padding:'18px 16px 0' }}>
+            <div style={{ background:'var(--card)',borderRadius:22,padding:'18px',border:'1px solid var(--border)',boxShadow:dark ? '0 14px 34px rgba(0,0,0,.2)' : '0 14px 34px rgba(12,28,54,.08)',marginBottom:14 }}>
+              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:14,marginBottom:10 }}>
+                <h1 style={{ fontSize:24,fontWeight:900,color:'var(--text)',flex:1,letterSpacing:'-0.03em' }}>{selectedProduct.name}</h1>
+                <div style={{ textAlign:'right' }}>
+                  <p style={{ fontSize:26,fontWeight:900,color:BLUE,whiteSpace:'nowrap' }}>₦{Number(selectedProduct.price).toLocaleString()}</p>
+                  <div style={{ marginTop:6,display:'inline-flex',padding:'5px 10px',borderRadius:999,background:selectedProduct.inStock?'rgba(48,209,88,.12)':'rgba(255,59,48,.12)',color:selectedProduct.inStock?GREEN:RED,fontSize:11,fontWeight:800,textTransform:'uppercase' }}>{selectedProduct.inStock ? 'Available' : 'Out of Stock'}</div>
                 </div>
-                <div>
-                  <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Postal Code *</label>
-                  <input value={deliveryPostalCode} onChange={e=>setDeliveryPostalCode(e.target.value)}
-                    placeholder="100001"
-                    style={{ width:'100%',padding:'12px 14px',borderRadius:10,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:14,boxSizing:'border-box' }} />
+              </div>
+              {selectedProduct.description && <p style={{ fontSize:14,color:'var(--text-secondary)',lineHeight:1.8 }}>{selectedProduct.description}</p>}
+            </div>
+
+            <div style={{ display:'grid',gap:12 }}>
+              {selectedProduct.shippingTerms && (
+                <div style={{ background:'var(--card)',borderRadius:18,padding:'16px',border:'1px solid var(--border)' }}>
+                  <p style={{ fontWeight:800,fontSize:14,color:'var(--text)',marginBottom:8 }}>Shipping Terms</p>
+                  <p style={{ fontSize:14,color:'var(--text-secondary)',lineHeight:1.7 }}>{selectedProduct.shippingTerms}</p>
+                </div>
+              )}
+              {selectedProduct.pickupTerms && (
+                <div style={{ background:'var(--card)',borderRadius:18,padding:'16px',border:'1px solid var(--border)' }}>
+                  <p style={{ fontWeight:800,fontSize:14,color:'var(--text)',marginBottom:8 }}>Pickup Terms</p>
+                  <p style={{ fontSize:14,color:'var(--text-secondary)',lineHeight:1.7 }}>{selectedProduct.pickupTerms}</p>
+                </div>
+              )}
+              <div style={{ background:'var(--card)',borderRadius:18,padding:'16px',border:'1px solid var(--border)' }}>
+                <p style={{ fontWeight:800,fontSize:14,color:'var(--text)',marginBottom:12 }}>Delivery Address</p>
+                <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:6,letterSpacing:'0.05em',textTransform:'uppercase' }}>Street Address</label>
+                <input value={deliveryAddress} onChange={e=>setDeliveryAddress(e.target.value)} placeholder="123 Main Street" maxLength={100} style={{ width:'100%',padding:'13px 14px',borderRadius:12,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:14,marginBottom:12,boxSizing:'border-box' }} />
+                <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10 }}>
+                  <div>
+                    <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:6,letterSpacing:'0.05em',textTransform:'uppercase' }}>City</label>
+                    <input value={deliveryCity} onChange={e=>setDeliveryCity(e.target.value)} placeholder="Lagos" style={{ width:'100%',padding:'13px 14px',borderRadius:12,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:14,boxSizing:'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:6,letterSpacing:'0.05em',textTransform:'uppercase' }}>Postal Code</label>
+                    <input value={deliveryPostalCode} onChange={e=>setDeliveryPostalCode(e.target.value)} placeholder="100001" style={{ width:'100%',padding:'13px 14px',borderRadius:12,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:14,boxSizing:'border-box' }} />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
         {selectedProduct.inStock && (
-          <div style={{ position:'fixed',bottom:0,left:0,right:0,padding:'16px 20px',background:'var(--card)',borderTop:'1px solid var(--border)' }}>
-            <button onClick={()=>{ setPinAction('buy-product'); setShowPin(true); }}
-              style={{ width:'100%',padding:'16px',borderRadius:12,background:BLUE,color:'#fff',fontSize:16,fontWeight:700 }}>
+          <div style={{ position:'fixed',bottom:0,left:0,right:0,padding:'16px 20px',background:'var(--card)',borderTop:'1px solid var(--border)',boxShadow:'0 -10px 28px rgba(0,0,0,.12)' }}>
+            <button onClick={()=>{ setPinAction('buy-product'); setShowPin(true); }} className="tactile-btn" style={{ width:'100%',padding:'16px',borderRadius:14,background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:16,fontWeight:800,boxShadow:'0 12px 26px rgba(0,113,227,.32)' }}>
               Buy for ₦{Number(selectedProduct.price).toLocaleString()}
             </button>
           </div>
         )}
       </div>
-      {showPin && <PinKeyboard title={`Pay ₦${Number(selectedProduct.price).toLocaleString()}`} subtitle={selectedProduct.name} onComplete={handlePinComplete} onClose={()=>setShowPin(false)} />}
-      {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>{ setReceipt(null); setScreen('home'); }} dark={dark} />}
-      {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
     </>
   );
 
@@ -1936,25 +1933,37 @@ export default function AppPage() {
       {showPin && <PinKeyboard title="Confirm with PIN" onComplete={(pin)=>{ setShowPin(false); handleChangePin(pin); }} onClose={()=>setShowPin(false)} />}
       {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500 }}>{toast}</div>}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
-      <div style={{ height:'100dvh',background:'var(--bg)',overflowY:'auto',paddingBottom:100 }}>
-        <div style={{ padding:'60px 20px 24px' }}>
-          {/* Avatar Section */}
-          <div style={{ display:'flex',alignItems:'center',gap:16,marginBottom:32,paddingBottom:20,borderBottom:'1px solid var(--border)' }}>
-            <div style={{ width:68,height:68,borderRadius:16,background:BLUE,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:20 }}>{getInitials(user)}</div>
-            <div>
-              <p style={{ fontSize:18,fontWeight:700,color:'var(--text)' }}>{user.firstName} {user.lastName}</p>
-              <p style={{ color:'var(--text-secondary)',fontSize:14,marginTop:2 }}>{user.phone}</p>
-              <p style={{ color:'var(--text-secondary)',fontSize:13,marginTop:2 }}>Joined {new Date(user.createdAt).toLocaleDateString('en-NG',{month:'short',year:'numeric'})}</p>
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#040810 0%,#0A1221 48%,#08101D 100%)' : 'linear-gradient(180deg,#F3F7FF 0%,#EEF3FB 52%,#F7F9FD 100%)',overflowY:'auto',paddingBottom:100 }}>
+        <div style={{ padding:'58px 16px 24px' }}>
+          <div style={{ background:'linear-gradient(140deg,#011A4D 0%,#003EAD 55%,#0068D8 100%)',borderRadius:24,padding:'22px 18px',border:'1px solid rgba(255,255,255,.14)',boxShadow:'0 16px 42px rgba(0,66,173,.35)',position:'relative',overflow:'hidden',color:'#fff',marginBottom:18 }}>
+            <div style={{ position:'absolute',right:-65,top:-68,width:210,height:210,borderRadius:'50%',background:'rgba(255,255,255,.08)',pointerEvents:'none' }} />
+            <div style={{ display:'flex',alignItems:'center',gap:16,position:'relative',zIndex:1 }}>
+              <div style={{ width:74,height:74,borderRadius:20,background:'rgba(255,255,255,.14)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:900,fontSize:22,border:'1px solid rgba(255,255,255,.18)' }}>{getInitials(user)}</div>
+              <div style={{ flex:1,minWidth:0 }}>
+                <p style={{ fontSize:11,fontWeight:700,opacity:.76,letterSpacing:'0.08em',textTransform:'uppercase' }}>Executive Profile</p>
+                <p style={{ fontSize:24,fontWeight:900,letterSpacing:'-0.03em',marginTop:6,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{user.firstName} {user.lastName}</p>
+                <p style={{ fontSize:13,opacity:.84,marginTop:6 }}>{user.phone}</p>
+                <p style={{ fontSize:12,opacity:.74,marginTop:4 }}>Joined {new Date(user.createdAt).toLocaleDateString('en-NG',{month:'short',year:'numeric'})}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Settings */}
-        <div style={{ padding:'0 16px' }}>
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:18 }}>
+            <div style={{ background:'var(--card)',borderRadius:18,padding:'14px 16px',border:'1px solid var(--border)',boxShadow:dark ? '0 10px 24px rgba(0,0,0,.2)' : '0 10px 24px rgba(12,28,54,.06)' }}>
+              <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',letterSpacing:'0.08em',textTransform:'uppercase' }}>Theme</p>
+              <p style={{ fontSize:16,fontWeight:800,color:'var(--text)',marginTop:8 }}>{dark ? 'Dark Appearance' : 'Light Appearance'}</p>
+            </div>
+            <div style={{ background:'var(--card)',borderRadius:18,padding:'14px 16px',border:'1px solid var(--border)',boxShadow:dark ? '0 10px 24px rgba(0,0,0,.2)' : '0 10px 24px rgba(12,28,54,.06)' }}>
+              <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',letterSpacing:'0.08em',textTransform:'uppercase' }}>Security</p>
+              <p style={{ fontSize:16,fontWeight:800,color:'var(--text)',marginTop:8 }}>PIN Protected</p>
+            </div>
+          </div>
+
+          <div style={{ padding:'0 0' }}>
           <SettingsGroup title="Display">
             <SettingsRow icon={Icons.bell(BLUE, 20)} label="Theme" right={
               <button onClick={()=>updatePref('theme', dark?'light':'dark')}
-                style={{ background:dark?BLUE:'var(--bg-secondary)',borderRadius:16,padding:'6px 14px',color:dark?'#fff':'var(--text)',fontSize:13,fontWeight:600,border:'1px solid var(--border)' }}>
+                style={{ background:dark?BLUE:'var(--bg-secondary)',borderRadius:16,padding:'7px 14px',color:dark?'#fff':'var(--text)',fontSize:13,fontWeight:700,border:'1px solid var(--border)' }}>
                 {dark?'Dark':'Light'}
               </button>
             } />
@@ -2008,27 +2017,33 @@ export default function AppPage() {
       <GlobalStyle dark={dark} />
       {showPin && <PinKeyboard title="Enter current PIN" onComplete={(pin)=>{ setShowPin(false); handleChangePin(pin); }} onClose={()=>setShowPin(false)} />}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
-      <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
-        <div style={{ padding:'60px 20px 20px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
-          <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
-          <h2 style={{ fontSize:18,fontWeight:800,color:'var(--text)' }}>Change PIN</h2>
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#040810 0%,#0A1221 48%,#08101D 100%)' : 'linear-gradient(180deg,#F3F7FF 0%,#EEF3FB 52%,#F7F9FD 100%)',display:'flex',flexDirection:'column' }}>
+        <div style={{ padding:'58px 20px 20px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
+          <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+          <div>
+            <h2 style={{ fontSize:22,fontWeight:900,color:'var(--text)',letterSpacing:-0.4 }}>Change PIN</h2>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>Strengthen access to your wallet and transactions</p>
+          </div>
         </div>
-        <div style={{ padding:'0 24px',flex:1,display:'flex',flexDirection:'column',justifyContent:'center' }}>
+        <div style={{ padding:'24px 20px',flex:1,display:'flex',flexDirection:'column',justifyContent:'center' }}>
+          <div style={{ background:'var(--card)',borderRadius:22,padding:'20px',border:'1px solid var(--border)',boxShadow:dark ? '0 14px 34px rgba(0,0,0,.2)' : '0 14px 34px rgba(12,28,54,.08)' }}>
           <div style={{ marginBottom:24 }}>
-            <label style={{ fontSize:14,fontWeight:600,color:'var(--text-secondary)',marginBottom:8,display:'block' }}>New PIN (4 digits)</label>
+            <label style={{ fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:8,display:'block',letterSpacing:'0.08em',textTransform:'uppercase' }}>New PIN</label>
             <input type="password" inputMode="numeric" maxLength={6} value={newPin} onChange={e=>setNewPin(e.target.value.replace(/\D/g,'').slice(0,6))}
-              placeholder="••••••" style={{ width:'100%',padding:'14px 16px',borderRadius:12,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:20,letterSpacing:6,textAlign:'center' }} />
+              placeholder="••••••" style={{ width:'100%',padding:'15px 16px',borderRadius:14,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:20,letterSpacing:6,textAlign:'center' }} />
           </div>
           <div style={{ marginBottom:32 }}>
-            <label style={{ fontSize:14,fontWeight:600,color:'var(--text-secondary)',marginBottom:8,display:'block' }}>Confirm PIN</label>
+            <label style={{ fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:8,display:'block',letterSpacing:'0.08em',textTransform:'uppercase' }}>Confirm PIN</label>
             <input type="password" inputMode="numeric" maxLength={6} value={confirmNewPin} onChange={e=>setConfirmNewPin(e.target.value.replace(/\D/g,'').slice(0,6))}
-              placeholder="••••••" style={{ width:'100%',padding:'14px 16px',borderRadius:12,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:20,letterSpacing:6,textAlign:'center' }} />
+              placeholder="••••••" style={{ width:'100%',padding:'15px 16px',borderRadius:14,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:20,letterSpacing:6,textAlign:'center' }} />
           </div>
           <button onClick={()=>{ if(newPin.length===6&&newPin===confirmNewPin){ setShowPin(true); } else showError('PINs must match'); }}
             disabled={newPin.length!==6||newPin!==confirmNewPin}
-            style={{ width:'100%',padding:'16px',borderRadius:12,background:newPin.length===6&&newPin===confirmNewPin?BLUE:'var(--bg-secondary)',color:newPin.length===6&&newPin===confirmNewPin?'#fff':'var(--text-secondary)',fontSize:16,fontWeight:700 }}>
+            className="tactile-btn"
+            style={{ width:'100%',padding:'16px',borderRadius:14,background:newPin.length===6&&newPin===confirmNewPin?'linear-gradient(135deg,#0047CC,#0071E3)':'var(--bg-secondary)',color:newPin.length===6&&newPin===confirmNewPin?'#fff':'var(--text-secondary)',fontSize:16,fontWeight:800,boxShadow:newPin.length===6&&newPin===confirmNewPin?'0 12px 26px rgba(0,113,227,.28)':'none' }}>
             Update PIN
           </button>
+          </div>
         </div>
       </div>
     </>
@@ -2189,8 +2204,8 @@ export default function AppPage() {
 function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom:16 }}>
-      <p style={{ fontSize:12,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.4,marginBottom:10,marginLeft:4,textTransform:'uppercase' }}>{title}</p>
-      <div style={{ background:'var(--card)',borderRadius:12,overflow:'hidden',border:'1px solid var(--border)' }}>
+      <p style={{ fontSize:12,fontWeight:800,color:'var(--text-secondary)',letterSpacing:'0.08em',marginBottom:10,marginLeft:4,textTransform:'uppercase' }}>{title}</p>
+      <div style={{ background:'var(--card)',borderRadius:18,overflow:'hidden',border:'1px solid var(--border)',boxShadow:'0 10px 24px rgba(12,28,54,.05)' }}>
         {children}
       </div>
     </div>
@@ -2199,9 +2214,9 @@ function SettingsGroup({ title, children }: { title: string; children: React.Rea
 
 function SettingsRow({ icon, label, onPress, right }: { icon: string | React.ReactNode; label: string; onPress?: ()=>void; right?: React.ReactNode; }) {
   return (
-    <button onClick={onPress} style={{ width:'100%',display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom:'1px solid var(--border)',background:'none',textAlign:'left',cursor:onPress?'pointer':'default' }}>
-      <div style={{ fontSize:18,width:24,textAlign:'center',display:'flex',alignItems:'center',justifyContent:'center' }}>{icon}</div>
-      <span style={{ flex:1,fontSize:15,fontWeight:500,color:'var(--text)' }}>{label}</span>
+    <button onClick={onPress} style={{ width:'100%',display:'flex',alignItems:'center',gap:12,padding:'16px 16px',borderBottom:'1px solid var(--border)',background:'none',textAlign:'left',cursor:onPress?'pointer':'default' }}>
+      <div style={{ width:34,height:34,borderRadius:10,background:'var(--bg-secondary)',fontSize:18,textAlign:'center',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{icon}</div>
+      <span style={{ flex:1,fontSize:15,fontWeight:700,color:'var(--text)' }}>{label}</span>
       {right || (onPress && <span style={{ color:'var(--text-secondary)',fontSize:18 }}>›</span>)}
     </button>
   );
