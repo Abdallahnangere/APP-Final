@@ -116,11 +116,26 @@ const GlobalStyle = ({ dark }: { dark: boolean }) => (
     @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
     @keyframes floatUp{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-20px);opacity:0}}
     @keyframes typing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-10px)}}
+    @keyframes sheetRise{0%{opacity:0;transform:translateY(24px) scale(.985)}100%{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes softPulse{0%,100%{transform:scale(1);opacity:.08}50%{transform:scale(1.06);opacity:.14}}
+    @keyframes listRise{0%{opacity:0;transform:translateY(10px) scale(.992)}100%{opacity:1;transform:translateY(0) scale(1)}}
     .slide-up{animation:slideUp .32s cubic-bezier(.32,.72,0,1) both}
     .fade-in{animation:fadeIn .2s ease both}
     .fade-up-scale{animation:fadeUpScale .4s cubic-bezier(.16,.1,0,1) both}
+    .receipt-shell{animation:sheetRise .36s cubic-bezier(.16,.84,.25,1) both}
+    .ledger-card{transition:all .22s cubic-bezier(.2,.84,.22,1)}
+    .ledger-card:active{transform:scale(.985)}
+    .stagger-card{animation:listRise .34s cubic-bezier(.2,.84,.22,1) both;will-change:transform,opacity}
+    .haptic-pulse{transition:filter .12s ease,transform .12s ease}
+    .haptic-pulse:active{filter:brightness(.97) saturate(1.05);transform:scale(.986)}
+    .tactile-btn{transition:all .22s cubic-bezier(.2,.84,.22,1)}
+    .tactile-btn:active{transform:scale(.985)}
     .card{border-radius:16px;background:var(--card);border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.07);transition:all .3s cubic-bezier(.16,.1,0,1)}
     .card:hover{box-shadow:0 12px 40px rgba(0,0,0,0.32),inset 0 1px 0 rgba(255,255,255,0.07);transform:translateY(-2px)}
+    @media (prefers-reduced-motion: reduce){
+      .slide-up,.fade-in,.fade-up-scale,.receipt-shell,.stagger-card{animation:none !important}
+      .ledger-card,.tactile-btn,.haptic-pulse{transition:none !important}
+    }
   `}</style>
 );
 
@@ -293,6 +308,7 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
 
   const date = new Date(data.date as string).toLocaleString('en-NG', { dateStyle:'short', timeStyle:'short' });
   const isDataPurchase = data.type === 'data' || data.network;
+  const isTransfer = data.type === 'transfer' || data.type === 'transfer_out' || data.type === 'transfer_in';
   const amount = Number(data.price || data.amount || 0);
   const refNum = ((data.ref || data.amigoRef || '—') as string).toUpperCase();
 
@@ -306,8 +322,8 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
   );
 
   return (
-    <div style={{ position:'fixed',inset:0,zIndex:300,background:'rgba(0,8,20,.82)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',display:'flex',alignItems:'flex-end',justifyContent:'center' }}>
-      <div className="slide-up" style={{ width:'100%',maxWidth:420,borderRadius:'28px 28px 0 0',overflow:'hidden',boxShadow:'0 -24px 80px rgba(0,0,0,.5)' }}>
+    <div style={{ position:'fixed',inset:0,zIndex:300,background:'rgba(0,8,20,.82)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',display:'flex',alignItems:'flex-end',justifyContent:'center',animation:'fadeIn .24s ease both' }}>
+      <div className="slide-up receipt-shell" style={{ width:'100%',maxWidth:420,borderRadius:'28px 28px 0 0',overflow:'hidden',boxShadow:'0 -24px 80px rgba(0,0,0,.5)' }}>
 
         {/* ════ Downloadable receipt paper ════ */}
         <div ref={ref} style={{ background:'#FFFFFF',fontFamily:'-apple-system,"SF Pro Display",BlinkMacSystemFont,sans-serif',overflow:'hidden' }}>
@@ -317,7 +333,7 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
             {/* Decorative geometry – large circle top-right */}
             <div style={{ position:'absolute',top:-70,right:-70,width:200,height:200,borderRadius:'50%',background:'rgba(255,255,255,.05)',pointerEvents:'none' }} />
             {/* Medium circle mid-left */}
-            <div style={{ position:'absolute',top:10,left:-40,width:120,height:120,borderRadius:'50%',background:'rgba(0,180,255,.06)',pointerEvents:'none' }} />
+            <div style={{ position:'absolute',top:10,left:-40,width:120,height:120,borderRadius:'50%',background:'rgba(0,180,255,.06)',pointerEvents:'none',animation:'softPulse 4.8s ease-in-out infinite' }} />
             {/* Small accent dot */}
             <div style={{ position:'absolute',top:22,right:22,width:50,height:50,borderRadius:'50%',background:'rgba(255,255,255,.04)',pointerEvents:'none' }} />
 
@@ -369,6 +385,13 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
                 <Row label="Network"   value={(data.network     as string) || '—'} />
                 <Row label="Data Plan" value={`${(data.dataSize as string)||'—'} · ${(data.validity as string)||'—'}`} />
                 <Row label="Recipient" value={(data.phoneNumber as string) || '—'} mono />
+              </>
+            ) : isTransfer ? (
+              <>
+                <Row label="Type" value={(data.productName || 'Wallet Transfer') as string} />
+                <Row label="Recipient" value={(data.userName || '—') as string} />
+                <Row label="Recipient Phone" value={(data.userPhone || '—') as string} mono />
+                <Row label="Narration" value={(data.deliveryAddress || 'Instant wallet transfer') as string} />
               </>
             ) : (
               <>
@@ -472,6 +495,7 @@ export default function AppPage() {
   // Transfer states
   const [transferPhone, setTransferPhone] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
+  const [transferNote, setTransferNote] = useState('');
   const [transferRecipient, setTransferRecipient] = useState<{name:string; phone:string}|null>(null);
   const [transferLoading, setTransferLoading] = useState(false);
 
@@ -893,14 +917,29 @@ export default function AppPage() {
       const res = await fetch('/api/user-transfer', {
         method: 'POST',
         headers: authHeader(),
-        body: JSON.stringify({ recipientPhone: transferRecipient.phone, amount, pin })
+        body: JSON.stringify({ recipientPhone: transferRecipient.phone, amount, pin, note: transferNote.trim() || undefined })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
       showToast(`✅ Sent ₦${amount.toLocaleString()} to ${transferRecipient.name}`);
-      setTransferPhone(''); setTransferAmount(''); setTransferRecipient(null);
-      setScreen('home'); refreshUser(); loadHomeData();
+      setReceipt({
+        type: 'transfer',
+        amount,
+        productName: 'Wallet Transfer',
+        userName: transferRecipient.name,
+        userPhone: transferRecipient.phone,
+        deliveryAddress: transferNote.trim() || 'Instant wallet transfer',
+        ref: `TRF-${Date.now()}`,
+        date: new Date().toISOString(),
+      });
+      setTransferPhone('');
+      setTransferAmount('');
+      setTransferNote('');
+      setTransferRecipient(null);
+      setScreen('transfer');
+      refreshUser();
+      loadHomeData();
       setPinAction(null); setShowPin(false);
     } catch(e:unknown) { 
       showError(e instanceof Error ? e.message : 'Transfer failed');
@@ -1218,7 +1257,7 @@ export default function AppPage() {
     <>
       <GlobalStyle dark={dark} />
       {showPin && <PinKeyboard onComplete={handlePinComplete} onClose={()=>setShowPin(false)} pinAction={pinAction} />}
-      {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} autoDownload={true} dark={dark} />}
+      {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} dark={dark} />}
       {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500,whiteSpace:'nowrap' }}>{toast}</div>}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
       {redeemOpen && (
@@ -1392,7 +1431,7 @@ export default function AppPage() {
                 const amountColor = isCredit ? GREEN : RED;
                 
                 return (
-                  <div key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt(tx.receipt as Record<string,unknown>); } }} style={{ display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom: i<Math.min(transactions.length,8)-1?'1px solid var(--border)':undefined,background:'none',cursor:'pointer',transition:'all .15s' }} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background='var(--bg-secondary)'}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background='none'}}>
+                  <div className="haptic-pulse stagger-card" key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt({ ...(tx.receipt as Record<string,unknown>), type: tx.type }); } }} style={{ display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom: i<Math.min(transactions.length,8)-1?'1px solid var(--border)':undefined,background:'none',cursor:'pointer',transition:'all .15s',animationDelay:`${i * 32}ms` }} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background='var(--bg-secondary)'}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background='none'}} onTouchStart={e=>{(e.currentTarget as HTMLElement).style.transform='scale(.988)';}} onTouchEnd={e=>{(e.currentTarget as HTMLElement).style.transform='scale(1)';}}>
                     {/* Icon */}
                     <div style={{ width:40,height:40,borderRadius:10,background:config.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
                       {config.icon}
@@ -1662,43 +1701,58 @@ export default function AppPage() {
   if (screen === 'transactions') return (
     <>
       <GlobalStyle dark={dark} />
-      {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} autoDownload={true} dark={dark} />}
-      <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
-        <div style={{ padding:'60px 20px 16px',borderBottom:'1px solid var(--border)' }}>
-          <h2 style={{ fontSize:26,fontWeight:800,color:'var(--text)',letterSpacing:-0.5 }}>Activity</h2>
-          <p style={{ color:'var(--text-secondary)',fontSize:14,marginTop:6 }}>Your transaction history</p>
+      {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} dark={dark} />}
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#05070D 0%,#090E1A 42%,#0A101B 100%)' : 'linear-gradient(180deg,#F6F8FC 0%,#EDF2FB 38%,#F4F6FA 100%)',display:'flex',flexDirection:'column' }}>
+        <div style={{ padding:'60px 20px 20px',borderBottom:`1px solid ${dark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)'}`,background:dark ? 'linear-gradient(180deg,rgba(0,113,227,.18),transparent)' : 'linear-gradient(180deg,rgba(0,113,227,.1),transparent)' }}>
+          <h2 style={{ fontSize:28,fontWeight:900,color:'var(--text)',letterSpacing:-0.7 }}>Activity</h2>
+          <p style={{ color:'var(--text-secondary)',fontSize:13,marginTop:6,letterSpacing:'0.02em' }}>Fintech timeline of your credits and debits</p>
         </div>
-        <div style={{ flex:1,overflowY:'auto',padding:'16px 16px 20px' }}>
+        <div style={{ flex:1,overflowY:'auto',padding:'16px 16px 24px' }}>
           {transactions.length === 0 ? (
-            <div style={{ textAlign:'center',padding:60 }}>
-              <div style={{ fontSize:48,marginBottom:16 }}>∿</div>
-              <p style={{ fontSize:16,fontWeight:700,color:'var(--text)' }}>No activity</p>
-              <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:8 }}>Your transactions will appear here</p>
+            <div style={{ textAlign:'center',padding:'64px 24px',background:'var(--card)',borderRadius:20,border:'1px solid var(--border)' }}>
+              <div style={{ width:76,height:76,borderRadius:22,margin:'0 auto 16px',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(140deg,rgba(0,113,227,.16),rgba(90,200,250,.12))',fontSize:34,color:BLUE }}>◎</div>
+              <p style={{ fontSize:17,fontWeight:800,color:'var(--text)' }}>No activity yet</p>
+              <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:8,lineHeight:1.6 }}>Your completed transactions will show here in a clean ledger format.</p>
             </div>
           ) : (
-            <div style={{ display:'grid',gap:10 }}>
-              {transactions.filter(tx => tx.status !== 'pending').map(tx => {
+            <div style={{ display:'grid',gap:12 }}>
+              {transactions.filter(tx => tx.status !== 'pending').map((tx, idx) => {
                 const isDeposit = tx.type === 'deposit';
                 const isCashbackTx = tx.type === 'cashback' || tx.type === 'cashback_redemption';
+                const isTransferIn = tx.type === 'transfer_in';
+                const isTransferOut = tx.type === 'transfer_out';
                 const isFailed = tx.status === 'failed';
-                const isCredit = isDeposit || isCashbackTx;
-                const color = isFailed ? RED : isCashbackTx ? ORANGE : isDeposit ? GREEN : RED;
-                const icon = isFailed ? Icons.alertCircle(RED, 20) : isCredit ? Icons.arrowUp(color, 20) : Icons.arrowDown(color, 20);
-                const bgColor = isFailed ? 'rgba(255,59,48,.08)' : isCashbackTx ? 'rgba(255,159,10,.08)' : isDeposit ? 'rgba(48,209,88,.08)' : 'rgba(255,59,48,.08)';
-                const sign = isCredit ? '+' : '-';
+                const isCredit = isDeposit || isCashbackTx || isTransferIn;
+                const signedColor = isFailed ? RED : isCredit ? GREEN : '#D9263A';
+                const amountSign = isCredit ? '+' : '−';
+                const amountValue = Number(tx.amount).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
+                const txLabel = isTransferIn ? 'Transfer In' : isTransferOut ? 'Transfer Out' : isCashbackTx ? 'Cashback' : isDeposit ? 'Deposit' : 'Purchase';
+
                 return (
-                  <button key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt(tx.receipt as Record<string,unknown>); } }}
-                    style={{ background:'var(--card)',borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,border:'1px solid var(--border)',width:'100%',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
-                    onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)';e.currentTarget.style.transform='translateY(-1px)'}}
-                    onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.04)';e.currentTarget.style.transform='translateY(0)'}}>
-                    <IconBox icon={icon} bg={bgColor} />
-                    <div style={{ flex:1,textAlign:'left' }}>
-                      <p style={{ fontWeight:600,fontSize:14,color:'var(--text)' }}>{tx.description}</p>
-                      <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:3 }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</p>
+                  <button className="ledger-card stagger-card haptic-pulse" key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt({ ...(tx.receipt as Record<string,unknown>), type: tx.type }); } }}
+                    style={{ width:'100%',background:'var(--card)',borderRadius:18,padding:'14px 14px',display:'flex',alignItems:'center',gap:12,border:'1px solid var(--border)',boxShadow:dark ? '0 10px 22px rgba(0,0,0,.26)' : '0 10px 22px rgba(12,28,54,.08)',cursor:'pointer',animationDelay:`${Math.min(idx, 9) * 34}ms` }}
+                    onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow=dark ? '0 14px 28px rgba(0,0,0,.32)' : '0 16px 28px rgba(12,28,54,.14)';}}
+                    onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow=dark ? '0 10px 22px rgba(0,0,0,.26)' : '0 10px 22px rgba(12,28,54,.08)';}}
+                    onMouseDown={e=>{e.currentTarget.style.transform='scale(.985)'}}
+                    onMouseUp={e=>{e.currentTarget.style.transform='translateY(-2px)'}}
+                    onTouchStart={e=>{e.currentTarget.style.transform='scale(.985)';}}
+                    onTouchEnd={e=>{e.currentTarget.style.transform='translateY(0)';}}>
+
+                    <div style={{ width:42,height:42,borderRadius:13,display:'flex',alignItems:'center',justifyContent:'center',background:isCredit ? 'linear-gradient(145deg,rgba(48,209,88,.22),rgba(48,209,88,.1))' : 'linear-gradient(145deg,rgba(255,59,48,.2),rgba(255,59,48,.09))',border:`1px solid ${isCredit ? 'rgba(48,209,88,.4)' : 'rgba(255,59,48,.35)'}`,fontWeight:900,fontSize:20,color:isCredit ? GREEN : RED,flexShrink:0 }}>
+                      {isCredit ? '+' : '−'}
                     </div>
+
+                    <div style={{ flex:1,minWidth:0,textAlign:'left' }}>
+                      <p style={{ fontWeight:700,fontSize:14,color:'var(--text)',margin:0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{tx.description || txLabel}</p>
+                      <p style={{ fontSize:12,color:'var(--text-secondary)',margin:'4px 0 0' }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'medium',timeStyle:'short'})}</p>
+                    </div>
+
                     <div style={{ textAlign:'right',flexShrink:0 }}>
-                      <p style={{ fontWeight:700,fontSize:15,color }}>{sign}₦{Number(tx.amount).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
-                      <div style={{ fontSize:11,fontWeight:700,color,marginTop:2,textTransform:'uppercase' }}>{isFailed ? '✕ Failed' : '✓ Success'}</div>
+                      <p style={{ fontWeight:900,fontSize:15,color:signedColor,margin:0,letterSpacing:'-0.01em' }}>{amountSign}₦{amountValue}</p>
+                      <span style={{ display:'inline-flex',alignItems:'center',gap:5,marginTop:4,padding:'3px 8px',borderRadius:999,fontSize:10,fontWeight:800,textTransform:'uppercase',letterSpacing:'0.04em',color:isFailed ? RED : GREEN,background:isFailed ? 'rgba(255,59,48,.13)' : 'rgba(48,209,88,.12)' }}>
+                        <span style={{ width:5,height:5,borderRadius:'50%',background:isFailed ? RED : GREEN }} />
+                        {isFailed ? 'Failed' : 'Completed'}
+                      </span>
                     </div>
                   </button>
                 );
@@ -1939,95 +1993,111 @@ export default function AppPage() {
   if (screen === 'transfer') return (
     <>
       <GlobalStyle dark={dark} />
+      {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} dark={dark} />}
       {showPin && <PinKeyboard title="Confirm with PIN" onComplete={handleTransfer} onClose={()=>setShowPin(false)} />}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
       {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500 }}>{toast}</div>}
-      <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
-        <div style={{ padding:'60px 20px 20px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
-          <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
-          <h2 style={{ fontSize:18,fontWeight:800,color:'var(--text)' }}>Send Money</h2>
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#040810 0%,#071322 100%)' : 'linear-gradient(180deg,#F3F8FF 0%,#EFF4FB 100%)',display:'flex',flexDirection:'column' }}>
+        <div style={{ padding:'60px 20px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:`1px solid ${dark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)'}` }}>
+          <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+          <h2 style={{ fontSize:21,fontWeight:900,color:'var(--text)',letterSpacing:-0.4 }}>Send Money</h2>
         </div>
 
-        <div style={{ padding:'24px',flex:1,overflowY:'auto' }}>
-          {/* Balance Info */}
-          <div style={{ background:'linear-gradient(135deg, #0071E3, #5AC8FA)',borderRadius:16,padding:'20px',marginBottom:28,color:'#fff',boxShadow:'0 8px 20px rgba(0,113,227,.2)' }}>
-            <p style={{ fontSize:13,fontWeight:600,opacity:0.9,marginBottom:6 }}>Available Balance</p>
-            <p style={{ fontSize:28,fontWeight:800 }}>₦{(user?.walletBalance || 0).toLocaleString('en-NG', {minimumFractionDigits:2})}</p>
+        <div style={{ padding:'20px 16px 30px',flex:1,overflowY:'auto' }}>
+          <div style={{ background:'linear-gradient(145deg,#011F5B 0%, #0047CC 65%, #0071E3 100%)',borderRadius:22,padding:'18px 18px 20px',marginBottom:16,color:'#fff',boxShadow:'0 20px 42px rgba(0,71,204,.32)',position:'relative',overflow:'hidden' }}>
+            <div style={{ position:'absolute',right:-40,top:-50,width:160,height:160,borderRadius:'50%',background:'rgba(255,255,255,.08)',animation:'softPulse 5.2s ease-in-out infinite' }} />
+            <p style={{ fontSize:11,fontWeight:700,opacity:.72,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8 }}>Available Balance</p>
+            <p style={{ fontSize:30,fontWeight:900,letterSpacing:-1 }}>₦{(user?.walletBalance || 0).toLocaleString('en-NG', {minimumFractionDigits:2})}</p>
           </div>
 
-          {/* Recipient Lookup */}
-          <div style={{ marginBottom:24 }}>
-            <label style={{ fontSize:14,fontWeight:600,color:'var(--text-secondary)',marginBottom:8,display:'block' }}>Recipient Phone</label>
+          <div className="fade-up-scale" style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:16,boxShadow:dark ? '0 12px 24px rgba(0,0,0,.24)' : '0 12px 24px rgba(10,35,85,.08)',marginBottom:14 }}>
+            <p style={{ fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:10,letterSpacing:'0.06em',textTransform:'uppercase' }}>Step 1 · Find Recipient</p>
             <div style={{ display:'flex',gap:10 }}>
-              <input 
+              <input
                 value={transferPhone}
                 onChange={e=>{ setTransferPhone(e.target.value.replace(/\D/g,'').slice(0,11)); setTransferRecipient(null); }}
-                placeholder="e.g., 08012345678"
+                placeholder="08012345678"
                 inputMode="numeric"
-                style={{ flex:1,padding:'14px 16px',borderRadius:12,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:15 }}
+                style={{ flex:1,padding:'14px 14px',borderRadius:12,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:15,fontWeight:600,transition:'all .2s' }}
+                onFocus={e=>{e.currentTarget.style.borderColor=BLUE;e.currentTarget.style.boxShadow='0 0 0 3px rgba(0,113,227,.14)';}}
+                onBlur={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.boxShadow='none';}}
               />
-              <button 
+              <button
+                className="tactile-btn"
                 onClick={()=>lookupTransferRecipient(transferPhone)}
                 disabled={transferPhone.length !== 11 || transferLoading}
-                style={{ padding:'14px 20px',borderRadius:12,background:transferPhone.length===11&&!transferLoading?BLUE:'var(--bg-secondary)',color:transferPhone.length===11&&!transferLoading?'#fff':'var(--text-secondary)',fontSize:15,fontWeight:600,border:'1px solid var(--border)',cursor:transferPhone.length===11&&!transferLoading?'pointer':'not-allowed' }}>
-                {transferLoading ? '...' : 'Find'}
+                style={{ padding:'0 16px',borderRadius:12,background:transferPhone.length===11&&!transferLoading ? 'linear-gradient(135deg,#0047CC,#0071E3)' : 'var(--bg-secondary)',color:transferPhone.length===11&&!transferLoading ? '#fff' : 'var(--text-secondary)',fontSize:14,fontWeight:800,border:'1px solid var(--border)',cursor:transferPhone.length===11&&!transferLoading?'pointer':'not-allowed',minWidth:92 }}>
+                {transferLoading ? 'Finding...' : 'Find'}
               </button>
             </div>
           </div>
 
-          {/* Recipient Info */}
           {transferRecipient && (
-            <div style={{ background:'var(--card)',border:`2px solid ${GREEN}`,borderRadius:16,padding:'16px',marginBottom:24 }}>
-              <p style={{ fontSize:13,fontWeight:600,color:'var(--text-secondary)',marginBottom:4 }}>Sending to</p>
-              <p style={{ fontSize:18,fontWeight:700,color:'var(--text)' }}>{transferRecipient.name}</p>
+            <div style={{ background:'linear-gradient(145deg,rgba(48,209,88,.15),rgba(48,209,88,.06))',border:'1px solid rgba(48,209,88,.35)',borderRadius:18,padding:16,marginBottom:14 }}>
+              <p style={{ fontSize:11,fontWeight:800,color:GREEN,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8 }}>Verified Recipient</p>
+              <p style={{ fontSize:18,fontWeight:800,color:'var(--text)' }}>{transferRecipient.name}</p>
               <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:4 }}>{transferRecipient.phone}</p>
             </div>
           )}
 
-          {/* Amount Input */}
           {transferRecipient && (
-            <div style={{ marginBottom:20 }}>
-              <label style={{ fontSize:14,fontWeight:600,color:'var(--text-secondary)',marginBottom:8,display:'block' }}>Amount (₦)</label>
-              <input 
+            <div className="fade-up-scale" style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:16,boxShadow:dark ? '0 12px 24px rgba(0,0,0,.24)' : '0 12px 24px rgba(10,35,85,.08)',marginBottom:14 }}>
+              <p style={{ fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:10,letterSpacing:'0.06em',textTransform:'uppercase' }}>Step 2 · Amount & Narration</p>
+              <input
                 value={transferAmount}
                 onChange={e=>setTransferAmount(e.target.value.replace(/\D/g,''))}
-                placeholder="Enter amount"
+                placeholder="Amount in naira"
                 inputMode="numeric"
-                style={{ width:'100%',padding:'14px 16px',borderRadius:12,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:15 }}
+                style={{ width:'100%',padding:'14px 14px',borderRadius:12,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:15,fontWeight:700,marginBottom:10,transition:'all .2s' }}
+                onFocus={e=>{e.currentTarget.style.borderColor=BLUE;e.currentTarget.style.boxShadow='0 0 0 3px rgba(0,113,227,.14)';}}
+                onBlur={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.boxShadow='none';}}
               />
-              {transferAmount && (
-                <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:8 }}>You have ₦{(user?.walletBalance || 0).toLocaleString('en-NG',{minimumFractionDigits:2})}</p>
-              )}
+              <input
+                value={transferNote}
+                onChange={e=>setTransferNote(e.target.value.slice(0,50))}
+                placeholder="Narration (optional)"
+                style={{ width:'100%',padding:'13px 14px',borderRadius:12,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:14,transition:'all .2s' }}
+                onFocus={e=>{e.currentTarget.style.borderColor=BLUE;e.currentTarget.style.boxShadow='0 0 0 3px rgba(0,113,227,.14)';}}
+                onBlur={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.boxShadow='none';}}
+              />
+              <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:8 }}>Balance: ₦{(user?.walletBalance || 0).toLocaleString('en-NG',{minimumFractionDigits:2})}</p>
             </div>
           )}
 
-          {/* Confirm Button */}
           {transferRecipient && transferAmount && (
-            <div style={{ background:'var(--card)',borderRadius:16,padding:'16px',marginBottom:24,border:'1px solid var(--border)' }}>
-              <div style={{ display:'flex',justifyContent:'space-between',marginBottom:12 }}>
-                <span style={{ color:'var(--text-secondary)',fontSize:14 }}>Amount</span>
-                <span style={{ color:'var(--text)',fontWeight:700,fontSize:14 }}>₦{parseFloat(transferAmount || '0').toLocaleString('en-NG',{minimumFractionDigits:2})}</span>
+            <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:16,marginBottom:16 }}>
+              <p style={{ fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:10,letterSpacing:'0.06em',textTransform:'uppercase' }}>Step 3 · Confirm Transfer</p>
+              <div style={{ display:'flex',justifyContent:'space-between',marginBottom:10 }}>
+                <span style={{ color:'var(--text-secondary)',fontSize:13 }}>Recipient</span>
+                <span style={{ color:'var(--text)',fontWeight:700,fontSize:13 }}>{transferRecipient.name}</span>
               </div>
+              <div style={{ display:'flex',justifyContent:'space-between',marginBottom:10 }}>
+                <span style={{ color:'var(--text-secondary)',fontSize:13 }}>Amount</span>
+                <span style={{ color:'var(--text)',fontWeight:800,fontSize:14 }}>₦{parseFloat(transferAmount || '0').toLocaleString('en-NG',{minimumFractionDigits:2})}</span>
+              </div>
+              <div style={{ display:'flex',justifyContent:'space-between',marginBottom:10 }}>
+                <span style={{ color:'var(--text-secondary)',fontSize:13 }}>Fee</span>
+                <span style={{ color:GREEN,fontWeight:700,fontSize:13 }}>₦0.00</span>
+              </div>
+              <div style={{ height:1,background:'var(--border)',margin:'8px 0 10px' }} />
               <div style={{ display:'flex',justifyContent:'space-between' }}>
-                <span style={{ color:'var(--text-secondary)',fontSize:14 }}>To</span>
-                <span style={{ color:'var(--text)',fontWeight:700,fontSize:14 }}>{transferRecipient.name}</span>
+                <span style={{ color:'var(--text-secondary)',fontSize:13 }}>Total Debit</span>
+                <span style={{ color:'var(--text)',fontWeight:900,fontSize:15 }}>₦{parseFloat(transferAmount || '0').toLocaleString('en-NG',{minimumFractionDigits:2})}</span>
               </div>
             </div>
           )}
 
-          {transferRecipient && transferAmount && (
-            <button 
+          {transferRecipient && transferAmount ? (
+            <button className="tactile-btn"
               onClick={()=>{ setPinAction('transfer'); setShowPin(true); }}
-              style={{ width:'100%',padding:'16px',borderRadius:12,background:BLUE,color:'#fff',fontSize:16,fontWeight:700,border:'none',cursor:'pointer',marginBottom:12 }}>
-              Confirm & Continue
+              style={{ width:'100%',padding:'16px',borderRadius:14,background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:16,fontWeight:800,border:'none',cursor:'pointer',boxShadow:'0 12px 26px rgba(0,113,227,.36)' }}>
+              Continue to PIN Confirmation
             </button>
-          )}
-
-          {!transferRecipient && (
-            <div style={{ textAlign:'center',padding:'40px 20px',color:'var(--text-secondary)' }}>
-              <div style={{ fontSize:36,marginBottom:12 }}>💳</div>
-              <p style={{ fontSize:15,fontWeight:600,color:'var(--text)' }}>Send Money to Friends</p>
-              <p style={{ fontSize:13,marginTop:8 }}>Enter a recipient's phone number to get started</p>
+          ) : (
+            <div style={{ textAlign:'center',padding:'36px 18px',color:'var(--text-secondary)' }}>
+              <div style={{ width:70,height:70,borderRadius:18,margin:'0 auto 12px',background:'linear-gradient(145deg,rgba(0,113,227,.2),rgba(90,200,250,.08))',display:'flex',alignItems:'center',justifyContent:'center',fontSize:30,color:BLUE }}>⇄</div>
+              <p style={{ fontSize:15,fontWeight:700,color:'var(--text)' }}>Transfer in 3 secure steps</p>
+              <p style={{ fontSize:12,marginTop:8,lineHeight:1.6 }}>Find recipient, enter amount, then authorize with your PIN.</p>
             </div>
           )}
         </div>
