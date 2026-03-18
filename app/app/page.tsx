@@ -361,7 +361,7 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
               <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'center',gap:4,lineHeight:1 }}>
                 <span style={{ fontSize:22,fontWeight:800,color:'rgba(255,255,255,.55)',marginTop:8 }}>₦</span>
                 <span style={{ fontSize:56,fontWeight:900,color:'#FFFFFF',letterSpacing:-2.5 }}>
-                  {amount.toLocaleString('en-NG',{maximumFractionDigits:0})}
+                  {amount.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}
                 </span>
               </div>
               {/* Ref pill */}
@@ -390,14 +390,14 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
               <>
                 <Row label="Type" value={(data.productName || 'Wallet Transfer') as string} />
                 <Row label="Recipient" value={(data.userName || '—') as string} />
-                <Row label="Recipient Phone" value={(data.userPhone || '—') as string} mono />
+                <Row label="Recipient Email" value={(data.userEmail || '—') as string} mono />
                 <Row label="Narration" value={(data.deliveryAddress || 'Instant wallet transfer') as string} />
               </>
             ) : (
               <>
                 <Row label="Item"      value={(data.productName || data.itemName || '—') as string} />
                 <Row label="Customer"  value={(data.userName  || '—') as string} />
-                <Row label="Contact"   value={(data.userPhone || '—') as string} mono />
+                <Row label="Email"     value={(data.userEmail || '—') as string} mono />
                 {data.deliveryAddress && <Row label="Delivery" value={data.deliveryAddress as string} />}
               </>
             )}
@@ -922,13 +922,13 @@ export default function AppPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      showToast(`✅ Sent ₦${amount.toLocaleString()} to ${transferRecipient.name}`);
+      showToast(`✅ Sent ₦${amount.toLocaleString('en-NG',{minimumFractionDigits:2})} to ${transferRecipient.name}`);
       setReceipt({
         type: 'transfer',
         amount,
         productName: 'Wallet Transfer',
         userName: transferRecipient.name,
-        userPhone: transferRecipient.phone,
+        userEmail: transferRecipient.email || transferRecipient.phone,
         deliveryAddress: transferNote.trim() || 'Instant wallet transfer',
         ref: `TRF-${Date.now()}`,
         date: new Date().toISOString(),
@@ -1427,11 +1427,11 @@ export default function AppPage() {
                 const config = typeConfig[tx.type] || typeConfig.deposit;
                 const amount = Number(tx.amount);
                 const isCredit = isDeposit || isCashback || isTransferIn;
-                const displayAmount = `${isCredit ? '+' : '−'}₦${amount.toLocaleString('en-NG',{maximumFractionDigits:0})}`;
+                const displayAmount = `${isCredit ? '+' : '−'}₦${amount.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
                 const amountColor = isCredit ? GREEN : RED;
                 
                 return (
-                  <div className="haptic-pulse stagger-card" key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt({ ...(tx.receipt as Record<string,unknown>), type: tx.type }); } }} style={{ display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom: i<Math.min(transactions.length,8)-1?'1px solid var(--border)':undefined,background:'none',cursor:'pointer',transition:'all .15s',animationDelay:`${i * 32}ms` }} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background='var(--bg-secondary)'}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background='none'}} onTouchStart={e=>{(e.currentTarget as HTMLElement).style.transform='scale(.988)';}} onTouchEnd={e=>{(e.currentTarget as HTMLElement).style.transform='scale(1)';}}>
+                  <button className="haptic-pulse stagger-card" key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt({ ...(tx.receipt as Record<string,unknown>), type: tx.type }); } }} style={{ width:'100%',display:'flex',alignItems:'center',gap:12,padding:'16px 16px',borderBottom: i<Math.min(transactions.length,8)-1?'1px solid rgba(0,0,0,.06)':undefined,background:'transparent',cursor:'pointer',transition:'all .2s cubic-bezier(.16,.1,0,1)',animationDelay:`${i * 32}ms`,border:'none',fontFamily:'inherit',textAlign:'left' }} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background='var(--bg-secondary)'}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background='transparent'}} onTouchStart={e=>{(e.currentTarget as HTMLElement).style.transform='scale(.992)';}} onTouchEnd={e=>{(e.currentTarget as HTMLElement).style.transform='scale(1)';}}>
                     {/* Icon */}
                     <div style={{ width:40,height:40,borderRadius:10,background:config.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
                       {config.icon}
@@ -1439,20 +1439,16 @@ export default function AppPage() {
                     
                     {/* Details */}
                     <div style={{ flex:1,minWidth:0 }}>
-                      <p style={{ fontWeight:600,fontSize:13,color:'var(--text)',margin:0 }}>{tx.description || config.label}</p>
-                      <p style={{ fontSize:11,color:'var(--text-secondary)',margin:'4px 0 0' }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</p>
+                      <p style={{ fontWeight:700,fontSize:14,color:'var(--text)',margin:0,lineHeight:1.3 }}>{tx.description || config.label}</p>
+                      <p style={{ fontSize:12,color:'var(--text-secondary)',margin:'6px 0 0',letterSpacing:'0.02em' }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</p>
                     </div>
                     
                     {/* Amount & Status */}
-                    <div style={{ textAlign:'right',flexShrink:0 }}>
-                      <p style={{ fontWeight:700,fontSize:14,color:amountColor,margin:0 }}>{displayAmount}</p>
-                      <div style={{ marginTop:3 }}>
-                        <span style={{ display:'inline-block',padding:'3px 8px',borderRadius:6,fontSize:10,fontWeight:600,color:tx.status === 'success' ? GREEN : tx.status === 'pending' ? ORANGE : RED,background:tx.status === 'success' ? 'rgba(48,209,88,.12)' : tx.status === 'pending' ? 'rgba(255,159,10,.12)' : 'rgba(255,59,48,.12)' }}>
-                          {tx.status === 'success' ? '✓' : tx.status === 'pending' ? '⋯' : '✕'} {tx.status}
-                        </span>
-                      </div>
+                    <div style={{ textAlign:'right',flexShrink:0,display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6 }}>
+                      <p style={{ fontWeight:800,fontSize:15,color:amountColor,margin:0,letterSpacing:'-0.01em' }}>{displayAmount}</p>
+                      <span style={{ display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:8,fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.03em',color:tx.status === 'success' ? GREEN : tx.status === 'pending' ? ORANGE : RED,background:tx.status === 'success' ? 'rgba(48,209,88,.13)' : tx.status === 'pending' ? 'rgba(255,159,10,.13)' : 'rgba(255,59,48,.13)' }}><span style={{ width:4,height:4,borderRadius:'50%',background:'currentColor' }} />{tx.status === 'success' ? 'Completed' : tx.status === 'pending' ? 'Pending' : 'Failed'}</span>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -2033,10 +2029,10 @@ export default function AppPage() {
           </div>
 
           {transferRecipient && (
-            <div style={{ background:'linear-gradient(145deg,rgba(48,209,88,.15),rgba(48,209,88,.06))',border:'1px solid rgba(48,209,88,.35)',borderRadius:18,padding:16,marginBottom:14 }}>
-              <p style={{ fontSize:11,fontWeight:800,color:GREEN,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8 }}>Verified Recipient</p>
-              <p style={{ fontSize:18,fontWeight:800,color:'var(--text)' }}>{transferRecipient.name}</p>
-              <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:4 }}>{transferRecipient.phone}</p>
+            <div style={{ background:'linear-gradient(145deg,rgba(48,209,88,.15),rgba(48,209,88,.06))',border:'1.5px solid rgba(48,209,88,.35)',borderRadius:18,padding:16,marginBottom:14,backdropFilter:'blur(10px)',animation:'slideUp .3s cubic-bezier(.34,.1,.68,.55)' }}>
+              <p style={{ fontSize:11,fontWeight:800,color:GREEN,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8 }}>✓ Verified Recipient</p>
+              <p style={{ fontSize:19,fontWeight:900,color:'var(--text)',marginBottom:4 }}>{transferRecipient.name}</p>
+              <p style={{ fontSize:13,color:'var(--text-secondary)',fontWeight:500,letterSpacing:'0.02em' }}>{transferRecipient.phone}</p>
             </div>
           )}
 
@@ -2065,24 +2061,23 @@ export default function AppPage() {
           )}
 
           {transferRecipient && transferAmount && (
-            <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:16,marginBottom:16 }}>
-              <p style={{ fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:10,letterSpacing:'0.06em',textTransform:'uppercase' }}>Step 3 · Confirm Transfer</p>
-              <div style={{ display:'flex',justifyContent:'space-between',marginBottom:10 }}>
-                <span style={{ color:'var(--text-secondary)',fontSize:13 }}>Recipient</span>
-                <span style={{ color:'var(--text)',fontWeight:700,fontSize:13 }}>{transferRecipient.name}</span>
+            <div style={{ background:'linear-gradient(145deg,rgba(0,113,227,.08),rgba(0,113,227,.02))',border:'1px solid rgba(0,113,227,.2)',borderRadius:20,padding:16,marginBottom:16,backdropFilter:'blur(10px)',animation:'slideUp .3s cubic-bezier(.34,.1,.68,.55)' }}>
+              <p style={{ fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:14,letterSpacing:'0.06em',textTransform:'uppercase' }}>Step 3 · Confirm Transfer</p>
+              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,paddingBottom:12,borderBottom:'1px solid rgba(0,113,227,.2)' }}>
+                <span style={{ color:'var(--text-secondary)',fontSize:13,fontWeight:600,letterSpacing:'0.02em' }}>Recipient</span>
+                <span style={{ color:'var(--text)',fontWeight:800,fontSize:14 }}>{transferRecipient.name}</span>
               </div>
-              <div style={{ display:'flex',justifyContent:'space-between',marginBottom:10 }}>
-                <span style={{ color:'var(--text-secondary)',fontSize:13 }}>Amount</span>
-                <span style={{ color:'var(--text)',fontWeight:800,fontSize:14 }}>₦{parseFloat(transferAmount || '0').toLocaleString('en-NG',{minimumFractionDigits:2})}</span>
+              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,paddingBottom:12,borderBottom:'1px solid rgba(0,113,227,.2)' }}>
+                <span style={{ color:'var(--text-secondary)',fontSize:13,fontWeight:600,letterSpacing:'0.02em' }}>Amount</span>
+                <span style={{ color:BLUE,fontWeight:900,fontSize:15 }}>₦{parseFloat(transferAmount || '0').toLocaleString('en-NG',{minimumFractionDigits:2})}</span>
               </div>
-              <div style={{ display:'flex',justifyContent:'space-between',marginBottom:10 }}>
-                <span style={{ color:'var(--text-secondary)',fontSize:13 }}>Fee</span>
-                <span style={{ color:GREEN,fontWeight:700,fontSize:13 }}>₦0.00</span>
+              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,paddingBottom:12,borderBottom:'1px solid rgba(0,113,227,.2)' }}>
+                <span style={{ color:'var(--text-secondary)',fontSize:13,fontWeight:600,letterSpacing:'0.02em' }}>Fee</span>
+                <span style={{ color:GREEN,fontWeight:800,fontSize:13 }}>₦0.00</span>
               </div>
-              <div style={{ height:1,background:'var(--border)',margin:'8px 0 10px' }} />
-              <div style={{ display:'flex',justifyContent:'space-between' }}>
-                <span style={{ color:'var(--text-secondary)',fontSize:13 }}>Total Debit</span>
-                <span style={{ color:'var(--text)',fontWeight:900,fontSize:15 }}>₦{parseFloat(transferAmount || '0').toLocaleString('en-NG',{minimumFractionDigits:2})}</span>
+              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:4 }}>
+                <span style={{ color:'var(--text-secondary)',fontSize:13,fontWeight:600,letterSpacing:'0.02em' }}>Total Debit</span>
+                <span style={{ color:BLUE,fontWeight:900,fontSize:16,letterSpacing:'-0.01em' }}>₦{parseFloat(transferAmount || '0').toLocaleString('en-NG',{minimumFractionDigits:2})}</span>
               </div>
             </div>
           )}
