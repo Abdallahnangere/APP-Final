@@ -176,8 +176,10 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', su
   };
 
   return (
-    <div style={{ position:'fixed',top:0,right:0,bottom:0,left:0,zIndex:200,background:'rgba(0,0,0,.4)',display:'flex',alignItems:'flex-end',backdropFilter:'blur(8px)' }} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} className="slide-up" style={{ width:'100%',background:'var(--card)',borderRadius:'28px 28px 0 0',padding:'24px 20px 32px',position:'relative' }}>
+    <div style={{ position:'fixed',top:0,right:0,bottom:0,left:0,zIndex:200,background:'rgba(0,8,20,.54)',display:'flex',alignItems:'flex-end',backdropFilter:'blur(12px)' }} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} className="slide-up" style={{ width:'100%',background:'var(--card)',borderRadius:'30px 30px 0 0',padding:'24px 20px 32px',position:'relative',boxShadow:'0 -24px 60px rgba(0,0,0,.28)',overflow:'hidden' }}>
+        <div style={{ position:'absolute',right:-40,top:-46,width:150,height:150,borderRadius:'50%',background:'rgba(0,113,227,.07)',pointerEvents:'none' }} />
+        <div style={{ position:'absolute',left:-34,top:40,width:110,height:110,borderRadius:'50%',background:'rgba(90,200,250,.06)',pointerEvents:'none' }} />
         {/* Hidden input for keyboard management */}
         <input 
           ref={inputRef}
@@ -193,18 +195,21 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', su
           }}
         />
         
-        <p style={{ textAlign:'center',fontWeight:700,fontSize:18,color:'var(--text)',marginBottom:6 }}>{title}</p>
-        {subtitle && <p style={{ textAlign:'center',fontSize:14,color:'var(--text-secondary)',marginBottom:24 }}>{subtitle}</p>}
+        <div style={{ position:'relative',zIndex:1 }}>
+          <div style={{ width:48,height:5,borderRadius:999,background:'var(--border)',margin:'0 auto 18px' }} />
+          <p style={{ textAlign:'center',fontWeight:800,fontSize:20,color:'var(--text)',marginBottom:6,letterSpacing:'-0.02em' }}>{title}</p>
+          {subtitle && <p style={{ textAlign:'center',fontSize:14,color:'var(--text-secondary)',marginBottom:24,lineHeight:1.6,maxWidth:320,marginLeft:'auto',marginRight:'auto' }}>{subtitle}</p>}
+        </div>
         
         {/* PIN dots */}
-        <div style={{ display:'flex',gap:14,justifyContent:'center',marginBottom:24 }}>
+        <div style={{ display:'flex',gap:14,justifyContent:'center',marginBottom:24,position:'relative',zIndex:1 }}>
           {[0,1,2,3].map(i => (
-            <div key={i} style={{ width:14,height:14,borderRadius:7,background: i<pin.length ? BLUE : 'var(--border)',transition:'all .12s cubic-bezier(.34,.1,.68,.55)',transform: i<pin.length ? 'scale(1.15)' : 'scale(1)' }} />
+            <div key={i} style={{ width:16,height:16,borderRadius:8,background: i<pin.length ? 'linear-gradient(135deg,#0047CC,#0071E3)' : 'var(--border)',boxShadow:i<pin.length ? '0 0 0 5px rgba(0,113,227,.12)' : 'none',transition:'all .12s cubic-bezier(.34,.1,.68,.55)',transform: i<pin.length ? 'scale(1.08)' : 'scale(1)' }} />
           ))}
         </div>
         
         {/* Keypad */}
-        <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,maxWidth:300,margin:'0 auto 16px' }}>
+        <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,maxWidth:300,margin:'0 auto 16px',position:'relative',zIndex:1 }}>
           {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((k,i) => {
             const isEmpty = k === '';
             const isBackspace = k === '⌫';
@@ -237,11 +242,12 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', su
                 style={{
                   height: 64,
                   borderRadius: 16,
-                  background: isEmpty ? 'transparent' : 'var(--card2)',
+                  background: isEmpty ? 'transparent' : 'linear-gradient(180deg,var(--card2),var(--bg-secondary))',
                   fontSize: isBackspace ? 22 : 26,
                   fontWeight: 700,
                   color: 'var(--text)',
                   border: `1px solid ${isEmpty ? 'transparent' : 'var(--border-subtle)'}`,
+                  boxShadow: isEmpty ? 'none' : '0 8px 18px rgba(0,0,0,.06)',
                   transition: 'all .08s',
                   opacity: isEmpty ? 0 : 1,
                   cursor: isEmpty ? 'default' : 'pointer',
@@ -251,9 +257,9 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', su
                 }}
               >
                 {k}
-              </button>
+              <button 
             );
-          })}
+                style={{ width:'100%',padding:'14px',background:'var(--bg-secondary)',color:'var(--text-secondary)',borderRadius:14,fontWeight:700,fontSize:15,border:'1px solid var(--border)',cursor:'pointer',position:'relative',zIndex:1 }}
         </div>
         
         <button 
@@ -1182,36 +1188,32 @@ export default function AppPage() {
   /* ─── MAIN HOME ─── */
   if (!user) return null;
   const getInitials = (u: User) => `${u.firstName[0]}${u.lastName[0]}`.toUpperCase();
-  const displayName = user.firstName.trim() || user.lastName.trim() || 'There';
+  const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Valued Customer';
 
   const Header = () => (
-    <div style={{ padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--bg)',borderBottom:'1px solid var(--border)',position:'fixed',top:0,left:0,right:0,zIndex:100,backdropFilter:'blur(10px)',backgroundImage: dark ? 'radial-gradient(ellipse at 50% 100%, rgba(0,113,227,0.05) 0%, transparent 80%)' : 'none' }}>
+    <div style={{ padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(255,255,255,.78)',borderBottom:'1px solid var(--border)',position:'fixed',top:0,left:0,right:0,zIndex:100,backdropFilter:'blur(16px)',backgroundImage: dark ? 'linear-gradient(180deg,rgba(4,8,16,.92),rgba(4,8,16,.78))' : 'linear-gradient(180deg,rgba(255,255,255,.84),rgba(255,255,255,.76))' }}>
       <div style={{ display:'flex',alignItems:'center',gap:12,minWidth:0 }}>
         <img src="/images/logo-sm.png" alt="SaukiMart" style={{ height:36,width:'auto',borderRadius:8,flexShrink:0 }} />
-        <div style={{ display:'flex',flexDirection:'column',minWidth:0,lineHeight:1 }}>
-          <span style={{ fontSize:10,fontWeight:800,letterSpacing:'0.28em',color:'var(--text-secondary)',textTransform:'uppercase',marginBottom:4 }}>
-            HI
+        <div style={{ display:'flex',flexDirection:'column',minWidth:0 }}>
+          <span style={{ fontSize:10,fontWeight:800,letterSpacing:'0.22em',color:'var(--text-secondary)',textTransform:'uppercase',marginBottom:4 }}>
+            Primary Account
           </span>
           <span
             style={{
-              fontSize:26,
-              fontWeight:700,
-              fontFamily:'"Segoe Script", "Brush Script MT", "Apple Chancery", "Snell Roundhand", cursive',
-              color:'transparent',
-              backgroundImage: dark
-                ? 'linear-gradient(135deg, #F5F5F7 0%, #8ED6FF 48%, #5AC8FA 100%)'
-                : 'linear-gradient(135deg, #0F172A 0%, #0071E3 55%, #0EA5E9 100%)',
-              WebkitBackgroundClip:'text',
-              backgroundClip:'text',
-              textShadow: dark ? '0 10px 24px rgba(0,113,227,.18)' : '0 10px 24px rgba(0,113,227,.12)',
+              fontSize:18,
+              fontWeight:800,
+              fontFamily:'-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,sans-serif',
+              color:'var(--text)',
               whiteSpace:'nowrap',
               overflow:'hidden',
               textOverflow:'ellipsis',
-              maxWidth:'34vw'
+              maxWidth:'42vw',
+              letterSpacing:'-0.02em'
             }}
           >
             {displayName}
           </span>
+          <span style={{ fontSize:11,color:'var(--text-secondary)',marginTop:3,fontWeight:600 }}>SaukiMart Wallet Dashboard</span>
         </div>
       </div>
       <div style={{ display:'flex',alignItems:'center',gap:10 }}>
@@ -1465,22 +1467,36 @@ export default function AppPage() {
   if (screen === 'data-networks') return (
     <>
       <GlobalStyle dark={dark} />
-      <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
-        <div style={{ padding:'60px 20px 20px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
-          <button onClick={()=>setScreen('home')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
-          <h2 style={{ fontSize:26,fontWeight:800,color:'var(--text)',letterSpacing:-0.5 }}>Select Network</h2>
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#050A13 0%,#08101B 100%)' : 'linear-gradient(180deg,#F4F8FF 0%,#EFF4FB 100%)',display:'flex',flexDirection:'column' }}>
+        <div style={{ padding:'58px 20px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
+          <button onClick={()=>setScreen('home')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+          <div>
+            <h2 style={{ fontSize:24,fontWeight:900,color:'var(--text)',letterSpacing:-0.5 }}>Buy Data</h2>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>Choose a network to begin a premium purchase flow</p>
+          </div>
         </div>
-        <div style={{ flex:1,overflowY:'auto',padding:'16px 16px 40px' }}>
+        <div style={{ flex:1,overflowY:'auto',padding:'18px 16px 40px' }}>
+          <div style={{ background:dark ? 'linear-gradient(145deg,rgba(0,113,227,.22),rgba(0,113,227,.08))' : 'linear-gradient(145deg,rgba(0,113,227,.12),rgba(0,113,227,.04))',border:'1px solid rgba(0,113,227,.18)',borderRadius:22,padding:18,marginBottom:16 }}>
+            <p style={{ fontSize:12,fontWeight:800,color:'var(--text-secondary)',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8 }}>Step 1</p>
+            <p style={{ fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:'-0.03em' }}>Select your network provider</p>
+            <p style={{ fontSize:13,color:'var(--text-secondary)',lineHeight:1.7,marginTop:8 }}>We support affordable bundles across MTN, Airtel, Glo and 9mobile with a cleaner checkout path and clear confirmation state.</p>
+          </div>
           <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginTop:12 }}>
             {NETWORKS.map(net => {
               const networkLogos = { 'MTN': '/images/mtn.png', 'GLO': '/images/glo.png', 'AIRTEL': '/images/airtel.png', '9MOBILE': '/images/mtn.png' };
               return (
                 <button key={net.name} onClick={()=>{ setSelectedNetwork(net); setScreen('data-phone'); }}
-                  style={{ background:'var(--card)',borderRadius:16,padding:'28px 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:14,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)',transition:'all .3s',cursor:'pointer' }}
-                  onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
-                  onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
-                  <img src={networkLogos[net.name as keyof typeof networkLogos]} alt={net.name} style={{ width:64,height:64,borderRadius:14,objectFit:'contain' }} />
-                  <p style={{ fontWeight:700,fontSize:16,color:'var(--text)',marginTop:4 }}>{net.name}</p>
+                  className="ledger-card"
+                  style={{ background:'var(--card)',borderRadius:20,padding:'22px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:14,border:'1px solid var(--border)',boxShadow:dark ? '0 12px 28px rgba(0,0,0,.22)' : '0 12px 28px rgba(12,28,54,.08)',transition:'all .3s',cursor:'pointer',textAlign:'left' }}
+                  onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)';e.currentTarget.style.boxShadow=dark ? '0 18px 34px rgba(0,0,0,.28)' : '0 18px 34px rgba(12,28,54,.14)';}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow=dark ? '0 12px 28px rgba(0,0,0,.22)' : '0 12px 28px rgba(12,28,54,.08)';}}>
+                  <div style={{ width:58,height:58,borderRadius:16,background:'linear-gradient(145deg,rgba(0,113,227,.12),rgba(90,200,250,.05))',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                    <img src={networkLogos[net.name as keyof typeof networkLogos]} alt={net.name} style={{ width:44,height:44,borderRadius:12,objectFit:'contain' }} />
+                  </div>
+                  <div>
+                    <p style={{ fontWeight:800,fontSize:16,color:'var(--text)',marginTop:4 }}>{net.name}</p>
+                    <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>Fast activation and competitive pricing</p>
+                  </div>
                 </button>
               );
             })}
@@ -1494,27 +1510,42 @@ export default function AppPage() {
   if (screen === 'data-phone') return (
     <>
       <GlobalStyle dark={dark} />
-      <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
-        <div style={{ padding:'60px 20px 20px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
-          <button onClick={()=>setScreen('data-networks')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
-          <h2 style={{ fontSize:18,fontWeight:800,color:'var(--text)' }}>Enter Phone Number</h2>
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#050A13 0%,#08101B 100%)' : 'linear-gradient(180deg,#F4F8FF 0%,#EFF4FB 100%)',display:'flex',flexDirection:'column' }}>
+        <div style={{ padding:'58px 20px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
+          <button onClick={()=>setScreen('data-networks')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+          <div>
+            <h2 style={{ fontSize:22,fontWeight:900,color:'var(--text)',letterSpacing:-0.4 }}>Recipient Number</h2>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>Step 2 of 3 · Confirm the number for {selectedNetwork?.name}</p>
+          </div>
         </div>
-        <div style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 20px',gap:24 }}>
-          <div style={{ width:96,height:96,borderRadius:20,background:'var(--card)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
-            <img src={selectedNetwork?.name === 'MTN' ? '/images/mtn.png' : selectedNetwork?.name === 'GLO' ? '/images/glo.png' : selectedNetwork?.name === 'AIRTEL' ? '/images/airtel.png' : '/images/mtn.png'} alt={selectedNetwork?.name} style={{ width:80,height:80,objectFit:'contain' }} />
+        <div style={{ flex:1,display:'flex',flexDirection:'column',padding:'24px 20px 40px',gap:18 }}>
+          <div style={{ background:'linear-gradient(145deg,#011A4D 0%,#0047CC 70%,#0071E3 100%)',borderRadius:24,padding:'22px 18px',color:'#fff',position:'relative',overflow:'hidden' }}>
+            <div style={{ position:'absolute',right:-38,top:-40,width:132,height:132,borderRadius:'50%',background:'rgba(255,255,255,.08)' }} />
+            <div style={{ display:'flex',alignItems:'center',gap:14,position:'relative',zIndex:1 }}>
+              <div style={{ width:72,height:72,borderRadius:18,background:'rgba(255,255,255,.12)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                <img src={selectedNetwork?.name === 'MTN' ? '/images/mtn.png' : selectedNetwork?.name === 'GLO' ? '/images/glo.png' : selectedNetwork?.name === 'AIRTEL' ? '/images/airtel.png' : '/images/mtn.png'} alt={selectedNetwork?.name} style={{ width:56,height:56,objectFit:'contain' }} />
+              </div>
+              <div>
+                <p style={{ fontSize:11,fontWeight:700,opacity:.74,letterSpacing:'0.08em',textTransform:'uppercase' }}>{selectedNetwork?.name} Checkout</p>
+                <p style={{ fontSize:22,fontWeight:900,letterSpacing:'-0.03em',marginTop:4 }}>Enter recipient phone number</p>
+                <p style={{ fontSize:12,opacity:.82,lineHeight:1.6,marginTop:6 }}>The next step will show all available bundles for this number.</p>
+              </div>
+            </div>
           </div>
-          <div style={{ textAlign:'center' }}>
-            <p style={{ fontSize:18,fontWeight:700,color:'var(--text)' }}>{selectedNetwork?.name}</p>
-            <p style={{ color:'var(--text-secondary)',fontSize:14,marginTop:4 }}>Select your plan after entering phone number</p>
-          </div>
-          <div style={{ width:'100%',maxWidth:320 }}>
+          <div style={{ width:'100%',background:'var(--card)',border:'1px solid var(--border)',borderRadius:22,padding:'18px',boxShadow:dark ? '0 14px 34px rgba(0,0,0,.22)' : '0 14px 34px rgba(12,28,54,.08)' }}>
+            <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:10,letterSpacing:'0.08em',textTransform:'uppercase' }}>Phone number</label>
             <input value={buyPhone} onChange={e=>setBuyPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
               placeholder="Enter 11-digit phone number" inputMode="numeric" maxLength={11}
-              style={{ width:'100%',padding:'14px 16px',borderRadius:12,background:'var(--card)',border:'1px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:600,marginBottom:16 }} />
+              style={{ width:'100%',padding:'16px 16px',borderRadius:14,background:'var(--bg-secondary)',border:'1.5px solid var(--border)',color:'var(--text)',fontSize:18,fontWeight:700,marginBottom:14,letterSpacing:'0.04em' }} />
+            <div style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text-secondary)',marginBottom:16 }}>
+              <span>Supported format: 08012345678</span>
+              <span>{buyPhone.length}/11</span>
+            </div>
             <button onClick={()=>{ if(buyPhone.length!==11){showError('Enter 11-digit phone number');return;} loadPlans(selectedNetwork?.name || ''); setScreen('data-plans'); }}
               disabled={buyPhone.length!==11} 
-              style={{ width:'100%',padding:'14px',background:buyPhone.length===11?BLUE:'#ccc',color:'#fff',borderRadius:12,fontWeight:700,fontSize:16,border:'none',cursor:buyPhone.length===11?'pointer':'not-allowed',opacity:buyPhone.length===11?1:0.6 }}>
-              Proceed to Plans
+              className="tactile-btn"
+              style={{ width:'100%',padding:'16px',background:buyPhone.length===11?'linear-gradient(135deg,#0047CC,#0071E3)':'rgba(142,142,147,.35)',color:'#fff',borderRadius:14,fontWeight:800,fontSize:16,border:'none',cursor:buyPhone.length===11?'pointer':'not-allowed',opacity:buyPhone.length===11?1:0.72,boxShadow:buyPhone.length===11?'0 12px 26px rgba(0,113,227,.32)':'none' }}>
+              Continue to Plans
             </button>
           </div>
         </div>
@@ -1565,28 +1596,45 @@ export default function AppPage() {
   );
 
   /* STORE */
-  if (screen === 'store') return (
+  if (screen === 'data-plans') return (
     <>
       <GlobalStyle dark={dark} />
-      <div style={{ height:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column' }}>
-        <div style={{ padding:'60px 20px 16px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
-          <button onClick={()=>setScreen('home')} style={{ color:BLUE,fontSize:16,fontWeight:600 }}>← Back</button>
-          <h2 style={{ fontSize:26,fontWeight:800,color:'var(--text)',letterSpacing:-0.5 }}>Store</h2>
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#050A13 0%,#08101B 100%)' : 'linear-gradient(180deg,#F4F8FF 0%,#EFF4FB 100%)',display:'flex',flexDirection:'column' }}>
+        <div style={{ padding:'58px 20px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
+          <button onClick={()=>setScreen('data-phone')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+          <div>
+            <h2 style={{ fontSize:22,fontWeight:900,color:'var(--text)',letterSpacing:-0.4 }}>{selectedNetwork?.name} Plans</h2>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>Step 3 of 3 · Choose the most suitable bundle for {buyPhone}</p>
+          </div>
         </div>
-        <div style={{ flex:1,overflowY:'auto',padding:'16px 16px 40px' }}>
+        <div style={{ flex:1,overflowY:'auto',padding:'18px 16px 40px' }}>
+          <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:'14px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,boxShadow:dark ? '0 10px 24px rgba(0,0,0,.2)' : '0 10px 24px rgba(12,28,54,.06)' }}>
+            <div>
+              <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',letterSpacing:'0.08em',textTransform:'uppercase' }}>Recipient</p>
+              <p style={{ fontSize:16,fontWeight:800,color:'var(--text)',marginTop:4 }}>{buyPhone}</p>
+            </div>
+            <div style={{ padding:'8px 12px',borderRadius:999,background:'rgba(0,113,227,.1)',color:BLUE,fontSize:12,fontWeight:800 }}>{selectedNetwork?.name}</div>
+          </div>
           {products.length === 0 ? (
-            <div style={{ textAlign:'center',padding:'60px 20px' }}>
+            <div style={{ textAlign:'center',color:'var(--text-secondary)',padding:40,background:'var(--card)',border:'1px solid var(--border)',borderRadius:20 }}>No plans available</div>
               <IconBox icon={Icons.download(BLUE, 44)} bg={'rgba(0,113,227,.10)'} />
-              <p style={{ fontSize:16,fontWeight:700,color:'var(--text)',marginTop:16,marginBottom:8 }}>Coming Soon</p>
+            <div style={{ display:'grid',gap:12,marginTop:12 }}>
               <p style={{ color:'var(--text-secondary)',marginTop:8 }}>Amazing products are being added</p>
             </div>
-          ) : (
-            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginTop:12 }}>
-              {products.map(p => (
-                <button key={p.id} onClick={()=>{ setSelectedProduct(p); setScreen('product'); }}
+                  className="ledger-card"
+                  style={{ background:'var(--card)',borderRadius:18,padding:'16px',display:'flex',justifyContent:'space-between',alignItems:'center',border:'1px solid var(--border)',width:'100%',boxShadow:dark ? '0 10px 20px rgba(0,0,0,.2)' : '0 10px 20px rgba(12,28,54,.06)' }}>
+                  <div style={{ textAlign:'left',display:'flex',alignItems:'center',gap:12 }}>
+                    <div style={{ width:46,height:46,borderRadius:14,background:'linear-gradient(145deg,rgba(0,113,227,.12),rgba(90,200,250,.04))',display:'flex',alignItems:'center',justifyContent:'center',color:BLUE,fontWeight:900,fontSize:14 }}>
+                      {(plan.dataSize || '').slice(0,2) || 'DT'}
+                    </div>
+                    <div>
+                      <p style={{ fontWeight:800,fontSize:16,color:'var(--text)' }}>{plan.dataSize}</p>
+                      <p style={{ color:'var(--text-secondary)',fontSize:13,marginTop:3 }}>{plan.validity}</p>
+                    </div>
                   style={{ background:'var(--card)',borderRadius:16,overflow:'hidden',textAlign:'left',border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)',transition:'all .3s',cursor:'pointer' }}
-                  onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
-                  onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
+                  <div style={{ textAlign:'right' }}>
+                    <p style={{ fontSize:18,fontWeight:900,color:BLUE }}>₦{plan.price.toLocaleString()}</p>
+                    <p style={{ fontSize:11,fontWeight:700,color:'var(--text-secondary)',marginTop:4 }}>Tap to authorize</p>
                   <div style={{ height:160,background:'var(--bg-secondary)',position:'relative',overflow:'hidden' }}>
                     {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : p.imageBase64 ? <img src={`data:image/jpeg;base64,${p.imageBase64}`} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <div style={{ height:'100%',background:'var(--border)',display:'flex',alignItems:'center',justifyContent:'center' }}>
                       {Icons.download(BLUE, 32)}
@@ -1595,8 +1643,8 @@ export default function AppPage() {
                       <div style={{ background:'rgba(255,59,48,.95)',borderRadius:8,padding:'6px 12px' }}>
                         <p style={{ color:'#fff',fontWeight:700,fontSize:12 }}>Out of Stock</p>
                       </div>
-                    </div>}
-                  </div>
+          title={`Confirm ${selectedPlan.dataSize} Purchase`}
+          subtitle={`Authorize ₦${selectedPlan.price.toLocaleString('en-NG',{minimumFractionDigits:2})} for ${selectedNetwork?.name} on ${buyPhone}`}
                   <div style={{ padding:'14px' }}>
                     <p style={{ fontWeight:700,fontSize:14,color:'var(--text)',lineHeight:1.4,marginBottom:8,minHeight:'2.8em' }}>{p.name}</p>
                     <div style={{ display:'flex',alignItems:'baseline',gap:2 }}>
