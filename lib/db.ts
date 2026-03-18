@@ -173,6 +173,9 @@ export async function initDB() {
     -- Backfill schema for old chats (new columns for improved chat features)
     DO $$
     BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='image_base64') THEN
+        ALTER TABLE products ADD COLUMN image_base64 TEXT;
+      END IF;
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='chats' AND column_name='session_id') THEN
         ALTER TABLE chats ADD COLUMN session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE;
       END IF;

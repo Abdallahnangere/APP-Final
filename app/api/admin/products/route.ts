@@ -11,9 +11,9 @@ async function auth(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   if (!await auth(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  const products = await sql`SELECT id, name, description, price, cost_price, image_url, category, in_stock, shipping_terms, pickup_terms, created_at, updated_at FROM products ORDER BY created_at DESC`;
+  const products = await sql`SELECT id, name, description, price, cost_price, image_url, image_base64, category, in_stock, shipping_terms, pickup_terms, created_at, updated_at FROM products ORDER BY created_at DESC`;
   const response = NextResponse.json(products);
-  response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  response.headers.set('Cache-Control', 'no-store');
   return response;
 }
 
@@ -21,10 +21,12 @@ export async function POST(req: NextRequest) {
   if (!await auth(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const body = await req.json();
   const [product] = await sql`
-    INSERT INTO products (name, description, price, cost_price, image_url, category, in_stock, shipping_terms, pickup_terms)
+    INSERT INTO products (name, description, price, cost_price, image_url, image_base64, category, in_stock, shipping_terms, pickup_terms)
     VALUES (
       ${body.name}, ${body.description || null}, ${body.price}, ${body.cost_price || body.costPrice || 0},
-      ${body.image_url || body.imageUrl || null}, ${body.category || 'General'},
+      ${body.image_url || body.imageUrl || null},
+      ${body.image_base64 || body.imageBase64 || null},
+      ${body.category || 'General'},
       ${body.in_stock ?? body.inStock ?? true},
       ${body.shipping_terms || body.shippingTerms || null},
       ${body.pickup_terms || body.pickupTerms || null}
@@ -47,6 +49,7 @@ export async function PATCH(req: NextRequest) {
       price = COALESCE(${body.price ?? null}, price),
       cost_price = COALESCE(${body.cost_price ?? body.costPrice ?? null}, cost_price),
       image_url = COALESCE(${body.image_url ?? body.imageUrl ?? null}, image_url),
+      image_base64 = COALESCE(${body.image_base64 ?? body.imageBase64 ?? null}, image_base64),
       category = COALESCE(${body.category ?? null}, category),
       in_stock = COALESCE(${body.in_stock ?? body.inStock ?? null}, in_stock),
       shipping_terms = COALESCE(${body.shipping_terms ?? body.shippingTerms ?? null}, shipping_terms),

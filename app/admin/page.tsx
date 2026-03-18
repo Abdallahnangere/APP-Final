@@ -89,6 +89,7 @@ export default function AdminPage() {
   const [chatReply, setChatReply] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [analyticsFilter, setAnalyticsFilter] = useState('all');
+  const [analyticsDate, setAnalyticsDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [receiptModal, setReceiptModal] = useState<Record<string,unknown>|null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -153,10 +154,19 @@ export default function AdminPage() {
   // authH is stable (reads from localStorage), so load is also stable
   }, [authH]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const loadAnalytics = useCallback(async (filter = analyticsFilter, date = analyticsDate) => {
+    const params = new URLSearchParams();
+    if (filter && filter !== 'all' && filter !== 'custom') params.set('filter', filter);
+    if (filter === 'custom' && date) params.set('date', date);
+    const query = params.toString();
+    const payload = await load(`analytics${query ? `?${query}` : ''}`);
+    setAnalytics((payload?.overview || payload || {}) as Record<string, unknown>);
+  }, [analyticsDate, analyticsFilter, load]);
+
   useEffect(() => {
     if (!authed) return;
     if (tab === 'overview') {
-      load('analytics').then(d => setAnalytics(d?.overview || d || {}));
+      loadAnalytics('all', analyticsDate);
       load('transactions').then(d => setTransactions(Array.isArray(d)?d:[]));
     }
     if (tab === 'users') load('users').then(d => setUsers(Array.isArray(d)?d:[]));
@@ -166,8 +176,13 @@ export default function AdminPage() {
     if (tab === 'broadcasts') load('broadcasts').then(d => setBroadcasts(Array.isArray(d)?d:[]));
     if (tab === 'webhooks') load('webhooks').then(d => setWebhooks(Array.isArray(d)?d:[]));
     if (tab === 'sim') load('sim-activations').then(d => setSimActs(Array.isArray(d)?d:[]));
-    if (tab === 'analytics') load('analytics').then(d => setAnalytics(d?.overview || d || {}));
-  }, [tab, authed, load]);
+    if (tab === 'analytics') loadAnalytics();
+  }, [tab, authed, load, loadAnalytics, analyticsDate]);
+
+  useEffect(() => {
+    if (!authed || tab !== 'analytics') return;
+    loadAnalytics();
+  }, [analyticsFilter, analyticsDate, authed, tab, loadAnalytics]);
 
   // Real-time wallet updates when needed
   useEffect(() => {
@@ -601,10 +616,21 @@ export default function AdminPage() {
             <div className="fade-in">
               <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20 }}>
                 <h1 style={{ fontSize:22,fontWeight:900 }}>Sales Analytics & Profit Calculator</h1>
-                <select value={analyticsFilter} onChange={e=>setAnalyticsFilter(e.target.value)} style={{ padding:'10px 14px',borderRadius:12,border:'1.5px solid #E5E5EA',fontSize:14 }}>
-                  {['all','today','week','month'].map(f=><option key={f} value={f}>{f.charAt(0).toUpperCase()+f.slice(1)}</option>)}
-                </select>
+                <div style={{ display:'flex',gap:10,alignItems:'center' }}>
+                  <select value={analyticsFilter} onChange={e=>setAnalyticsFilter(e.target.value)} style={{ padding:'10px 14px',borderRadius:12,border:'1.5px solid #E5E5EA',fontSize:14 }}>
+                    {['all','today','week','month','custom'].map(f=><option key={f} value={f}>{f === 'custom' ? 'Select Date' : f.charAt(0).toUpperCase()+f.slice(1)}</option>)}
+                  </select>
+                  <input
+                    type="date"
+                    value={analyticsDate}
+                    onChange={e=>{ setAnalyticsDate(e.target.value); setAnalyticsFilter('custom'); }}
+                    style={{ padding:'10px 14px',borderRadius:12,border:'1.5px solid #E5E5EA',fontSize:14 }}
+                  />
+                </div>
               </div>
+              <p style={{ color:'#8E8E93',marginBottom:16,fontSize:13 }}>
+                Viewing: {String((analytics as Record<string,unknown>).rangeLabel || 'last 30 days')}
+              </p>
               <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,marginBottom:24 }}>
                 {[
                   { label:'Total Revenue', value:`₦${Number((analytics as Record<string,unknown>).totalRevenue||0).toLocaleString()}`, color:BLUE, desc:'Total sales price' },
@@ -624,7 +650,7 @@ export default function AdminPage() {
                   { label:'Data Sales', value:(analytics as Record<string,unknown>).dataSales||0 },
                   { label:'Product Sales', value:(analytics as Record<string,unknown>).productSales||0 },
                   { label:'SIM Activations', value:(analytics as Record<string,unknown>).simSales||0 },
-                  { label:'Active Users', value:(analytics as Record<string,unknown>).totalUsers||0 },
+                  { label:'Active Users Today', value:(analytics as Record<string,unknown>).activeToday||0 },
                   { label:'Total Deposits', value:`₦${Number((analytics as Record<string,unknown>).totalDeposits||0).toLocaleString()}` },
                   { label:'Avg Transaction', value:`₦${Number((analytics as Record<string,unknown>).avgTransaction||0).toLocaleString()}` },
                   { label:'Profit Margin', value:`${((Number((analytics as Record<string,unknown>).totalProfit||0)/Math.max(Number((analytics as Record<string,unknown>).totalRevenue||1),1))*100).toFixed(1)}%` },
