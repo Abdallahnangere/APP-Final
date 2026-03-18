@@ -1306,42 +1306,44 @@ export default function AppPage() {
           </div>
         </div>
       )}
-      <div style={{ height:'100dvh',overflowY:'auto',background:'var(--bg)',paddingTop:'80px',paddingBottom:100,backgroundImage: dark ? 'radial-gradient(ellipse at 50% 0%, rgba(0,113,227,0.08) 0%, transparent 50%)' : 'none',backgroundAttachment: 'fixed' }}>
+      <div style={{ height:'100dvh',overflowY:'auto',background:dark ? 'linear-gradient(180deg,#040810 0%,#0A1221 48%,#08101D 100%)' : 'linear-gradient(180deg,#F3F7FF 0%,#EEF3FB 52%,#F7F9FD 100%)',paddingTop:'80px',paddingBottom:100,backgroundImage: dark ? 'radial-gradient(ellipse at 50% -8%, rgba(0,113,227,0.18) 0%, transparent 56%)' : 'radial-gradient(ellipse at 50% -18%, rgba(0,113,227,0.12) 0%, transparent 58%)',backgroundAttachment: 'fixed' }}>
         <Header />
         
         {/* Wallet Card - Professional Fintech Design */}
-        <div style={{ margin:'0 16px',background:`linear-gradient(135deg, ${BLUE}08, ${TEAL}08)`,borderRadius:20,padding:'20px',border:'1px solid var(--border)',boxShadow:'0 8px 24px rgba(0,113,227,.15)' }}>
+        <div style={{ margin:'0 16px',background:'linear-gradient(140deg,#011A4D 0%,#003EAD 55%,#0068D8 100%)',borderRadius:24,padding:'20px',border:'1px solid rgba(255,255,255,.14)',boxShadow:'0 16px 42px rgba(0,66,173,.35)',position:'relative',overflow:'hidden' }}>
+          <div style={{ position:'absolute',right:-65,top:-68,width:210,height:210,borderRadius:'50%',background:'rgba(255,255,255,.08)',pointerEvents:'none' }} />
+          <div style={{ position:'absolute',left:-48,bottom:-56,width:170,height:170,borderRadius:'50%',background:'rgba(0,210,255,.11)',pointerEvents:'none' }} />
           <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,marginBottom:20 }}>
             <div>
-              <p style={{ color:'var(--text-secondary)',fontSize:12,fontWeight:700,marginBottom:8,letterSpacing:.5 }}>TOTAL BALANCE</p>
+              <p style={{ color:'rgba(255,255,255,.7)',fontSize:12,fontWeight:700,marginBottom:8,letterSpacing:.5 }}>TOTAL BALANCE</p>
               <div style={{ display:'flex',alignItems:'baseline',gap:2 }}>
-                <span style={{ fontSize:28,fontWeight:900,color:'var(--text)' }}>₦</span>
-                <span style={{ fontSize:28,fontWeight:900,color:'var(--text)' }}>{user.walletBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                <span style={{ fontSize:28,fontWeight:900,color:'#FFFFFF' }}>₦</span>
+                <span style={{ fontSize:28,fontWeight:900,color:'#FFFFFF' }}>{user.walletBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
               </div>
             </div>
             <div style={{ display:'flex',gap:8 }}>
-              <button onClick={refreshUser} style={{ background:`${BLUE}15`,border:`1px solid ${BLUE}30`,borderRadius:10,padding:'10px 14px',cursor:'pointer',fontSize:12,fontWeight:600,color:BLUE,transition:'all .2s' }}>↻ Sync</button>
-              <button onClick={() => setRedeemOpen(true)} disabled={user.cashbackBalance <= 0} style={{ background:user.cashbackBalance > 0 ? `${ORANGE}15` : 'rgba(142,142,147,.08)',border:user.cashbackBalance > 0 ? `1px solid ${ORANGE}30` : '1px solid rgba(142,142,147,.2)',borderRadius:10,padding:'10px 14px',cursor:user.cashbackBalance > 0 ? 'pointer' : 'not-allowed',fontSize:12,fontWeight:600,color:user.cashbackBalance > 0 ? ORANGE : 'rgba(142,142,147,.5)',transition:'all .2s' }}>+ Redeem</button>
+              <button onClick={refreshUser} className="tactile-btn" style={{ background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',borderRadius:11,padding:'10px 14px',cursor:'pointer',fontSize:12,fontWeight:700,color:'#FFFFFF',transition:'all .2s' }}>↻ Sync</button>
+              <button onClick={() => setRedeemOpen(true)} disabled={user.cashbackBalance <= 0} className="tactile-btn" style={{ background:user.cashbackBalance > 0 ? 'rgba(255,159,10,.22)' : 'rgba(255,255,255,.08)',border:user.cashbackBalance > 0 ? '1px solid rgba(255,159,10,.38)' : '1px solid rgba(255,255,255,.14)',borderRadius:11,padding:'10px 14px',cursor:user.cashbackBalance > 0 ? 'pointer' : 'not-allowed',fontSize:12,fontWeight:700,color:user.cashbackBalance > 0 ? '#FFD9A6' : 'rgba(255,255,255,.45)',transition:'all .2s' }}>+ Redeem</button>
             </div>
           </div>
           <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16 }}>
-            <div style={{ background:'rgba(255,159,10,.06)',borderRadius:14,padding:'12px',border:`1px solid ${ORANGE}20` }}>
-              <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:700,margin:0,letterSpacing:.3 }}>CASHBACK</p>
-              <p style={{ color:ORANGE,fontWeight:800,fontSize:16,margin:'6px 0 0' }}>₦{user.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+            <div style={{ background:'rgba(255,255,255,.1)',borderRadius:14,padding:'12px',border:'1px solid rgba(255,255,255,.16)' }}>
+              <p style={{ color:'rgba(255,255,255,.72)',fontSize:11,fontWeight:700,margin:0,letterSpacing:.3 }}>CASHBACK</p>
+              <p style={{ color:'#FFD38D',fontWeight:800,fontSize:16,margin:'6px 0 0' }}>₦{user.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
             </div>
-            <div style={{ background:'rgba(191,90,242,.06)',borderRadius:14,padding:'12px',border:`1px solid ${PURPLE}20` }}>
-              <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:700,margin:0,letterSpacing:.3 }}>REFERRAL</p>
-              <p style={{ color:PURPLE,fontWeight:800,fontSize:16,margin:'6px 0 0' }}>₦{user.referralBonus.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+            <div style={{ background:'rgba(255,255,255,.1)',borderRadius:14,padding:'12px',border:'1px solid rgba(255,255,255,.16)' }}>
+              <p style={{ color:'rgba(255,255,255,.72)',fontSize:11,fontWeight:700,margin:0,letterSpacing:.3 }}>REFERRAL</p>
+              <p style={{ color:'#BFE2FF',fontWeight:800,fontSize:16,margin:'6px 0 0' }}>₦{user.referralBonus.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
             </div>
           </div>
-          <div style={{ background:'rgba(0,0,0,.04)',borderRadius:14,padding:'12px',border:'1px solid var(--border)' }}>
-            <p style={{ color:'var(--text-secondary)',fontSize:11,fontWeight:700,margin:0,marginBottom:6,letterSpacing:.3 }}>ACCOUNT DETAILS</p>
+          <div style={{ background:'rgba(255,255,255,.1)',borderRadius:14,padding:'12px',border:'1px solid rgba(255,255,255,.18)' }}>
+            <p style={{ color:'rgba(255,255,255,.72)',fontSize:11,fontWeight:700,margin:0,marginBottom:6,letterSpacing:.3 }}>ACCOUNT DETAILS</p>
             <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center' }}>
               <div>
-                <p style={{ color:'var(--text)',fontWeight:700,fontSize:14,margin:0 }}>{user.bankName || 'No Bank'}</p>
-                <p style={{ color:'var(--text-secondary)',fontSize:12,margin:'4px 0 0',fontFamily:'monospace',fontWeight:600 }}>{user.accountNumber || 'N/A'}</p>
+                <p style={{ color:'#FFFFFF',fontWeight:700,fontSize:14,margin:0 }}>{user.bankName || 'No Bank'}</p>
+                <p style={{ color:'rgba(255,255,255,.78)',fontSize:12,margin:'4px 0 0',fontFamily:'monospace',fontWeight:600 }}>{user.accountNumber || 'N/A'}</p>
               </div>
-              <button onClick={() => { navigator.clipboard.writeText(user.accountNumber || ''); showToast('✓ Copied'); }} style={{ background:`${BLUE}15`,border:`1px solid ${BLUE}30`,borderRadius:8,padding:'8px 12px',cursor:'pointer',fontSize:11,fontWeight:600,color:BLUE,transition:'all .2s' }}>Copy</button>
+              <button onClick={() => { navigator.clipboard.writeText(user.accountNumber || ''); showToast('✓ Copied'); }} className="tactile-btn" style={{ background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.22)',borderRadius:8,padding:'8px 12px',cursor:'pointer',fontSize:11,fontWeight:700,color:'#FFFFFF',transition:'all .2s' }}>Copy</button>
             </div>
           </div>
         </div>
@@ -1362,7 +1364,7 @@ export default function AppPage() {
           <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.5,marginBottom:14,marginLeft:4,textTransform:'uppercase' }}>Quick Actions</p>
           <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12 }}>
             <button onClick={()=>setScreen('data-networks')}
-              style={{ background:'var(--card)',borderRadius:16,padding:'20px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:12,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)',transition:'all .3s',cursor:'pointer' }}
+              style={{ background:'linear-gradient(145deg,rgba(0,113,227,.11),rgba(0,113,227,.03))',borderRadius:18,padding:'20px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:12,border:'1px solid rgba(0,113,227,.2)',boxShadow:'0 10px 24px rgba(0,113,227,.14)',transition:'all .3s',cursor:'pointer' }}
               onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
               <IconBox icon={Icons.bolt(BLUE, 24)} bg={'rgba(0,113,227,.10)'} />
@@ -1372,7 +1374,7 @@ export default function AppPage() {
               </div>
             </button>
             <button onClick={()=>{ loadProducts(); setScreen('store'); }}
-              style={{ background:'var(--card)',borderRadius:16,padding:'20px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:12,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)',transition:'all .3s',cursor:'pointer' }}
+              style={{ background:'linear-gradient(145deg,rgba(48,209,88,.12),rgba(48,209,88,.03))',borderRadius:18,padding:'20px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:12,border:'1px solid rgba(48,209,88,.25)',boxShadow:'0 10px 24px rgba(48,209,88,.14)',transition:'all .3s',cursor:'pointer' }}
               onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
               <IconBox icon={Icons.chartBar(GREEN, 24)} bg={'rgba(48,209,88,.10)'} />
@@ -1382,7 +1384,7 @@ export default function AppPage() {
               </div>
             </button>
             <button onClick={()=>setScreen('transfer')}
-              style={{ background:'var(--card)',borderRadius:16,padding:'20px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:12,border:'1px solid var(--border)',boxShadow:'0 4px 16px rgba(0,0,0,.08)',transition:'all .3s',cursor:'pointer' }}
+              style={{ background:'linear-gradient(145deg,rgba(90,200,250,.12),rgba(90,200,250,.03))',borderRadius:18,padding:'20px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:12,border:'1px solid rgba(90,200,250,.27)',boxShadow:'0 10px 24px rgba(90,200,250,.16)',transition:'all .3s',cursor:'pointer' }}
               onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
               <IconBox icon={Icons.sendIcon(TEAL, 24)} bg={'rgba(90,200,250,.10)'} />
