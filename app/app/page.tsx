@@ -496,7 +496,7 @@ export default function AppPage() {
   const [transferPhone, setTransferPhone] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
   const [transferNote, setTransferNote] = useState('');
-  const [transferRecipient, setTransferRecipient] = useState<{name:string; phone:string}|null>(null);
+  const [transferRecipient, setTransferRecipient] = useState<{name:string; phone:string; email?:string}|null>(null);
   const [transferLoading, setTransferLoading] = useState(false);
 
   // Product delivery states
