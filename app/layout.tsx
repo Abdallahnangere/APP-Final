@@ -1,4 +1,7 @@
 import type { Metadata } from 'next';
+import dynamic from 'next/dynamic';
+
+const AppUpdateModal = dynamic(() => import('@/components/AppUpdateModal'), { ssr: false });
 
 export const metadata: Metadata = {
   title: 'SaukiMart — Instant Data, Airtime & Devices',
@@ -112,7 +115,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="description" content="Nigeria's premium data reseller platform. Instant delivery, best prices, trusted by thousands." />
       </head>
-      <body style={{ margin: 0, padding: 0 }}>{children}</body>
+      <body style={{ margin: 0, padding: 0 }}>
+        <AppUpdateModal />
+        {children}
+      </body>
     </html>
   );
 }
