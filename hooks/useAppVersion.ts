@@ -69,7 +69,7 @@ export function useAppVersion(): AppVersionState {
           currentVersionCode,
           currentVersionName,
           latestVersionName: meta.latestVersionName,
-          needsForceUpdate: currentVersionCode < meta.forceUpdateBelow,
+          needsForceUpdate: currentVersionCode < 14,
           playStoreUrl: meta.playStoreUrl,
           isLoading: false,
         });

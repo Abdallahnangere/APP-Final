@@ -31,10 +31,6 @@ export function OPTIONS(req: NextRequest): NextResponse {
 
   return new NextResponse(null, {
     status: 200,
-    headers: {
-      ...RESPONSE_HEADERS,
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-App-Version',
-    },
+    headers: RESPONSE_HEADERS,
   });
 }

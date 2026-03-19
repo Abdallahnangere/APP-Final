@@ -1,14 +1,17 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAppVersion } from '@/hooks/useAppVersion';
 
 export default function AppUpdateModal() {
+  const pathname = usePathname();
+  const isAppRoute = pathname?.startsWith('/app') ?? false;
   const { isLoading, needsForceUpdate, playStoreUrl } = useAppVersion();
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!needsForceUpdate) return;
+    if (!isAppRoute || !needsForceUpdate) return;
 
     // Block body scroll
     document.body.style.overflow = 'hidden';
@@ -26,9 +29,9 @@ export default function AppUpdateModal() {
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [needsForceUpdate]);
+  }, [isAppRoute, needsForceUpdate]);
 
-  if (isLoading || !needsForceUpdate) return null;
+  if (!isAppRoute || isLoading || !needsForceUpdate) return null;
 
   return (
     <div
