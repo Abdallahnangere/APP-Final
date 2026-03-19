@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { verifyAdminToken } from '@/lib/auth';
+import { sendCreditAlert } from '@/lib/push';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,21 @@ export async function POST(req: NextRequest) {
   `;
 
   const [updated] = await sql`SELECT wallet_balance, cashback_balance FROM users WHERE id = ${userId}`;
+
+  if (action === 'credit') {
+    try {
+      await sendCreditAlert({
+        userId,
+        amount: Number(amount),
+        newBalance: parseFloat(isCashback ? updated.cashback_balance : updated.wallet_balance),
+        kind: isCashback ? 'admin_cashback_credit' : 'admin_credit',
+        note: note || '',
+      });
+    } catch (pushErr) {
+      console.error('Admin credit push send failed:', pushErr);
+    }
+  }
+
   return NextResponse.json({
     success: true,
     newBalance: parseFloat(isCashback ? updated.cashback_balance : updated.wallet_balance),

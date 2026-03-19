@@ -146,6 +146,19 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 12. User Push Tokens Table
+CREATE TABLE IF NOT EXISTS user_push_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  token TEXT UNIQUE NOT NULL,
+  platform TEXT DEFAULT 'android',
+  app_version TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ==========================================
 -- SEED DEFAULT DATA
 -- ==========================================
@@ -210,7 +223,7 @@ SELECT * FROM site_settings;
 -- ==========================================
 -- SUMMARY
 -- ==========================================
--- ✅ 11 tables created
+-- ✅ 12 tables created
 -- ✅ 18 data plans seeded (7 MTN + 6 GLO + 5 AIRTEL)
 -- ✅ 6 default site settings configured
 -- ✅ Ready for production!

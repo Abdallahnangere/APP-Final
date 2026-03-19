@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { verifyFlutterwaveWebhook } from '@/lib/utils';
+import { sendCreditAlert } from '@/lib/push';
 
 interface FlutterwaveWebhookData {
   id: number;
@@ -247,10 +248,11 @@ export async function POST(req: NextRequest) {
       `;
 
       // Credit wallet
-      await sql`
+      const [creditedUser] = await sql`
         UPDATE users
         SET wallet_balance = wallet_balance + ${amount}, updated_at = NOW()
         WHERE id = ${user.id}
+        RETURNING wallet_balance
       `;
 
       await ensureDepositTransaction({
@@ -263,8 +265,21 @@ export async function POST(req: NextRequest) {
         createdAt: data.created_at || new Date().toISOString(),
       });
 
-      const newBalance = (user.wallet_balance || 0) + amount;
+      const newBalance = parseFloat(creditedUser?.wallet_balance || 0);
       console.log(`✅ Deposit credited: User ${user.id} (${user.first_name} ${user.last_name}), Amount: ₦${amount}, New Balance: ₦${newBalance}`);
+
+      try {
+        await sendCreditAlert({
+          userId: user.id,
+          amount,
+          newBalance,
+          kind: 'deposit',
+          reference: flwRef || flwTxId,
+          senderLabel: senderName,
+        });
+      } catch (pushErr) {
+        console.error('Deposit credit push send failed:', pushErr);
+      }
 
       await logWebhookProcessing(
         flwTxId,

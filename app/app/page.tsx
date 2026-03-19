@@ -284,11 +284,23 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
     if (typeof window === 'undefined' || !ref.current) return;
     try {
       const { toPng } = await import('html-to-image');
-      const url = await toPng(ref.current, { quality:1, pixelRatio:2 });
+      const dataUrl = await toPng(ref.current, { quality:1, pixelRatio:2 });
+      
+      // Convert data URL to blob for Android DownloadListener compatibility
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      
+      // Create blob: URL that Android's DownloadListener can intercept
+      const blobUrl = URL.createObjectURL(blob);
+      
       const a = document.createElement('a');
-      a.href = url;
+      a.href = blobUrl;
       a.download = `receipt-${(data.ref as string) || Date.now()}.png`;
       a.click();
+      
+      // Clean up the blob URL after a short delay
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+      
       if (onDownload) onDownload();
     } catch (err) {
       console.error('Receipt download error:', err);
@@ -511,21 +523,49 @@ export default function AppPage() {
 
   const prevCashbackRef = useRef<number>(0);
   const hasSeenCashbackRef = useRef(false);
+  const screenHistoryRef = useRef<string[]>([]);
+  const isBackNavigationRef = useRef(false);
 
   const authHeader = useCallback(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
   const showError = (msg: string) => { setError(msg); setTimeout(() => setError(''), 4000); };
 
-  // Back Button Prevention
+  // Back Navigation Handler
+  const goBack = useCallback(() => {
+    if (screenHistoryRef.current.length > 1) {
+      screenHistoryRef.current.pop(); // Remove current
+      const previousScreen = screenHistoryRef.current[screenHistoryRef.current.length - 1];
+      isBackNavigationRef.current = true;
+      setScreen(previousScreen as any);
+      setTimeout(() => { isBackNavigationRef.current = false; }, 0);
+    }
+  }, []);
+
+  // Track screen changes for back navigation
+  useEffect(() => {
+    // Only track forward navigation, not back navigation
+    if (!isBackNavigationRef.current) {
+      // Don't track splash and login as "previous" screens
+      if (screen !== 'splash' && screen !== 'login' && screen !== 'register' && screen !== 'registered') {
+        const lastScreen = screenHistoryRef.current[screenHistoryRef.current.length - 1];
+        if (lastScreen !== screen) {
+          screenHistoryRef.current.push(screen);
+        }
+      }
+    }
+  }, [screen]);
+
+  // Back Button Handler - Navigate within app instead of exiting
   useEffect(() => {
     window.history.pushState(null, '', window.location.href);
     const handleBackButton = () => {
       window.history.pushState(null, '', window.location.href);
+      goBack();
     };
     window.addEventListener('popstate', handleBackButton);
     return () => window.removeEventListener('popstate', handleBackButton);
-  }, []);
+  }, [goBack]);
 
   // Initialize database on app load
   useEffect(() => {

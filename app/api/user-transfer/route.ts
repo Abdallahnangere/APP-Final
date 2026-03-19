@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { verifyPin } from '@/lib/utils';
+import { sendCreditAlert } from '@/lib/push';
 
 export async function POST(req: NextRequest) {
   try {
@@ -78,11 +79,12 @@ export async function POST(req: NextRequest) {
     `;
 
     // Credit recipient
-    await sql`
+    const [creditedRecipient] = await sql`
       UPDATE users 
       SET wallet_balance = wallet_balance + ${transferAmount},
           updated_at = NOW()
       WHERE id = ${recipient.id}
+      RETURNING wallet_balance
     `;
 
     // Record sender transaction
@@ -98,6 +100,18 @@ export async function POST(req: NextRequest) {
       (user_id, type, description, amount, status, created_at)
       VALUES (${recipient.id}, 'transfer_in', ${'Transfer from ' + sender.phone}, ${transferAmount}, 'success', NOW())
     `;
+
+    try {
+      await sendCreditAlert({
+        userId: recipient.id,
+        amount: transferAmount,
+        newBalance: parseFloat(creditedRecipient?.wallet_balance || 0),
+        kind: 'transfer_in',
+        senderLabel: sender.phone,
+      });
+    } catch (pushErr) {
+      console.error('Transfer-in credit push send failed:', pushErr);
+    }
 
     return NextResponse.json({
       success: true,
