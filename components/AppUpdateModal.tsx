@@ -2,15 +2,18 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
+import { useAppVersion } from '@/hooks/useAppVersion';
 
-const UPDATE_NOTICE_KEY = 'sm_update_notice_seen_4_2';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=online.saukimart.twa';
 
 export default function AppUpdateModal() {
   const pathname = usePathname();
   const isAppRoute = pathname?.startsWith('/app') ?? false;
+  const { latestVersionName } = useAppVersion();
   const [visible, setVisible] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const safeVersionName = (latestVersionName || '4.2').trim();
+  const versionStorageKey = `sm_update_notice_seen_${safeVersionName.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
   const checkAndShowNotice = useCallback(() => {
     if (!isAppRoute || typeof window === 'undefined') {
@@ -19,16 +22,16 @@ export default function AppUpdateModal() {
     }
 
     const hasSession = Boolean(localStorage.getItem('sm_token'));
-    const hasSeen = localStorage.getItem(UPDATE_NOTICE_KEY) === '1';
+    const hasSeen = localStorage.getItem(versionStorageKey) === '1';
 
     if (hasSession && !hasSeen) {
-      localStorage.setItem(UPDATE_NOTICE_KEY, '1');
+      localStorage.setItem(versionStorageKey, '1');
       setVisible(true);
       return;
     }
 
     setVisible(false);
-  }, [isAppRoute]);
+  }, [isAppRoute, versionStorageKey]);
 
   useEffect(() => {
     checkAndShowNotice();
@@ -142,7 +145,7 @@ export default function AppUpdateModal() {
             marginTop: '4px',
           }}
         >
-          Update App on Play Store
+          Update App to Version {safeVersionName}
         </button>
 
         <button
