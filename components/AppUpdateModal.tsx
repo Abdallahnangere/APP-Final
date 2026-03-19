@@ -1,41 +1,65 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import { useAppVersion } from '@/hooks/useAppVersion';
+
+const UPDATE_NOTICE_KEY = 'sm_update_notice_seen_4_2';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=online.saukimart.twa';
 
 export default function AppUpdateModal() {
   const pathname = usePathname();
   const isAppRoute = pathname?.startsWith('/app') ?? false;
-  const { isLoading, needsForceUpdate, playStoreUrl } = useAppVersion();
+  const [visible, setVisible] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  const checkAndShowNotice = useCallback(() => {
+    if (!isAppRoute || typeof window === 'undefined') {
+      setVisible(false);
+      return;
+    }
+
+    const hasSession = Boolean(localStorage.getItem('sm_token'));
+    const hasSeen = localStorage.getItem(UPDATE_NOTICE_KEY) === '1';
+
+    if (hasSession && !hasSeen) {
+      localStorage.setItem(UPDATE_NOTICE_KEY, '1');
+      setVisible(true);
+      return;
+    }
+
+    setVisible(false);
+  }, [isAppRoute]);
+
   useEffect(() => {
-    if (!isAppRoute || !needsForceUpdate) return;
+    checkAndShowNotice();
+
+    const handleLoginSuccess = () => checkAndShowNotice();
+    window.addEventListener('sm-login-success', handleLoginSuccess);
+
+    return () => {
+      window.removeEventListener('sm-login-success', handleLoginSuccess);
+    };
+  }, [checkAndShowNotice]);
+
+  useEffect(() => {
+    if (!visible) return;
 
     // Block body scroll
     document.body.style.overflow = 'hidden';
 
-    // Prevent ESC from dismissing
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') e.preventDefault();
-    };
-    window.addEventListener('keydown', handleKeyDown, true);
-
-    // Auto-focus the update button
+    // Auto-focus the update button when notice opens
     buttonRef.current?.focus();
 
     return () => {
       document.body.style.overflow = '';
-      window.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [isAppRoute, needsForceUpdate]);
+  }, [visible]);
 
-  if (!isAppRoute || isLoading || !needsForceUpdate) return null;
+  if (!isAppRoute || !visible) return null;
 
   return (
     <div
-      role="alertdialog"
+      role="dialog"
       aria-modal="true"
       aria-labelledby="update-heading"
       aria-describedby="update-description"
@@ -43,7 +67,7 @@ export default function AppUpdateModal() {
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: '#0D0D1A',
+        background: 'rgba(13,13,26,.8)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -55,28 +79,26 @@ export default function AppUpdateModal() {
           background: '#1A1A2E',
           border: '1px solid #C9A84C',
           borderRadius: '16px',
-          padding: '40px',
-          maxWidth: '360px',
-          width: '90%',
+          padding: '28px',
+          maxWidth: '520px',
+          width: '94%',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          gap: '16px',
+          gap: '14px',
         }}
       >
-        {/* Logo */}
         <span
           style={{
             fontSize: '28px',
             fontWeight: 700,
             color: '#C9A84C',
             letterSpacing: '-0.5px',
+            textAlign: 'center',
           }}
         >
           SaukiMart
         </span>
 
-        {/* Heading */}
         <h1
           id="update-heading"
           style={{
@@ -87,27 +109,26 @@ export default function AppUpdateModal() {
             textAlign: 'center',
           }}
         >
-          Update Required
+          New Version Available on Play Store
         </h1>
 
-        {/* Subtext */}
         <p
           id="update-description"
           style={{
-            fontSize: '15px',
+            fontSize: '14px',
             color: '#AAAAAA',
             lineHeight: 1.6,
-            textAlign: 'center',
+            textAlign: 'left',
             margin: 0,
+            whiteSpace: 'pre-line',
           }}
         >
-          You are using an outdated version of SaukiMart. Please download the latest version (4.2) to continue.
+          {'Sauki Mart just got a major upgrade. Here\'s what\'s new:\n🤖 AI Support — 24/7, Instant\nGet help anytime without waiting. Our new in-app AI assistant handles complaints, answers questions, and resolves issues around the clock — no human queue, no delays.\n📲 User-to-User Transfers\nSend money directly to any Sauki Mart user in seconds. Fast, seamless, and built right into your wallet.\n🔔 Smart Alert System\nStay in the loop with real-time notifications for transactions, transfers, promotions, and account activity — so you never miss a beat.\n✨ Refreshed UI & UX\nA cleaner, faster, and more intuitive experience from top to bottom. Everything feels smoother, looks sharper, and works better.'}
         </p>
 
-        {/* Update button */}
         <button
           ref={buttonRef}
-          onClick={() => window.open(playStoreUrl, '_blank')}
+          onClick={() => window.open(PLAY_STORE_URL, '_blank')}
           style={{
             width: '100%',
             background: '#C9A84C',
@@ -115,26 +136,31 @@ export default function AppUpdateModal() {
             fontWeight: 700,
             fontSize: '16px',
             borderRadius: '10px',
-            padding: '14px 32px',
+            padding: '14px 20px',
             border: 'none',
             cursor: 'pointer',
-            marginTop: '8px',
+            marginTop: '4px',
           }}
         >
-          Update to Version 4.2
+          Update App on Play Store
         </button>
 
-        {/* Fine print */}
-        <p
+        <button
+          onClick={() => setVisible(false)}
           style={{
-            fontSize: '12px',
-            color: '#666666',
-            textAlign: 'center',
-            margin: 0,
+            width: '100%',
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,.22)',
+            color: '#CBD2E7',
+            fontWeight: 600,
+            fontSize: '14px',
+            borderRadius: '10px',
+            padding: '12px 16px',
+            cursor: 'pointer',
           }}
         >
-          This update is required to continue using SaukiMart.
-        </p>
+          Continue to App
+        </button>
       </div>
     </div>
   );

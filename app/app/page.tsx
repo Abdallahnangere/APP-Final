@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { generateIdempotencyKey } from '@/lib/utils';
 import SupportChat from '@/app/support/page';
-import { useAppVersion } from '@/hooks/useAppVersion';
 
 /* ─────────────── TYPES ─────────────── */
 type User = {
@@ -531,14 +530,6 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
 
 /* ─────────────── MAIN APP ─────────────── */
 export default function AppPage() {
-  const {
-    isAndroidWebView,
-    needsForceUpdate,
-    playStoreUrl,
-    latestVersionName,
-    isLoading: isVersionLoading,
-  } = useAppVersion();
-
   const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'|'chat'>('splash');
   const [dark, setDark] = useState(false);
   const [user, setUser] = useState<User|null>(null);
@@ -856,6 +847,7 @@ export default function AppPage() {
       setStoredPhone(loginPhone);
       setShowPin(false);
       setScreen('home');
+      window.dispatchEvent(new Event('sm-login-success'));
     } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Login failed'); }
     finally { setLoading(false); setShowPin(false); }
   };
@@ -1079,43 +1071,6 @@ export default function AppPage() {
   };
 
   /* ═══════════════════ SCREENS ═══════════════════ */
-
-  if (isAndroidWebView && isVersionLoading) {
-    return null;
-  }
-
-  if (isAndroidWebView && needsForceUpdate) {
-    return (
-      <div
-        role="alertdialog"
-        aria-modal="true"
-        style={{
-          position:'fixed',
-          inset:0,
-          zIndex:9999,
-          background:'#0D0D1A',
-          display:'flex',
-          alignItems:'center',
-          justifyContent:'center',
-          padding:'20px',
-        }}
-      >
-        <div style={{ background:'#1A1A2E',border:'1px solid #C9A84C',borderRadius:16,padding:34,maxWidth:360,width:'92%',textAlign:'center' }}>
-          <p style={{ fontSize:28,fontWeight:800,color:'#C9A84C',marginBottom:8 }}>SaukiMart</p>
-          <h1 style={{ color:'#fff',fontSize:22,fontWeight:800,marginBottom:10 }}>Update Required</h1>
-          <p style={{ color:'#AAAAAA',fontSize:15,lineHeight:1.6,marginBottom:18 }}>
-            You are using an outdated version of SaukiMart. Please download the latest version ({latestVersionName || '4.2'}) to continue.
-          </p>
-          <button
-            onClick={() => window.open(playStoreUrl, '_blank')}
-            style={{ width:'100%',background:'#C9A84C',color:'#0D0D1A',fontWeight:800,fontSize:16,borderRadius:10,padding:'14px 18px',border:'none',cursor:'pointer' }}
-          >
-            Update to Version {latestVersionName || '4.2'}
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   /* SPLASH */
   if (screen === 'splash') return (
