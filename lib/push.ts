@@ -11,6 +11,20 @@ type CreditAlertInput = {
   note?: string;
 };
 
+type AdminPushInput = {
+  title: string;
+  body: string;
+  userIds?: string[];
+  data?: Record<string, string>;
+};
+
+type AdminPushResult = {
+  targetedTokens: number;
+  sentCount: number;
+  failedCount: number;
+  deactivatedCount: number;
+};
+
 type GoogleTokenCache = {
   accessToken: string;
   expiresAtMs: number;
@@ -19,7 +33,7 @@ type GoogleTokenCache = {
 let googleTokenCache: GoogleTokenCache | null = null;
 
 function formatNaira(amount: number): string {
-  return `N${amount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `₦${amount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function getEnv(name: string): string {
@@ -201,4 +215,80 @@ export async function sendCreditAlert(input: CreditAlertInput): Promise<void> {
       console.error('FCM send error:', err);
     }
   }
+}
+
+export async function sendAdminPushNotification(input: AdminPushInput): Promise<AdminPushResult> {
+  const title = input.title.trim();
+  const body = input.body.trim();
+  if (!title || !body) {
+    throw new Error('Title and body are required');
+  }
+
+  const deactivatedTokens = new Set<string>();
+  let tokenRows: Array<{ token: string }> = [];
+
+  if (input.userIds && input.userIds.length > 0) {
+    for (const userId of input.userIds) {
+      const rows = await sql`
+        SELECT t.token
+        FROM user_push_tokens t
+        JOIN users u ON u.id = t.user_id
+        WHERE t.user_id = ${userId}
+          AND t.is_active = TRUE
+          AND COALESCE(u.notifications_enabled, TRUE) = TRUE
+      `;
+      tokenRows = tokenRows.concat(rows as Array<{ token: string }>);
+    }
+  } else {
+    const rows = await sql`
+      SELECT t.token
+      FROM user_push_tokens t
+      JOIN users u ON u.id = t.user_id
+      WHERE t.is_active = TRUE
+        AND COALESCE(u.notifications_enabled, TRUE) = TRUE
+      ORDER BY t.updated_at DESC
+      LIMIT 5000
+    `;
+    tokenRows = rows as Array<{ token: string }>;
+  }
+
+  const uniqueTokens = Array.from(new Set(tokenRows.map((r) => String(r.token || '').trim()).filter(Boolean)));
+  if (!uniqueTokens.length) {
+    return { targetedTokens: 0, sentCount: 0, failedCount: 0, deactivatedCount: 0 };
+  }
+
+  let sentCount = 0;
+  let failedCount = 0;
+
+  const payload: Record<string, string> = {
+    type: 'admin_broadcast',
+    ...(input.data || {}),
+  };
+
+  for (const token of uniqueTokens) {
+    try {
+      const result = await sendFcmToToken(token, title, body, payload);
+      if (result.ok) {
+        sentCount += 1;
+        continue;
+      }
+
+      failedCount += 1;
+      const errorCode = result?.json?.error?.details?.[0]?.errorCode || result?.json?.error?.status || '';
+      if (errorCode === 'UNREGISTERED' || errorCode === 'INVALID_ARGUMENT' || result.status === 404) {
+        await deactivateToken(token);
+        deactivatedTokens.add(token);
+      }
+    } catch (err) {
+      failedCount += 1;
+      console.error('Admin push send error:', err);
+    }
+  }
+
+  return {
+    targetedTokens: uniqueTokens.length,
+    sentCount,
+    failedCount,
+    deactivatedCount: deactivatedTokens.size,
+  };
 }

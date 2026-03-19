@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { verifyAdminToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+
+async function auth(req: NextRequest): Promise<boolean> {
+  const h = req.headers.get('authorization');
+  return Boolean(h?.startsWith('Bearer ')) && await verifyAdminToken((h as string).slice(7));
+}
 
 // POST /api/admin/intervene
 // action: 'takeover' | 'resolve' | 'flag' | 'add_note' | 'send_message' | 'release'
 export async function POST(req: NextRequest) {
   try {
+    if (!await auth(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
     const { sessionId, action, payload, agentId } = await req.json();
 
     if (!sessionId || !action) {

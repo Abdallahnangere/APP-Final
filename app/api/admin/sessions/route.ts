@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { verifyAdminToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+
+async function auth(req: NextRequest): Promise<boolean> {
+  const h = req.headers.get('authorization');
+  return Boolean(h?.startsWith('Bearer ')) && await verifyAdminToken((h as string).slice(7));
+}
 
 // GET /api/admin/sessions?filter=all|needs_agent|active|resolved|flagged&sessionId=xxx
 export async function GET(req: NextRequest) {
   try {
+    if (!await auth(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
     const filter = req.nextUrl.searchParams.get('filter') || 'all';
     const sessionId = req.nextUrl.searchParams.get('sessionId');
     const search = req.nextUrl.searchParams.get('search') || '';

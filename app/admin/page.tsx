@@ -10,7 +10,26 @@ type Transaction = { id: string; user_id: string; type: string; description: str
 type Broadcast = { id: string; message: string; is_active: boolean; created_at: string; };
 type Webhook = { id: string; event: string; payload: Record<string,unknown>; created_at: string; };
 type SimAct = { id: string; user_id: string; serial_number: string; front_image_url: string; back_image_url: string; status: string; created_at: string; first_name?: string; last_name?: string; phone?: string; };
-type ChatMsg = { id: string; user_id: string; sender: string; message: string; created_at: string; user_name?: string; delivered_at?: string; read_at?: string; };
+type AdminChatSession = {
+  id: string;
+  customer_id: string;
+  customer_name: string;
+  status: string;
+  last_message?: string;
+  last_message_at?: string;
+  unread_count?: number;
+  message_count?: number;
+  internal_notes?: string[];
+  agent_mode?: boolean;
+};
+type AdminChatMessage = {
+  id: string;
+  session_id: string;
+  sender: string;
+  content: string;
+  created_at: string;
+  read?: boolean;
+};
 
 const GlobalStyle = () => (
   <style>{`
@@ -60,7 +79,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [adminToken, setAdminToken] = useState('');
-  const [tab, setTab] = useState<'overview'|'users'|'plans'|'products'|'transactions'|'orders'|'broadcasts'|'sim'|'webhooks'|'console'|'analytics'>('overview');
+  const [tab, setTab] = useState<'overview'|'users'|'plans'|'products'|'transactions'|'orders'|'analytics'|'broadcasts'|'push'|'chat'|'sim'|'webhooks'|'console'>('overview');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
   const [error, setError] = useState('');
@@ -74,8 +93,11 @@ export default function AdminPage() {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [simActs, setSimActs] = useState<SimAct[]>([]);
   const [analytics, setAnalytics] = useState<Record<string,unknown>>({});
+  const [chatSessions, setChatSessions] = useState<AdminChatSession[]>([]);
+  const [chatStats, setChatStats] = useState<Record<string, unknown>>({});
+  const [activeChatSession, setActiveChatSession] = useState<AdminChatSession|null>(null);
+  const [chatMessages, setChatMessages] = useState<AdminChatMessage[]>([]);
   const [selectedUser, setSelectedUser] = useState<User|null>(null);
-  const [selectedUserId, setSelectedUserId] = useState<string|null>(null);
 
   // Forms
   const [planForm, setPlanForm] = useState({ network:'MTN', network_id:'1', plan_id:'', data_size:'', validity:'30 days', selling_price:'', cost_price:'', editId:'' });
@@ -86,7 +108,18 @@ export default function AdminPage() {
   const [consoleInput, setConsoleInput] = useState('');
   const [consoleEndpoint, setConsoleEndpoint] = useState('amigo');
   const [consoleLogs, setConsoleLogs] = useState<{dir:'sent'|'received';payload:string;ts:string}[]>([]);
+  const [pushAudience, setPushAudience] = useState<'all'|'specific'|'selected'>('all');
+  const [pushForm, setPushForm] = useState({ title:'', message:'' });
+  const [pushSpecificUserId, setPushSpecificUserId] = useState('');
+  const [pushSelectedUserIds, setPushSelectedUserIds] = useState<string[]>([]);
+  const [pushUserSearch, setPushUserSearch] = useState('');
+  const [pushSending, setPushSending] = useState(false);
+  const [pushResult, setPushResult] = useState<Record<string, unknown>|null>(null);
+  const [chatFilter, setChatFilter] = useState('all');
+  const [chatSearch, setChatSearch] = useState('');
   const [chatReply, setChatReply] = useState('');
+  const [chatNote, setChatNote] = useState('');
+  const [chatBusy, setChatBusy] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const [analyticsFilter, setAnalyticsFilter] = useState('all');
   const [analyticsDate, setAnalyticsDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -163,6 +196,84 @@ export default function AdminPage() {
     setAnalytics((payload?.overview || payload || {}) as Record<string, unknown>);
   }, [analyticsDate, analyticsFilter, load]);
 
+  const loadAdminSessions = useCallback(async (filter = chatFilter, search = chatSearch) => {
+    try {
+      const params = new URLSearchParams();
+      if (filter && filter !== 'all') params.set('filter', filter);
+      if (search.trim()) params.set('search', search.trim());
+      const res = await fetch(`/api/admin/sessions${params.toString() ? `?${params.toString()}` : ''}`, { headers: authH() });
+      if (!res.ok) throw new Error('Failed to load chat sessions');
+      const data = await res.json();
+      setChatSessions(Array.isArray(data?.sessions) ? data.sessions : []);
+      setChatStats((data?.stats || {}) as Record<string, unknown>);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Failed to load chat sessions');
+    }
+  }, [authH, chatFilter, chatSearch]);
+
+  const openChatSession = useCallback(async (sessionId: string) => {
+    try {
+      const res = await fetch(`/api/admin/sessions?sessionId=${encodeURIComponent(sessionId)}`, { headers: authH() });
+      if (!res.ok) throw new Error('Failed to load conversation');
+      const data = await res.json();
+      setActiveChatSession((data?.session || null) as AdminChatSession | null);
+      setChatMessages(Array.isArray(data?.messages) ? data.messages : []);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Failed to open conversation');
+    }
+  }, [authH]);
+
+  const chatAction = useCallback(async (action: 'takeover'|'release'|'resolve'|'flag'|'add_note'|'send_message', payload?: Record<string, unknown>) => {
+    if (!activeChatSession?.id) return;
+    setChatBusy(true);
+    try {
+      await api('intervene', 'POST', { sessionId: activeChatSession.id, action, payload, agentId: 'admin-panel' });
+      if (action === 'send_message') setChatReply('');
+      if (action === 'add_note') setChatNote('');
+      await openChatSession(activeChatSession.id);
+      await loadAdminSessions();
+      showToast('Action completed');
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Chat action failed');
+    } finally {
+      setChatBusy(false);
+    }
+  }, [activeChatSession?.id, loadAdminSessions, openChatSession]);
+
+  const sendPushCampaign = useCallback(async () => {
+    if (!pushForm.title.trim() || !pushForm.message.trim()) {
+      showError('Push title and message are required');
+      return;
+    }
+    if (pushAudience === 'specific' && !pushSpecificUserId) {
+      showError('Pick a user for specific audience');
+      return;
+    }
+    if (pushAudience === 'selected' && pushSelectedUserIds.length === 0) {
+      showError('Select at least one user');
+      return;
+    }
+
+    setPushSending(true);
+    try {
+      const payload: Record<string, unknown> = {
+        audience: pushAudience,
+        title: pushForm.title.trim(),
+        message: pushForm.message.trim(),
+      };
+      if (pushAudience === 'specific') payload.userId = pushSpecificUserId;
+      if (pushAudience === 'selected') payload.userIds = pushSelectedUserIds;
+      const data = await api('push', 'POST', payload);
+      setPushResult(data as Record<string, unknown>);
+      showToast('Push campaign sent');
+      setPushForm({ title:'', message:'' });
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Push send failed');
+    } finally {
+      setPushSending(false);
+    }
+  }, [pushAudience, pushForm.message, pushForm.title, pushSelectedUserIds, pushSpecificUserId]);
+
   useEffect(() => {
     if (!authed) return;
     if (tab === 'overview') {
@@ -174,10 +285,12 @@ export default function AdminPage() {
     if (tab === 'products') load('products').then(d => setProducts(Array.isArray(d)?d:[]));
     if (tab === 'transactions') load('transactions').then(d => setTransactions(Array.isArray(d)?d:[]));
     if (tab === 'broadcasts') load('broadcasts').then(d => setBroadcasts(Array.isArray(d)?d:[]));
+    if (tab === 'push') load('users').then(d => setUsers(Array.isArray(d)?d:[]));
+    if (tab === 'chat') loadAdminSessions();
     if (tab === 'webhooks') load('webhooks').then(d => setWebhooks(Array.isArray(d)?d:[]));
     if (tab === 'sim') load('sim-activations').then(d => setSimActs(Array.isArray(d)?d:[]));
     if (tab === 'analytics') loadAnalytics();
-  }, [tab, authed, load, loadAnalytics, analyticsDate]);
+  }, [tab, authed, load, loadAdminSessions, loadAnalytics, analyticsDate]);
 
   useEffect(() => {
     if (!authed || tab !== 'analytics') return;
@@ -188,6 +301,15 @@ export default function AdminPage() {
   useEffect(() => {
     // Placeholder for future real-time updates
   }, [authed, tab, adminToken]);
+
+  useEffect(() => {
+    if (!authed || tab !== 'chat') return;
+    const id = setInterval(() => {
+      loadAdminSessions();
+      if (activeChatSession?.id) openChatSession(activeChatSession.id);
+    }, 10000);
+    return () => clearInterval(id);
+  }, [authed, tab, activeChatSession?.id, loadAdminSessions, openChatSession]);
 
   const api = async (path: string, method: string, body?: unknown) => {
     const res = await fetch(`/api/admin/${path}`, { method, headers: authH(), body: body ? JSON.stringify(body) : undefined });
@@ -229,6 +351,8 @@ export default function AdminPage() {
     { id:'orders', label:'Orders', icon:'🛒' },
     { id:'analytics', label:'Analytics', icon:'📈' },
     { id:'broadcasts', label:'Broadcasts', icon:'📢' },
+    { id:'push', label:'Push Notifications', icon:'🔔' },
+    { id:'chat', label:'Support Chat', icon:'💬' },
     { id:'sim', label:'SIM Activations', icon:'📡' },
     { id:'webhooks', label:'Webhooks', icon:'🔗' },
     { id:'console', label:'API Console', icon:'⚙️' },
@@ -696,6 +820,278 @@ export default function AdminPage() {
                       </div>
                     </div>
                   ))}
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* ─── PUSH NOTIFICATIONS ─── */}
+          {tab === 'push' && (
+            <div className="fade-in">
+              <h1 style={{ fontSize:22,fontWeight:900,marginBottom:6 }}>Push Notifications</h1>
+              <p style={{ color:'#8E8E93',marginBottom:20 }}>Send FCM notifications to all users, a single user, or a selected list.</p>
+              <div style={{ display:'grid',gridTemplateColumns:'1.1fr .9fr',gap:20 }}>
+                <Card>
+                  <h3 style={{ fontWeight:800,fontSize:16,marginBottom:12 }}>Compose Campaign</h3>
+                  <div style={{ display:'flex',gap:8,marginBottom:14,flexWrap:'wrap' }}>
+                    {[
+                      { id: 'all', label: 'All Users' },
+                      { id: 'specific', label: 'Specific User' },
+                      { id: 'selected', label: 'Selected Users' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => {
+                          setPushAudience(opt.id as 'all'|'specific'|'selected');
+                          if (opt.id !== 'selected') setPushSelectedUserIds([]);
+                        }}
+                        style={{
+                          padding:'8px 14px',
+                          borderRadius:10,
+                          border:`1.5px solid ${pushAudience===opt.id?BLUE:'#E5E5EA'}`,
+                          background:pushAudience===opt.id?'rgba(0,122,255,.08)':'transparent',
+                          color:pushAudience===opt.id?BLUE:'#6C6C70',
+                          fontSize:13,
+                          fontWeight:700,
+                          cursor:'pointer',
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <Input label="Title" value={pushForm.title} onChange={v=>setPushForm(p=>({...p,title:v}))} placeholder="Service update" />
+                  <Input label="Message" value={pushForm.message} onChange={v=>setPushForm(p=>({...p,message:v}))} multiline placeholder="Write the notification body users will see..." />
+
+                  {pushAudience === 'specific' && (
+                    <div style={{ marginBottom:14 }}>
+                      <label style={{ display:'block',fontSize:13,fontWeight:600,color:'#6E6E73',marginBottom:8 }}>Choose user</label>
+                      <select
+                        value={pushSpecificUserId}
+                        onChange={e=>setPushSpecificUserId(e.target.value)}
+                        style={{ width:'100%',padding:'12px 14px',borderRadius:12,border:'1px solid rgba(0,0,0,0.15)',fontSize:14 }}
+                      >
+                        <option value="">Select a user</option>
+                        {users.map(u => (
+                          <option key={u.id} value={u.id}>{u.first_name} {u.last_name} ({u.phone})</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {pushAudience === 'selected' && (
+                    <div style={{ marginBottom:14 }}>
+                      <Input label="Filter users" value={pushUserSearch} onChange={setPushUserSearch} placeholder="Search by name or phone" />
+                      <div style={{ maxHeight:220,overflowY:'auto',border:'1px solid #E5E5EA',borderRadius:12,padding:10 }}>
+                        {users
+                          .filter(u => {
+                            const q = pushUserSearch.toLowerCase();
+                            if (!q) return true;
+                            return u.first_name.toLowerCase().includes(q) || u.last_name.toLowerCase().includes(q) || u.phone.includes(q);
+                          })
+                          .slice(0, 80)
+                          .map(u => {
+                            const checked = pushSelectedUserIds.includes(u.id);
+                            return (
+                              <label key={u.id} style={{ display:'flex',alignItems:'center',gap:8,padding:'6px 4px',fontSize:13,cursor:'pointer' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => setPushSelectedUserIds(prev => checked ? prev.filter(id => id !== u.id) : [...prev, u.id])}
+                                />
+                                <span>{u.first_name} {u.last_name} ({u.phone})</span>
+                              </label>
+                            );
+                          })}
+                      </div>
+                      <p style={{ marginTop:8,fontSize:12,color:'#8E8E93' }}>{pushSelectedUserIds.length} users selected</p>
+                    </div>
+                  )}
+
+                  <Btn onClick={sendPushCampaign} style={{ width:'100%' }}>
+                    {pushSending ? 'Sending...' : 'Send Push Notification'}
+                  </Btn>
+                </Card>
+
+                <Card>
+                  <h3 style={{ fontWeight:800,fontSize:16,marginBottom:12 }}>Campaign Result</h3>
+                  {pushResult ? (
+                    <div>
+                      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14 }}>
+                        <div style={{ background:'rgba(0,122,255,.08)',borderRadius:12,padding:12 }}>
+                          <p style={{ fontSize:12,color:'#8E8E93' }}>Targeted</p>
+                          <p style={{ fontSize:24,fontWeight:900,color:BLUE }}>{String(pushResult.targeted ?? 0)}</p>
+                        </div>
+                        <div style={{ background:'rgba(52,199,89,.08)',borderRadius:12,padding:12 }}>
+                          <p style={{ fontSize:12,color:'#8E8E93' }}>Sent</p>
+                          <p style={{ fontSize:24,fontWeight:900,color:GREEN }}>{String(pushResult.sent ?? 0)}</p>
+                        </div>
+                        <div style={{ background:'rgba(255,59,48,.08)',borderRadius:12,padding:12 }}>
+                          <p style={{ fontSize:12,color:'#8E8E93' }}>Failed</p>
+                          <p style={{ fontSize:24,fontWeight:900,color:RED }}>{String(pushResult.failed ?? 0)}</p>
+                        </div>
+                        <div style={{ background:'rgba(255,149,0,.08)',borderRadius:12,padding:12 }}>
+                          <p style={{ fontSize:12,color:'#8E8E93' }}>Deactivated Tokens</p>
+                          <p style={{ fontSize:24,fontWeight:900,color:GOLD }}>{String(pushResult.deactivated ?? 0)}</p>
+                        </div>
+                      </div>
+                      <pre style={{ fontSize:12,background:'#F2F2F7',borderRadius:10,padding:12,whiteSpace:'pre-wrap' }}>{JSON.stringify(pushResult, null, 2)}</pre>
+                    </div>
+                  ) : (
+                    <p style={{ fontSize:14,color:'#8E8E93' }}>Send a campaign to see delivery stats here.</p>
+                  )}
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* ─── SUPPORT CHAT ─── */}
+          {tab === 'chat' && (
+            <div className="fade-in">
+              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16 }}>
+                <div>
+                  <h1 style={{ fontSize:22,fontWeight:900,marginBottom:4 }}>Support Chat</h1>
+                  <p style={{ color:'#8E8E93',fontSize:13 }}>Monitor conversations and intervene live when needed.</p>
+                </div>
+                <Btn variant="ghost" onClick={()=>loadAdminSessions()}>Refresh</Btn>
+              </div>
+
+              <div style={{ display:'grid',gridTemplateColumns:'340px 1fr',gap:16 }}>
+                <Card style={{ padding:16 }}>
+                  <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10 }}>
+                    <div style={{ background:'rgba(0,122,255,.08)',borderRadius:10,padding:10 }}>
+                      <p style={{ fontSize:11,color:'#8E8E93' }}>Active</p>
+                      <p style={{ fontWeight:900,fontSize:20,color:BLUE }}>{String(chatStats.active_count || 0)}</p>
+                    </div>
+                    <div style={{ background:'rgba(255,149,0,.08)',borderRadius:10,padding:10 }}>
+                      <p style={{ fontSize:11,color:'#8E8E93' }}>Need Agent</p>
+                      <p style={{ fontWeight:900,fontSize:20,color:GOLD }}>{String(chatStats.needs_agent_count || 0)}</p>
+                    </div>
+                  </div>
+                  <div style={{ display:'flex',gap:8,marginBottom:10,flexWrap:'wrap' }}>
+                    {['all','needs_agent','active','resolved','flagged'].map(f => (
+                      <button
+                        key={f}
+                        onClick={() => { setChatFilter(f); loadAdminSessions(f, chatSearch); }}
+                        style={{
+                          padding:'6px 10px',
+                          borderRadius:9,
+                          border:`1px solid ${chatFilter===f?BLUE:'#E5E5EA'}`,
+                          background:chatFilter===f?'rgba(0,122,255,.08)':'#fff',
+                          color:chatFilter===f?BLUE:'#6C6C70',
+                          fontSize:12,
+                          fontWeight:700,
+                        }}
+                      >
+                        {f.replace('_', ' ')}
+                      </button>
+                    ))}
+                  </div>
+                  <Input label="Search" value={chatSearch} onChange={setChatSearch} placeholder="Customer id, name, or message" />
+                  <Btn variant="ghost" size="sm" onClick={()=>loadAdminSessions(chatFilter, chatSearch)} style={{ marginBottom:10 }}>Apply Search</Btn>
+                  <div style={{ maxHeight:520,overflowY:'auto',display:'flex',flexDirection:'column',gap:8 }}>
+                    {chatSessions.map(s => (
+                      <button
+                        key={s.id}
+                        onClick={()=>openChatSession(s.id)}
+                        style={{
+                          textAlign:'left',
+                          padding:10,
+                          borderRadius:10,
+                          border:`1px solid ${activeChatSession?.id===s.id?BLUE:'#EDEDED'}`,
+                          background:activeChatSession?.id===s.id?'rgba(0,122,255,.06)':'#fff',
+                        }}
+                      >
+                        <div style={{ display:'flex',justifyContent:'space-between',marginBottom:4,gap:8 }}>
+                          <p style={{ fontSize:13,fontWeight:700,color:'#1C1C1E',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{s.customer_name || s.customer_id}</p>
+                          <span style={{ fontSize:11,fontWeight:700,color:'#8E8E93' }}>{s.unread_count || 0}</span>
+                        </div>
+                        <p style={{ fontSize:11,color:'#8E8E93',marginBottom:4 }}>{s.customer_id}</p>
+                        <p style={{ fontSize:12,color:'#3C3C43',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{s.last_message || 'No message yet'}</p>
+                        <div style={{ display:'flex',justifyContent:'space-between',marginTop:6 }}>
+                          <span style={{ fontSize:10,color:'#8E8E93' }}>{s.last_message_at ? new Date(s.last_message_at).toLocaleString('en-NG',{ dateStyle:'short', timeStyle:'short' }) : '-'}</span>
+                          <span style={{ fontSize:10,fontWeight:700,color:s.status==='agent_required'?GOLD:s.status==='resolved'?GREEN:'#8E8E93' }}>{s.status}</span>
+                        </div>
+                      </button>
+                    ))}
+                    {chatSessions.length === 0 && <p style={{ fontSize:13,color:'#8E8E93',textAlign:'center',padding:20 }}>No sessions found.</p>}
+                  </div>
+                </Card>
+
+                <Card style={{ padding:16 }}>
+                  {!activeChatSession ? (
+                    <div style={{ height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'#8E8E93' }}>
+                      Select a conversation to start managing support.
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ display:'flex',justifyContent:'space-between',gap:10,alignItems:'flex-start',marginBottom:12 }}>
+                        <div>
+                          <h3 style={{ fontSize:16,fontWeight:900 }}>{activeChatSession.customer_name || activeChatSession.customer_id}</h3>
+                          <p style={{ color:'#8E8E93',fontSize:12 }}>{activeChatSession.customer_id} · {activeChatSession.status}</p>
+                        </div>
+                        <div style={{ display:'flex',gap:6,flexWrap:'wrap',justifyContent:'flex-end' }}>
+                          <Btn size="sm" variant="primary" onClick={()=>chatAction('takeover')} style={{ opacity: chatBusy ? .6 : 1 }}>Takeover</Btn>
+                          <Btn size="sm" variant="ghost" onClick={()=>chatAction('release')} style={{ opacity: chatBusy ? .6 : 1 }}>Release</Btn>
+                          <Btn size="sm" variant="success" onClick={()=>chatAction('resolve')} style={{ opacity: chatBusy ? .6 : 1 }}>Resolve</Btn>
+                          <Btn size="sm" variant="danger" onClick={()=>chatAction('flag')} style={{ opacity: chatBusy ? .6 : 1 }}>Flag</Btn>
+                        </div>
+                      </div>
+
+                      <div style={{ border:'1px solid #ECECEC',borderRadius:12,padding:12,height:360,overflowY:'auto',marginBottom:12,background:'#FBFBFD' }}>
+                        {chatMessages.map(m => {
+                          const mine = m.sender === 'agent';
+                          const ai = m.sender === 'ai';
+                          return (
+                            <div key={m.id} style={{ display:'flex',justifyContent: mine || ai ? 'flex-end' : 'flex-start',marginBottom:8 }}>
+                              <div
+                                style={{
+                                  maxWidth:'80%',
+                                  background: mine ? 'rgba(0,122,255,.12)' : ai ? 'rgba(52,199,89,.12)' : '#fff',
+                                  border:'1px solid #E5E5EA',
+                                  borderRadius:10,
+                                  padding:'8px 10px',
+                                }}
+                              >
+                                <p style={{ fontSize:11,color:'#8E8E93',marginBottom:3,textTransform:'capitalize' }}>{m.sender}</p>
+                                <p style={{ fontSize:13,lineHeight:1.4,whiteSpace:'pre-wrap' }}>{m.content}</p>
+                                <p style={{ fontSize:10,color:'#8E8E93',marginTop:4,textAlign:'right' }}>{new Date(m.created_at).toLocaleString('en-NG',{ dateStyle:'short', timeStyle:'short' })}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {chatMessages.length === 0 && <p style={{ textAlign:'center',fontSize:13,color:'#8E8E93',paddingTop:20 }}>No messages yet.</p>}
+                      </div>
+
+                      <Input label="Reply as Agent" value={chatReply} onChange={setChatReply} multiline placeholder="Type your response to the customer" />
+                      <div style={{ display:'flex',justifyContent:'flex-end',marginBottom:12 }}>
+                        <Btn
+                          onClick={()=>chatAction('send_message', { content: chatReply })}
+                          style={{ opacity: !chatReply.trim() || chatBusy ? .6 : 1 }}
+                        >
+                          Send Reply
+                        </Btn>
+                      </div>
+
+                      <Input label="Internal Note" value={chatNote} onChange={setChatNote} multiline placeholder="Add private note for support team" />
+                      <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+                        <Btn variant="ghost" onClick={()=>chatAction('add_note', { note: chatNote })} style={{ opacity: !chatNote.trim() || chatBusy ? .6 : 1 }}>Add Note</Btn>
+                        <Btn variant="ghost" onClick={()=>openChatSession(activeChatSession.id)}>Reload Conversation</Btn>
+                      </div>
+
+                      {Array.isArray(activeChatSession.internal_notes) && activeChatSession.internal_notes.length > 0 && (
+                        <div style={{ marginTop:12,borderTop:'1px solid #F0F0F0',paddingTop:12 }}>
+                          <p style={{ fontSize:12,fontWeight:800,color:'#6E6E73',marginBottom:8 }}>Internal Notes</p>
+                          <div style={{ display:'flex',flexDirection:'column',gap:6,maxHeight:120,overflowY:'auto' }}>
+                            {activeChatSession.internal_notes.map((n, i) => (
+                              <div key={`${i}-${n.slice(0,8)}`} style={{ background:'#F7F7FA',border:'1px solid #ECECF1',borderRadius:8,padding:'6px 8px',fontSize:12 }}>{n}</div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </Card>
               </div>
             </div>

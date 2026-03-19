@@ -1,10 +1,16 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
+import { verifyAdminToken } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const token = req.nextUrl.searchParams.get('token');
+  if (!token) return new Response('Forbidden', { status: 403 });
+  const ok = await verifyAdminToken(token);
+  if (!ok) return new Response('Forbidden', { status: 403 });
+
   const encoder = new TextEncoder();
   let closed = false;
 
