@@ -558,6 +558,7 @@ export default function AppPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
+  const [showHomeUpdateTip, setShowHomeUpdateTip] = useState(false);
   const [cashbackToast, setCashbackToast] = useState('');
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [redeemAmount, setRedeemAmount] = useState('');
@@ -848,6 +849,7 @@ export default function AppPage() {
       setShowPin(false);
       setScreen('home');
       window.dispatchEvent(new Event('sm-login-success'));
+      setShowHomeUpdateTip(true);
     } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Login failed'); }
     finally { setLoading(false); setShowPin(false); }
   };
@@ -1306,16 +1308,13 @@ export default function AppPage() {
   /* ─── MAIN HOME ─── */
   if (!user) return null;
   const getInitials = (u: User) => `${u.firstName[0]}${u.lastName[0]}`.toUpperCase();
-  const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Valued Customer';
+  const displayName = (user.firstName || '').trim() || 'Customer';
 
   const Header = () => (
     <div style={{ padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(255,255,255,.78)',borderBottom:'1px solid var(--border)',position:'fixed',top:0,left:0,right:0,zIndex:100,backdropFilter:'blur(16px)',backgroundImage: dark ? 'linear-gradient(180deg,rgba(4,8,16,.92),rgba(4,8,16,.78))' : 'linear-gradient(180deg,rgba(255,255,255,.84),rgba(255,255,255,.76))' }}>
       <div style={{ display:'flex',alignItems:'center',gap:12,minWidth:0 }}>
         <img src="/images/logo-sm.png" alt="SaukiMart" style={{ height:36,width:'auto',borderRadius:8,flexShrink:0 }} />
-        <div style={{ display:'flex',flexDirection:'column',minWidth:0 }}>
-          <span style={{ fontSize:10,fontWeight:800,letterSpacing:'0.22em',color:'var(--text-secondary)',textTransform:'uppercase',marginBottom:4 }}>
-            Primary Account
-          </span>
+        <div style={{ display:'flex',flexDirection:'column',minWidth:0,justifyContent:'center' }}>
           <span
             style={{
               fontSize:18,
@@ -1331,7 +1330,6 @@ export default function AppPage() {
           >
             {displayName}
           </span>
-          <span style={{ fontSize:11,color:'var(--text-secondary)',marginTop:3,fontWeight:600 }}>SaukiMart Wallet Dashboard</span>
         </div>
       </div>
       <div style={{ display:'flex',alignItems:'center',gap:10 }}>
@@ -1380,6 +1378,26 @@ export default function AppPage() {
       {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} dark={dark} />}
       {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500,whiteSpace:'nowrap' }}>{toast}</div>}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
+      {showHomeUpdateTip && (
+        <div className="fade-in" style={{ position:'fixed',top:88,right:16,zIndex:520,width:'min(320px, calc(100vw - 32px))',background:dark?'#101A2D':'#FFFFFF',border:dark?'1px solid rgba(255,255,255,.12)':'1px solid rgba(0,0,0,.09)',borderRadius:14,boxShadow:dark?'0 18px 40px rgba(0,0,0,.45)':'0 16px 34px rgba(12,28,54,.16)',padding:'12px 12px 10px' }}>
+          <button
+            onClick={() => setShowHomeUpdateTip(false)}
+            style={{ position:'absolute',top:8,right:8,width:24,height:24,borderRadius:8,border:'none',background:dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.06)',color:'var(--text-secondary)',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}
+            aria-label="Dismiss update tip"
+          >
+            ×
+          </button>
+          <p style={{ fontSize:11,fontWeight:800,letterSpacing:'0.07em',textTransform:'uppercase',color:BLUE,marginBottom:6 }}>New Version Available</p>
+          <p style={{ fontSize:13,color:'var(--text)',lineHeight:1.5,paddingRight:20,marginBottom:10 }}>Update now for AI support, smarter alerts, and smoother wallet transfers.</p>
+          <button
+            onClick={() => window.open('https://play.google.com/store/apps/details?id=online.saukimart.twa', '_blank')}
+            className="tactile-btn"
+            style={{ width:'100%',height:38,borderRadius:10,border:'none',background:'linear-gradient(135deg,#C9A84C,#E2C57C)',color:'#1A1A1A',fontSize:13,fontWeight:800,cursor:'pointer' }}
+          >
+            Update Now
+          </button>
+        </div>
+      )}
       {redeemOpen && (
         <div style={{ position:'fixed',inset:0,zIndex:600,background:'rgba(0,0,0,.65)',display:'flex',alignItems:'center',justifyContent:'center',padding:16 }}>
           <div style={{ width:'100%',maxWidth:420,background:'var(--card)',borderRadius:24,padding:24,boxShadow:'0 28px 60px rgba(0,0,0,.35)' }}>

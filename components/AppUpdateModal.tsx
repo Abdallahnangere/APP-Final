@@ -50,7 +50,7 @@ export default function AppUpdateModal() {
     // Block body scroll
     document.body.style.overflow = 'hidden';
 
-    // Auto-focus the update button when notice opens
+    // Auto-focus the update badge button when notice opens
     buttonRef.current?.focus();
 
     return () => {
@@ -129,40 +129,32 @@ export default function AppUpdateModal() {
           {'Sauki Mart just got a major upgrade. Here\'s what\'s new:\n🤖 AI Support — 24/7, Instant\nGet help anytime without waiting. Our new in-app AI assistant handles complaints, answers questions, and resolves issues around the clock — no human queue, no delays.\n📲 User-to-User Transfers\nSend money directly to any Sauki Mart user in seconds. Fast, seamless, and built right into your wallet.\n🔔 Smart Alert System\nStay in the loop with real-time notifications for transactions, transfers, promotions, and account activity — so you never miss a beat.\n✨ Refreshed UI & UX\nA cleaner, faster, and more intuitive experience from top to bottom. Everything feels smoother, looks sharper, and works better.'}
         </p>
 
-        <button
-          ref={buttonRef}
-          onClick={() => window.open(PLAY_STORE_URL, '_blank')}
-          style={{
-            width: '100%',
-            background: '#C9A84C',
-            color: '#0D0D1A',
-            fontWeight: 700,
-            fontSize: '16px',
-            borderRadius: '10px',
-            padding: '14px 20px',
-            border: 'none',
-            cursor: 'pointer',
-            marginTop: '4px',
-          }}
-        >
-          Update App to Version {safeVersionName}
-        </button>
+        <p style={{ margin: 0, color: '#8A93AA', fontSize: 13, textAlign: 'center' }}>
+          Tap the official Play Store badge to update to version {safeVersionName} and continue.
+        </p>
 
         <button
-          onClick={() => setVisible(false)}
-          style={{
-            width: '100%',
-            background: 'transparent',
-            border: '1px solid rgba(255,255,255,.22)',
-            color: '#CBD2E7',
-            fontWeight: 600,
-            fontSize: '14px',
-            borderRadius: '10px',
-            padding: '12px 16px',
-            cursor: 'pointer',
+          ref={buttonRef}
+          onClick={() => {
+            window.open(PLAY_STORE_URL, '_blank');
+            setVisible(false);
           }}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            padding: 0,
+            margin: '0 auto',
+            display: 'inline-flex',
+            alignSelf: 'center',
+          }}
+          aria-label="Update from Google Play"
         >
-          Continue to App
+          <img
+            src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+            alt="Get it on Google Play"
+            style={{ width: 'min(320px, 80vw)', height: 'auto' }}
+          />
         </button>
       </div>
     </div>
