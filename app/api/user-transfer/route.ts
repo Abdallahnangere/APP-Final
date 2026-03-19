@@ -94,11 +94,13 @@ export async function POST(req: NextRequest) {
       VALUES (${userId}, 'transfer_out', ${'Transfer to ' + recipientPhone}, ${transferAmount}, 'success', NOW())
     `;
 
+    const senderName = `${sender.first_name} ${sender.last_name}`.trim();
+
     // Record recipient transaction
     await sql`
       INSERT INTO transactions 
       (user_id, type, description, amount, status, created_at)
-      VALUES (${recipient.id}, 'transfer_in', ${'Transfer from ' + sender.phone}, ${transferAmount}, 'success', NOW())
+      VALUES (${recipient.id}, 'transfer_in', ${'Transfer from ' + senderName}, ${transferAmount}, 'success', NOW())
     `;
 
     try {
@@ -107,7 +109,7 @@ export async function POST(req: NextRequest) {
         amount: transferAmount,
         newBalance: parseFloat(creditedRecipient?.wallet_balance || 0),
         kind: 'transfer_in',
-        senderLabel: sender.phone,
+        senderLabel: senderName,
       });
     } catch (pushErr) {
       console.error('Transfer-in credit push send failed:', pushErr);

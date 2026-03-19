@@ -23,6 +23,73 @@ type SimActivation = { id: string; status: string; createdAt: string; serialNumb
 
 /* ─────────────── CONSTANTS ─────────────── */
 const BLUE = '#0071E3';
+
+/* ─────────────── SOUNDS ─────────────── */
+const playSound = (type: 'tap' | 'success' | 'error' | 'cash' | 'confirm') => {
+  if (typeof window === 'undefined') return;
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const g = ctx.createGain();
+    g.connect(ctx.destination);
+
+    if (type === 'tap') {
+      const o = ctx.createOscillator();
+      o.connect(g);
+      o.type = 'sine';
+      o.frequency.setValueAtTime(520, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(480, ctx.currentTime + 0.06);
+      g.gain.setValueAtTime(0.07, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.06);
+      o.start(ctx.currentTime);
+      o.stop(ctx.currentTime + 0.06);
+    } else if (type === 'success') {
+      [[523, 0], [659, 0.1], [784, 0.2]].forEach(([freq, delay]) => {
+        const o = ctx.createOscillator();
+        o.connect(g);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+        g.gain.setValueAtTime(0.1, ctx.currentTime + delay);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 0.18);
+        o.start(ctx.currentTime + delay);
+        o.stop(ctx.currentTime + delay + 0.18);
+      });
+    } else if (type === 'cash') {
+      // Coin/cash register sound
+      [[880, 0], [1100, 0.07], [1320, 0.14], [1760, 0.21]].forEach(([freq, delay]) => {
+        const o = ctx.createOscillator();
+        o.connect(g);
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+        g.gain.setValueAtTime(0.12, ctx.currentTime + delay);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 0.12);
+        o.start(ctx.currentTime + delay);
+        o.stop(ctx.currentTime + delay + 0.12);
+      });
+    } else if (type === 'error') {
+      const o = ctx.createOscillator();
+      o.connect(g);
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(200, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.2);
+      g.gain.setValueAtTime(0.08, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.2);
+      o.start(ctx.currentTime);
+      o.stop(ctx.currentTime + 0.2);
+    } else if (type === 'confirm') {
+      [[440, 0], [554, 0.1]].forEach(([freq, delay]) => {
+        const o = ctx.createOscillator();
+        o.connect(g);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+        g.gain.setValueAtTime(0.08, ctx.currentTime + delay);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 0.15);
+        o.start(ctx.currentTime + delay);
+        o.stop(ctx.currentTime + delay + 0.15);
+      });
+    }
+    setTimeout(() => ctx.close(), 600);
+  } catch { /* ignore audio errors */ }
+};
 const GREEN = '#30D158';
 const ORANGE = '#FF9F0A';
 const RED = '#FF3B30';
@@ -154,8 +221,9 @@ function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', su
     const np = pin + d;
     setPin(np);
     
-    // Haptic feedback if available
+    // Haptic + sound feedback
     if (navigator.vibrate) navigator.vibrate(10);
+    playSound('tap');
     
     if (np.length === 4) {
       // Force keyboard dismissal
@@ -528,8 +596,8 @@ export default function AppPage() {
 
   const authHeader = useCallback(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
-  const showError = (msg: string) => { setError(msg); setTimeout(() => setError(''), 4000); };
+  const showToast = (msg: string) => { playSound('success'); setToast(msg); setTimeout(() => setToast(''), 3000); };
+  const showError = (msg: string) => { playSound('error'); setError(msg); setTimeout(() => setError(''), 4000); };
 
   // Back Navigation Handler
   const goBack = useCallback(() => {
@@ -805,6 +873,7 @@ export default function AppPage() {
       setPurchaseIdempotencyKey(null); // Clear for next purchase
       await refreshUser();
       await loadHomeData();
+      playSound('cash');
       showToast('✅ Data purchase successful!');
     } catch(e:unknown) { 
       const msg = e instanceof Error ? e.message : 'Purchase failed';
@@ -975,6 +1044,7 @@ export default function AppPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
+      playSound('cash');
       showToast(`✅ Sent ₦${amount.toLocaleString('en-NG',{minimumFractionDigits:2})} to ${transferRecipient.name}`);
       setReceipt({
         type: 'transfer',
@@ -1113,13 +1183,13 @@ export default function AppPage() {
                 />
               </div>
               
-              <button onClick={()=>{ if(loginPhone.length===11){ setShowPin(true); } else showError('Enter 11-digit phone number'); }}
+              <button onClick={()=>{ if(loginPhone.length===11){ playSound('confirm'); setShowPin(true); } else showError('Enter 11-digit phone number'); }}
                 disabled={loginPhone.length !== 11}
                 style={{ width:'100%',padding:'16px',borderRadius:14,background: loginPhone.length===11 ? `linear-gradient(135deg, ${BLUE}, ${TEAL})` : 'rgba(255,255,255,.2)',color: loginPhone.length===11 ? '#fff' : 'rgba(255,255,255,.5)',fontSize:16,fontWeight:700,transition:'all .3s',marginBottom:16,boxShadow: loginPhone.length===11 ? `0 12px 32px ${BLUE}60` : 'none',cursor:loginPhone.length===11?'pointer':'not-allowed',border:'none',textShadow:'0 1px 2px rgba(0,0,0,.1)',backdropFilter:'blur(20px)' }}>
                 Continue →
               </button>
               
-              <button onClick={()=>setScreen('register')}
+              <button onClick={()=>{ playSound('tap'); setScreen('register'); }}
                 style={{ width:'100%',padding:'14px',borderRadius:14,background:'rgba(255,255,255,.15)',color:'#fff',fontSize:15,fontWeight:600,border:'1px solid rgba(255,255,255,.3)',cursor:'pointer',transition:'all .2s',backdropFilter:'blur(20px)' }}>
                 Create New Account
               </button>
@@ -1498,53 +1568,47 @@ export default function AppPage() {
     <>
       <GlobalStyle dark={dark} />
       <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#050A13 0%,#08101B 100%)' : 'linear-gradient(180deg,#F4F8FF 0%,#EFF4FB 100%)',display:'flex',flexDirection:'column' }}>
-        <div style={{ padding:'58px 20px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
+        <div style={{ padding:'52px 20px 10px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)' }}>
           <button onClick={()=>setScreen('home')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
           <div>
-            <h2 style={{ fontSize:24,fontWeight:900,color:'var(--text)',letterSpacing:-0.5 }}>Buy Data</h2>
-            <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>Choose a network to begin a premium purchase flow</p>
+            <h2 style={{ fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:-0.5 }}>Buy Data</h2>
+            <p style={{ fontSize:11,color:'var(--text-secondary)',marginTop:2 }}>Select network and enter recipient number</p>
           </div>
         </div>
-        <div style={{ flex:1,overflowY:'auto',padding:'18px 16px 40px' }}>
-          <div style={{ background:dark ? 'linear-gradient(145deg,rgba(0,113,227,.22),rgba(0,113,227,.08))' : 'linear-gradient(145deg,rgba(0,113,227,.12),rgba(0,113,227,.04))',border:'1px solid rgba(0,113,227,.18)',borderRadius:22,padding:18,marginBottom:16 }}>
-            <p style={{ fontSize:12,fontWeight:800,color:'var(--text-secondary)',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8 }}>Step 1</p>
-            <p style={{ fontSize:20,fontWeight:900,color:'var(--text)',letterSpacing:'-0.03em' }}>Choose network and recipient number</p>
-            <p style={{ fontSize:13,color:'var(--text-secondary)',lineHeight:1.7,marginTop:8 }}>Complete network selection and number entry on one screen for a smoother data checkout flow.</p>
-          </div>
-
-          <div style={{ width:'100%',background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:'16px',boxShadow:dark ? '0 12px 26px rgba(0,0,0,.22)' : '0 12px 26px rgba(12,28,54,.08)',marginBottom:14 }}>
-            <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:10 }}>Step 2</p>
-            <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:8,letterSpacing:'0.06em',textTransform:'uppercase' }}>Recipient Number</label>
+        <div style={{ flex:1,overflowY:'auto',padding:'12px 16px 16px' }}>
+          <div style={{ width:'100%',background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:'12px 14px',boxShadow:dark ? '0 8px 18px rgba(0,0,0,.18)' : '0 8px 18px rgba(12,28,54,.06)',marginBottom:10 }}>
+            <label style={{ display:'block',fontSize:11,fontWeight:800,color:'var(--text-secondary)',marginBottom:6,letterSpacing:'0.06em',textTransform:'uppercase' }}>Recipient Number</label>
             <input
               value={buyPhone}
               onChange={e=>setBuyPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
               placeholder="Enter 11-digit phone number"
               inputMode="numeric"
               maxLength={11}
-              style={{ width:'100%',padding:'15px 14px',borderRadius:14,background:'var(--bg-secondary)',border:'1.5px solid var(--border)',color:'var(--text)',fontSize:17,fontWeight:700,letterSpacing:'0.04em' }}
+              style={{ width:'100%',padding:'13px 12px',borderRadius:12,background:'var(--bg-secondary)',border:'1.5px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:700,letterSpacing:'0.04em' }}
             />
-            <div style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text-secondary)',marginTop:8 }}>
+            <div style={{ display:'flex',justifyContent:'space-between',fontSize:11,color:'var(--text-secondary)',marginTop:5 }}>
               <span>Format: 08012345678</span>
               <span>{buyPhone.length}/11</span>
             </div>
           </div>
 
-          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginTop:12 }}>
+          <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8 }}>Select Network</p>
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10 }}>
             {NETWORKS.map(net => {
               const networkLogos = { 'MTN': '/images/mtn.png', 'GLO': '/images/glo.png', 'AIRTEL': '/images/airtel.png', '9MOBILE': '/images/oip.jpg' };
               const selected = selectedNetwork?.name === net.name;
               return (
-                <button key={net.name} onClick={()=>setSelectedNetwork(net)}
+                <button key={net.name} onClick={()=>{ setSelectedNetwork(net); playSound('tap'); }}
                   className="ledger-card"
-                  style={{ background:'var(--card)',borderRadius:20,padding:'22px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:14,border:selected ? `1.5px solid ${BLUE}` : '1px solid var(--border)',boxShadow:selected ? (dark ? '0 14px 30px rgba(0,113,227,.35)' : '0 14px 30px rgba(0,113,227,.18)') : (dark ? '0 12px 28px rgba(0,0,0,.22)' : '0 12px 28px rgba(12,28,54,.08)'),transition:'all .3s',cursor:'pointer',textAlign:'left' }}
-                  onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)';e.currentTarget.style.boxShadow=dark ? '0 18px 34px rgba(0,0,0,.28)' : '0 18px 34px rgba(12,28,54,.14)';}}
-                  onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow=dark ? '0 12px 28px rgba(0,0,0,.22)' : '0 12px 28px rgba(12,28,54,.08)';}}>
-                  <div style={{ width:58,height:58,borderRadius:16,background:'linear-gradient(145deg,rgba(0,113,227,.12),rgba(90,200,250,.05))',display:'flex',alignItems:'center',justifyContent:'center' }}>
-                    <img src={networkLogos[net.name as keyof typeof networkLogos]} alt={net.name} style={{ width:44,height:44,borderRadius:12,objectFit:'contain' }} />
+                  style={{ background:'var(--card)',borderRadius:16,padding:'12px',display:'flex',alignItems:'center',gap:10,border:selected ? `1.5px solid ${BLUE}` : '1px solid var(--border)',boxShadow:selected ? (dark ? '0 8px 20px rgba(0,113,227,.3)' : '0 8px 20px rgba(0,113,227,.15)') : (dark ? '0 6px 16px rgba(0,0,0,.18)' : '0 6px 16px rgba(12,28,54,.06)'),transition:'all .25s',cursor:'pointer',textAlign:'left' }}
+                  onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';}}>
+                  <div style={{ width:42,height:42,borderRadius:12,background:'linear-gradient(145deg,rgba(0,113,227,.1),rgba(90,200,250,.04))',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+                    <img src={networkLogos[net.name as keyof typeof networkLogos]} alt={net.name} style={{ width:32,height:32,borderRadius:8,objectFit:'contain' }} />
                   </div>
                   <div>
-                    <p style={{ fontWeight:800,fontSize:16,color:'var(--text)',marginTop:4 }}>{net.name}</p>
-                    <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>Fast activation and competitive pricing</p>
+                    <p style={{ fontWeight:800,fontSize:14,color:'var(--text)' }}>{net.name}</p>
+                    {selected && <p style={{ fontSize:10,color:BLUE,fontWeight:700,marginTop:2 }}>✓ Selected</p>}
                   </div>
                 </button>
               );
@@ -1555,13 +1619,14 @@ export default function AppPage() {
             onClick={()=>{
               if (!selectedNetwork) { showError('Select a network first'); return; }
               if (buyPhone.length !== 11) { showError('Enter 11-digit phone number'); return; }
+              playSound('tap');
               loadPlans(selectedNetwork.name);
               setScreen('data-plans');
             }}
             disabled={!selectedNetwork || buyPhone.length !== 11}
             className="tactile-btn"
-            style={{ width:'100%',marginTop:16,padding:'16px',background:selectedNetwork && buyPhone.length===11 ? 'linear-gradient(135deg,#0047CC,#0071E3)' : 'rgba(142,142,147,.35)',color:'#fff',borderRadius:14,fontWeight:800,fontSize:16,border:'none',cursor:selectedNetwork && buyPhone.length===11 ? 'pointer' : 'not-allowed',opacity:selectedNetwork && buyPhone.length===11 ? 1 : 0.72,boxShadow:selectedNetwork && buyPhone.length===11 ? '0 12px 26px rgba(0,113,227,.32)' : 'none' }}>
-            Continue to Plans
+            style={{ width:'100%',marginTop:12,padding:'15px',background:selectedNetwork && buyPhone.length===11 ? 'linear-gradient(135deg,#0047CC,#0071E3)' : 'rgba(142,142,147,.35)',color:'#fff',borderRadius:14,fontWeight:800,fontSize:16,border:'none',cursor:selectedNetwork && buyPhone.length===11 ? 'pointer' : 'not-allowed',opacity:selectedNetwork && buyPhone.length===11 ? 1 : 0.72,boxShadow:selectedNetwork && buyPhone.length===11 ? '0 10px 22px rgba(0,113,227,.3)' : 'none' }}>
+            Continue to Plans →
           </button>
         </div>
       </div>
@@ -1825,7 +1890,7 @@ export default function AppPage() {
         </div>
         {selectedProduct.inStock && (
           <div style={{ position:'fixed',bottom:0,left:0,right:0,padding:'16px 20px',background:'var(--card)',borderTop:'1px solid var(--border)',boxShadow:'0 -10px 28px rgba(0,0,0,.12)' }}>
-            <button onClick={()=>{ setPinAction('buy-product'); setShowPin(true); }} className="tactile-btn" style={{ width:'100%',padding:'16px',borderRadius:14,background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:16,fontWeight:800,boxShadow:'0 12px 26px rgba(0,113,227,.32)' }}>
+            <button onClick={()=>{ playSound('confirm'); setPinAction('buy-product'); setShowPin(true); }} className="tactile-btn" style={{ width:'100%',padding:'16px',borderRadius:14,background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:16,fontWeight:800,boxShadow:'0 12px 26px rgba(0,113,227,.32)' }}>
               Buy for ₦{Number(selectedProduct.price).toLocaleString()}
             </button>
           </div>
@@ -2244,7 +2309,7 @@ export default function AppPage() {
 
           {transferRecipient && transferAmount ? (
             <button className="tactile-btn"
-              onClick={()=>{ setPinAction('transfer'); setShowPin(true); }}
+              onClick={()=>{ playSound('confirm'); setPinAction('transfer'); setShowPin(true); }}
               style={{ width:'100%',padding:'16px',borderRadius:14,background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:16,fontWeight:800,border:'none',cursor:'pointer',boxShadow:'0 12px 26px rgba(0,113,227,.36)' }}>
               Continue to PIN Confirmation
             </button>
