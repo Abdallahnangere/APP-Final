@@ -44,47 +44,58 @@ export function useAppVersion(): AppVersionState {
   });
 
   useEffect(() => {
-    const isAndroidWebView = navigator.userAgent.includes('SaukiMartAndroid');
+    let controller: AbortController | null = null;
 
-    if (!isAndroidWebView) {
-      setState(prev => ({ ...prev, isAndroidWebView: false, isLoading: false }));
-      return;
-    }
+    const runVersionCheck = () => {
+      const isAndroidWebView = navigator.userAgent.includes('SaukiMartAndroid');
 
-    const currentVersionCode = typeof window.appVersion === 'number' ? window.appVersion : 0;
-    const currentVersionName = typeof window.appVersionName === 'string' ? window.appVersionName : null;
+      if (!isAndroidWebView) {
+        setState(prev => ({ ...prev, isAndroidWebView: false, isLoading: false }));
+        return;
+      }
 
-    setState(prev => ({ ...prev, isAndroidWebView: true, currentVersionCode, currentVersionName, isLoading: true }));
+      const currentVersionCode = typeof window.appVersion === 'number' ? window.appVersion : 0;
+      const currentVersionName = typeof window.appVersionName === 'string' ? window.appVersionName : null;
 
-    const controller = new AbortController();
+      setState(prev => ({ ...prev, isAndroidWebView: true, currentVersionCode, currentVersionName, isLoading: true }));
 
-    fetch('/api/app-metadata', { signal: controller.signal })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<AppMetadata>;
-      })
-      .then((meta: AppMetadata) => {
-        setState({
-          isAndroidWebView: true,
-          currentVersionCode,
-          currentVersionName,
-          latestVersionName: meta.latestVersionName,
-          needsForceUpdate: currentVersionCode < 14,
-          playStoreUrl: meta.playStoreUrl,
-          isLoading: false,
+      if (controller) controller.abort();
+      controller = new AbortController();
+
+      fetch('/api/app-metadata', { signal: controller.signal })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json() as Promise<AppMetadata>;
+        })
+        .then((meta: AppMetadata) => {
+          setState({
+            isAndroidWebView: true,
+            currentVersionCode,
+            currentVersionName,
+            latestVersionName: meta.latestVersionName,
+            needsForceUpdate: currentVersionCode < 14,
+            playStoreUrl: meta.playStoreUrl,
+            isLoading: false,
+          });
+        })
+        .catch((err: unknown) => {
+          if (err instanceof Error && err.name === 'AbortError') return;
+          // Silently fail — never crash the app over a version check
+          setState(prev => ({
+            ...prev,
+            needsForceUpdate: false,
+            isLoading: false,
+          }));
         });
-      })
-      .catch((err: unknown) => {
-        if (err instanceof Error && err.name === 'AbortError') return;
-        // Silently fail — never crash the app over a version check
-        setState(prev => ({
-          ...prev,
-          needsForceUpdate: false,
-          isLoading: false,
-        }));
-      });
+    };
 
-    return () => controller.abort();
+    runVersionCheck();
+    window.addEventListener('saukimart-version-recheck', runVersionCheck);
+
+    return () => {
+      window.removeEventListener('saukimart-version-recheck', runVersionCheck);
+      if (controller) controller.abort();
+    };
   }, []);
 
   return state;
