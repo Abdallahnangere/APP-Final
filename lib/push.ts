@@ -184,7 +184,6 @@ export async function sendCreditAlert(input: CreditAlertInput): Promise<void> {
     FROM user_push_tokens
     WHERE user_id = ${input.userId} AND is_active = TRUE
     ORDER BY updated_at DESC
-    LIMIT 6
   `;
 
   if (!tokens.length) return;

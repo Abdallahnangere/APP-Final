@@ -991,7 +991,8 @@ export default function AppPage() {
 
   /* ── CHANGE PIN ── */
   const handleChangePin = async (currentPin: string) => {
-    if (!newPin || newPin !== confirmNewPin) { showError('New PINs do not match'); return; }
+    if (newPin.length !== 4 || confirmNewPin.length !== 4) { showError('PIN must be 4 digits'); return; }
+    if (newPin !== confirmNewPin) { showError('New PINs do not match'); return; }
     setLoading(true);
     try {
       const res = await fetch('/api/user', { method:'PATCH', headers: authHeader(), body: JSON.stringify({ action:'change-pin', currentPin, newPin }) });
@@ -1003,9 +1004,42 @@ export default function AppPage() {
     finally { setLoading(false); }
   };
 
-  const signOut = () => {
+  const signOut = async () => {
+    const authToken = localStorage.getItem('sm_token') || token;
+    const devicePushToken = localStorage.getItem('sm_fcm_token')
+      || localStorage.getItem('sm_push_token')
+      || localStorage.getItem('device_push_token');
+
+    if (authToken && devicePushToken) {
+      try {
+        await fetch('/api/push-token', {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token: devicePushToken }),
+        });
+      } catch {
+        // Sign-out should continue even if token deactivation fails.
+      }
+    }
+
+    const nativeHost = window as Window & {
+      SaukiMartAndroid?: { onLogout?: () => void };
+      Android?: { onLogout?: () => void };
+      webkit?: { messageHandlers?: { saukiMartLogout?: { postMessage?: (message: unknown) => void } } };
+    };
+
+    try { nativeHost.SaukiMartAndroid?.onLogout?.(); } catch {}
+    try { nativeHost.Android?.onLogout?.(); } catch {}
+    try { nativeHost.webkit?.messageHandlers?.saukiMartLogout?.postMessage?.({ type: 'logout' }); } catch {}
+
     localStorage.removeItem('sm_token');
     localStorage.removeItem('sm_user');
+    localStorage.removeItem('sm_fcm_token');
+    localStorage.removeItem('sm_push_token');
+    localStorage.removeItem('device_push_token');
     setToken(''); setUser(null);
     setScreen('login');
   };
@@ -1162,7 +1196,7 @@ export default function AppPage() {
                 🔐 Enter PIN
               </button>
 
-              <button onClick={()=>{ setStoredPhone(''); setLoginPhone(''); setIsReturningUserPIN(false); localStorage.removeItem('sm_phone'); localStorage.removeItem('sm_token'); localStorage.removeItem('sm_user'); setToken(''); setUser(null); }}
+              <button onClick={async()=>{ setStoredPhone(''); setLoginPhone(''); setIsReturningUserPIN(false); localStorage.removeItem('sm_phone'); await signOut(); }}
                 style={{ fontSize:14,color:'#fff',fontWeight:600,background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.3)',cursor:'pointer',width:'100%',padding:'14px',borderRadius:12,transition:'all .2s' }}>
                 Use Different Number
               </button>
@@ -2208,18 +2242,18 @@ export default function AppPage() {
           <div style={{ background:'var(--card)',borderRadius:22,padding:'20px',border:'1px solid var(--border)',boxShadow:dark ? '0 14px 34px rgba(0,0,0,.2)' : '0 14px 34px rgba(12,28,54,.08)' }}>
           <div style={{ marginBottom:24 }}>
             <label style={{ fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:8,display:'block',letterSpacing:'0.08em',textTransform:'uppercase' }}>New PIN</label>
-            <input type="password" inputMode="numeric" maxLength={6} value={newPin} onChange={e=>setNewPin(e.target.value.replace(/\D/g,'').slice(0,6))}
-              placeholder="••••••" style={{ width:'100%',padding:'15px 16px',borderRadius:14,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:20,letterSpacing:6,textAlign:'center' }} />
+            <input type="password" inputMode="numeric" maxLength={4} value={newPin} onChange={e=>setNewPin(e.target.value.replace(/\D/g,'').slice(0,4))}
+              placeholder="••••" style={{ width:'100%',padding:'15px 16px',borderRadius:14,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:20,letterSpacing:6,textAlign:'center' }} />
           </div>
           <div style={{ marginBottom:32 }}>
             <label style={{ fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:8,display:'block',letterSpacing:'0.08em',textTransform:'uppercase' }}>Confirm PIN</label>
-            <input type="password" inputMode="numeric" maxLength={6} value={confirmNewPin} onChange={e=>setConfirmNewPin(e.target.value.replace(/\D/g,'').slice(0,6))}
-              placeholder="••••••" style={{ width:'100%',padding:'15px 16px',borderRadius:14,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:20,letterSpacing:6,textAlign:'center' }} />
+            <input type="password" inputMode="numeric" maxLength={4} value={confirmNewPin} onChange={e=>setConfirmNewPin(e.target.value.replace(/\D/g,'').slice(0,4))}
+              placeholder="••••" style={{ width:'100%',padding:'15px 16px',borderRadius:14,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:20,letterSpacing:6,textAlign:'center' }} />
           </div>
-          <button onClick={()=>{ if(newPin.length===6&&newPin===confirmNewPin){ setShowPin(true); } else showError('PINs must match'); }}
-            disabled={newPin.length!==6||newPin!==confirmNewPin}
+          <button onClick={()=>{ if(newPin.length===4&&newPin===confirmNewPin){ setShowPin(true); } else showError('PINs must match'); }}
+            disabled={newPin.length!==4||newPin!==confirmNewPin}
             className="tactile-btn"
-            style={{ width:'100%',padding:'16px',borderRadius:14,background:newPin.length===6&&newPin===confirmNewPin?'linear-gradient(135deg,#0047CC,#0071E3)':'var(--bg-secondary)',color:newPin.length===6&&newPin===confirmNewPin?'#fff':'var(--text-secondary)',fontSize:16,fontWeight:800,boxShadow:newPin.length===6&&newPin===confirmNewPin?'0 12px 26px rgba(0,113,227,.28)':'none' }}>
+            style={{ width:'100%',padding:'16px',borderRadius:14,background:newPin.length===4&&newPin===confirmNewPin?'linear-gradient(135deg,#0047CC,#0071E3)':'var(--bg-secondary)',color:newPin.length===4&&newPin===confirmNewPin?'#fff':'var(--text-secondary)',fontSize:16,fontWeight:800,boxShadow:newPin.length===4&&newPin===confirmNewPin?'0 12px 26px rgba(0,113,227,.28)':'none' }}>
             Update PIN
           </button>
           </div>
