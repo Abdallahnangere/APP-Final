@@ -19,6 +19,25 @@ type Transaction = { id: string; user_id: string; type: string; description: str
 type Broadcast = { id: string; message: string; is_active: boolean; created_at: string; };
 type Webhook = { id: string; event: string; payload: Record<string,unknown>; created_at: string; };
 type SimAct = { id: string; user_id: string; serial_number: string; front_image_url: string; back_image_url: string; status: string; created_at: string; first_name?: string; last_name?: string; phone?: string; };
+type Order = {
+  id: string;
+  user_id: string;
+  product_id?: string;
+  product_name: string;
+  amount: number;
+  payment_status: string;
+  created_at: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  receipt_data: Record<string, unknown>;
+  delivery_address: string;
+  receipt_ref: string;
+  fulfillment_status: string;
+  tracking_number: string;
+  admin_note: string;
+  fulfillment_updated_at: string;
+};
 type AdminChatSession = {
   id: string;
   customer_id: string;
@@ -134,6 +153,8 @@ export default function AdminPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [orderStats, setOrderStats] = useState<Record<string, unknown>>({});
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [simActs, setSimActs] = useState<SimAct[]>([]);
@@ -143,6 +164,7 @@ export default function AdminPage() {
   const [activeChatSession, setActiveChatSession] = useState<AdminChatSession|null>(null);
   const [chatMessages, setChatMessages] = useState<AdminChatMessage[]>([]);
   const [selectedUser, setSelectedUser] = useState<User|null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order|null>(null);
 
   // Forms
   const [planForm, setPlanForm] = useState({ network:'MTN', network_id:'1', plan_id:'', data_size:'', validity:'30 days', selling_price:'', cost_price:'', editId:'' });
@@ -160,6 +182,10 @@ export default function AdminPage() {
   const [pushUserSearch, setPushUserSearch] = useState('');
   const [pushSending, setPushSending] = useState(false);
   const [pushResult, setPushResult] = useState<Record<string, unknown>|null>(null);
+  const [orderFilter, setOrderFilter] = useState('all');
+  const [orderSearch, setOrderSearch] = useState('');
+  const [orderForm, setOrderForm] = useState({ fulfillmentStatus:'paid', trackingNumber:'', adminNote:'' });
+  const [orderSaving, setOrderSaving] = useState(false);
   const [chatFilter, setChatFilter] = useState('all');
   const [chatSearch, setChatSearch] = useState('');
   const [chatReply, setChatReply] = useState('');
@@ -240,6 +266,23 @@ export default function AdminPage() {
     const payload = await load(`analytics${query ? `?${query}` : ''}`);
     setAnalytics((payload?.overview || payload || {}) as Record<string, unknown>);
   }, [analyticsDate, analyticsFilter, load]);
+
+  const loadOrders = useCallback(async (filter = orderFilter, search = orderSearch) => {
+    try {
+      const params = new URLSearchParams();
+      if (filter && filter !== 'all') params.set('filter', filter);
+      if (search.trim()) params.set('search', search.trim());
+      const res = await fetch(`/api/admin/orders${params.toString() ? `?${params.toString()}` : ''}`, { headers: authH() });
+      if (!res.ok) throw new Error('Failed to load orders');
+      const data = await res.json();
+      const nextOrders = Array.isArray(data?.orders) ? data.orders : [];
+      setOrders(nextOrders);
+      setOrderStats((data?.stats || {}) as Record<string, unknown>);
+      setSelectedOrder((prev) => prev ? nextOrders.find((order: Order) => order.id === prev.id) || prev : nextOrders[0] || null);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Failed to load orders');
+    }
+  }, [authH, orderFilter, orderSearch]);
 
   const loadAdminSessions = useCallback(async (filter = chatFilter, search = chatSearch) => {
     try {
@@ -344,18 +387,33 @@ export default function AdminPage() {
     if (tab === 'plans') load('plans').then(d => setPlans(Array.isArray(d)?d:[]));
     if (tab === 'products') load('products').then(d => setProducts(Array.isArray(d)?d:[]));
     if (tab === 'transactions') load('transactions').then(d => setTransactions(Array.isArray(d)?d:[]));
+    if (tab === 'orders') loadOrders();
     if (tab === 'broadcasts') load('broadcasts').then(d => setBroadcasts(Array.isArray(d)?d:[]));
     if (tab === 'push') load('users').then(d => setUsers(Array.isArray(d)?d:[]));
     if (tab === 'chat') loadAdminSessions();
     if (tab === 'webhooks') load('webhooks').then(d => setWebhooks(Array.isArray(d)?d:[]));
     if (tab === 'sim') load('sim-activations').then(d => setSimActs(Array.isArray(d)?d:[]));
     if (tab === 'analytics') loadAnalytics();
-  }, [tab, authed, load, loadAdminSessions, loadAnalytics, analyticsDate]);
+  }, [tab, authed, load, loadAdminSessions, loadAnalytics, analyticsDate, loadOrders]);
 
   useEffect(() => {
     if (!authed || tab !== 'analytics') return;
     loadAnalytics();
   }, [analyticsFilter, analyticsDate, authed, tab, loadAnalytics]);
+
+  useEffect(() => {
+    if (!authed || tab !== 'orders') return;
+    loadOrders();
+  }, [authed, tab, orderFilter, orderSearch, loadOrders]);
+
+  useEffect(() => {
+    if (!selectedOrder) return;
+    setOrderForm({
+      fulfillmentStatus: selectedOrder.fulfillment_status || 'paid',
+      trackingNumber: selectedOrder.tracking_number || '',
+      adminNote: selectedOrder.admin_note || '',
+    });
+  }, [selectedOrder]);
 
   // Real-time wallet updates when needed
   useEffect(() => {
@@ -381,6 +439,34 @@ export default function AdminPage() {
   /* ── RECEIPT DOWNLOAD ── */
   const downloadReceipt = async (data: Record<string,unknown>) => {
     setReceiptModal(data);
+  };
+
+  const saveOrderUpdate = async () => {
+    if (!selectedOrder) return;
+    setOrderSaving(true);
+    try {
+      await api('orders', 'PATCH', {
+        orderId: selectedOrder.id,
+        fulfillmentStatus: orderForm.fulfillmentStatus,
+        trackingNumber: orderForm.trackingNumber,
+        adminNote: orderForm.adminNote,
+      });
+      const updatedOrder: Order = {
+        ...selectedOrder,
+        fulfillment_status: orderForm.fulfillmentStatus,
+        tracking_number: orderForm.trackingNumber,
+        admin_note: orderForm.adminNote,
+        fulfillment_updated_at: new Date().toISOString(),
+      };
+      setSelectedOrder(updatedOrder);
+      setOrders((prev) => prev.map((order) => order.id === updatedOrder.id ? updatedOrder : order));
+      await loadOrders();
+      showToast('Order workflow updated');
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Failed to update order');
+    } finally {
+      setOrderSaving(false);
+    }
   };
 
   /* ── LOGIN SCREEN ── */
@@ -1233,20 +1319,149 @@ export default function AdminPage() {
           {/* ─── CHAT ─── */}
           {tab === 'orders' && (
             <div className="fade-in">
-              <h1 style={{ fontSize:22,fontWeight:900,marginBottom:20 }}>Orders Management</h1>
-              <Card>
-                <div style={{ overflowX:'auto' }}>
-                  <table style={{ width:'100%',borderCollapse:'collapse' }}>
-                    <thead><tr style={{ background:'#F9F9F9' }}>
-                      {['Order ID','Customer','Product','Amount','Status','Date','Actions'].map(h=><th key={h} style={{ padding:'10px 14px',fontSize:12,fontWeight:700,color:'#8E8E93',textAlign:'left',borderBottom:'1px solid #F2F2F7',whiteSpace:'nowrap' }}>{h}</th>)}
-                    </tr></thead>
-                    <tbody><tr><td colSpan={7} style={{ padding:'40px',textAlign:'center',color:'#8E8E93' }}>
-                      <div style={{ fontSize:36,marginBottom:12 }}>📦</div>
-                      <p>Order management system coming soon. Currently tracking orders via transactions table.</p>
-                    </td></tr></tbody>
-                  </table>
-                </div>
-              </Card>
+              <div style={{ display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:14,marginBottom:18 }}>
+                {[
+                  { label:'Total Orders', value: String(orderStats.total || 0), color:'#2359b8' },
+                  { label:'Paid', value: String(orderStats.paid_count || 0), color:'#4a80dd' },
+                  { label:'Processing', value: String(orderStats.processing_count || 0), color:'#cb9d41' },
+                  { label:'Shipped', value: String(orderStats.shipped_count || 0), color:'#248b78' },
+                  { label:'Delivered', value: String(orderStats.delivered_count || 0), color:'#1f6d5c' },
+                ].map((stat) => (
+                  <Card key={stat.label} style={{ padding:'16px 18px' }}>
+                    <p style={{ fontSize:12,color:'#667891',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8 }}>{stat.label}</p>
+                    <p className="admin-code" style={{ fontSize:28,fontWeight:700,color:stat.color }}>{stat.value}</p>
+                  </Card>
+                ))}
+              </div>
+
+              <div style={{ display:'grid',gridTemplateColumns:'1.15fr .85fr',gap:18 }}>
+                <Card>
+                  <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:16,flexWrap:'wrap' }}>
+                    <div>
+                      <h2 style={{ fontSize:20,fontWeight:900,color:'#10243f',letterSpacing:'-0.03em' }}>Order Queue</h2>
+                      <p style={{ color:'#667891',fontSize:13,marginTop:4 }}>Product purchases with delivery details and fulfilment workflow.</p>
+                    </div>
+                    <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
+                      {['all','paid','processing','shipped','delivered','cancelled'].map((filter) => (
+                        <button
+                          key={filter}
+                          onClick={() => setOrderFilter(filter)}
+                          style={{ padding:'8px 12px',borderRadius:12,border:`1px solid ${orderFilter===filter ? 'rgba(35,89,184,.26)' : 'rgba(196,208,230,.9)'}`,background:orderFilter===filter?'rgba(58,108,197,.08)':'rgba(255,255,255,.7)',color:orderFilter===filter?'#204e9d':'#5f7189',fontSize:12,fontWeight:800,textTransform:'capitalize' }}
+                        >
+                          {filter}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display:'grid',gridTemplateColumns:'1fr auto',gap:10,marginBottom:16 }}>
+                    <input
+                      value={orderSearch}
+                      onChange={(e)=>setOrderSearch(e.target.value)}
+                      placeholder="Search customer, phone, product, reference or address"
+                      style={{ padding:'13px 14px',borderRadius:14,border:'1px solid rgba(196,208,230,.9)',fontSize:14,background:'rgba(248,251,255,.9)',color:'#18304d' }}
+                    />
+                    <Btn variant="ghost" onClick={()=>loadOrders(orderFilter, orderSearch)}>Refresh</Btn>
+                  </div>
+
+                  <div style={{ overflowX:'auto' }}>
+                    <table style={{ width:'100%',borderCollapse:'collapse' }}>
+                      <thead><tr style={{ background:'rgba(239,244,252,.9)' }}>
+                        {['Customer','Product','Amount','Fulfilment','Payment','Ordered'].map(h=><th key={h} style={{ padding:'11px 12px',fontSize:11,fontWeight:800,color:'#647793',textAlign:'left',borderBottom:'1px solid rgba(210,221,240,.9)',textTransform:'uppercase',letterSpacing:'0.07em' }}>{h}</th>)}
+                      </tr></thead>
+                      <tbody>
+                        {orders.map((order) => (
+                          <tr key={order.id} onClick={()=>setSelectedOrder(order)} style={{ borderBottom:'1px solid rgba(224,231,244,.8)',cursor:'pointer',background:selectedOrder?.id===order.id?'rgba(53,105,194,.08)':'transparent' }}>
+                            <td style={{ padding:'13px 12px' }}>
+                              <p style={{ fontSize:13,fontWeight:800,color:'#132843' }}>{order.first_name} {order.last_name}</p>
+                              <p style={{ fontSize:12,color:'#6d809a',marginTop:3 }}>{order.phone}</p>
+                            </td>
+                            <td style={{ padding:'13px 12px' }}>
+                              <p style={{ fontSize:13,fontWeight:700,color:'#193352' }}>{order.product_name}</p>
+                              <p className="admin-code" style={{ fontSize:11,color:'#7990ac',marginTop:3 }}>{order.receipt_ref}</p>
+                            </td>
+                            <td style={{ padding:'13px 12px',fontSize:13,fontWeight:900,color:'#1f6d5c' }}>{formatMoney(order.amount)}</td>
+                            <td style={{ padding:'13px 12px' }}>
+                              <span style={{ display:'inline-block',padding:'5px 10px',borderRadius:999,border:'1px solid rgba(53,105,194,.16)',background:'rgba(58,108,197,.08)',fontSize:11,fontWeight:800,color:'#295fb3',textTransform:'capitalize' }}>{order.fulfillment_status.replace(/_/g, ' ')}</span>
+                            </td>
+                            <td style={{ padding:'13px 12px' }}>
+                              <span style={{ display:'inline-block',padding:'5px 10px',borderRadius:999,border:'1px solid rgba(34,121,89,.16)',background:order.payment_status==='success'?'rgba(41,132,96,.1)':'rgba(204,146,52,.12)',fontSize:11,fontWeight:800,color:order.payment_status==='success'?'#1f6d5c':'#a17018',textTransform:'capitalize' }}>{order.payment_status}</span>
+                            </td>
+                            <td style={{ padding:'13px 12px',fontSize:12,color:'#6d809a' }}>{formatDateTime(order.created_at)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {orders.length === 0 && <div style={{ padding:'40px 20px',textAlign:'center',color:'#6d809a' }}>No orders match the current filter.</div>}
+                  </div>
+                </Card>
+
+                <Card>
+                  {!selectedOrder ? (
+                    <div style={{ minHeight:420,display:'flex',alignItems:'center',justifyContent:'center',textAlign:'center',color:'#6d809a' }}>
+                      Select an order to review delivery details, tracking, and fulfilment status.
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',marginBottom:18 }}>
+                        <div>
+                          <p style={{ fontSize:11,fontWeight:800,color:'#7086a0',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:6 }}>Selected order</p>
+                          <h2 style={{ fontSize:22,fontWeight:900,color:'#10243f',letterSpacing:'-0.04em' }}>{selectedOrder.product_name}</h2>
+                          <p style={{ color:'#647793',fontSize:13,marginTop:6 }}>{selectedOrder.first_name} {selectedOrder.last_name} · {selectedOrder.phone}</p>
+                        </div>
+                        <div style={{ textAlign:'right' }}>
+                          <p style={{ color:'#6d809a',fontSize:11,textTransform:'uppercase',letterSpacing:'0.08em' }}>Order Value</p>
+                          <p style={{ color:'#1f6d5c',fontSize:22,fontWeight:900,marginTop:6 }}>{formatMoney(selectedOrder.amount)}</p>
+                        </div>
+                      </div>
+
+                      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:18 }}>
+                        {[
+                          ['Reference', selectedOrder.receipt_ref],
+                          ['Ordered', formatDateTime(selectedOrder.created_at)],
+                          ['Payment', selectedOrder.payment_status],
+                          ['Last Workflow Update', formatDateTime(selectedOrder.fulfillment_updated_at)],
+                        ].map(([label, value]) => (
+                          <div key={label} style={{ padding:'12px 14px',borderRadius:16,background:'rgba(244,248,254,.9)',border:'1px solid rgba(215,226,243,.9)' }}>
+                            <p style={{ fontSize:11,color:'#7086a0',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6 }}>{label}</p>
+                            <p className={label==='Reference' ? 'admin-code' : undefined} style={{ fontSize:13,fontWeight:800,color:'#163150' }}>{value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={{ marginBottom:18,padding:'14px 16px',borderRadius:18,background:'rgba(244,248,254,.9)',border:'1px solid rgba(215,226,243,.9)' }}>
+                        <p style={{ fontSize:11,color:'#7086a0',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8 }}>Delivery address</p>
+                        <p style={{ fontSize:14,lineHeight:1.7,color:'#163150' }}>{selectedOrder.delivery_address || 'Not provided'}</p>
+                      </div>
+
+                      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10 }}>
+                        <div>
+                          <label style={{ display:'block',fontSize:12,fontWeight:800,color:'#7086a0',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8 }}>Fulfilment status</label>
+                          <select value={orderForm.fulfillmentStatus} onChange={(e)=>setOrderForm((prev)=>({ ...prev, fulfillmentStatus: e.target.value }))} style={{ width:'100%',padding:'13px 14px',borderRadius:14,border:'1px solid rgba(196,208,230,.9)',fontSize:14,background:'rgba(248,251,255,.9)',color:'#18304d' }}>
+                            {['paid','processing','packed','shipped','delivered','cancelled'].map((status) => <option key={status} value={status}>{status}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ display:'block',fontSize:12,fontWeight:800,color:'#7086a0',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8 }}>Tracking number</label>
+                          <input value={orderForm.trackingNumber} onChange={(e)=>setOrderForm((prev)=>({ ...prev, trackingNumber: e.target.value }))} placeholder="Courier / tracking reference" style={{ width:'100%',padding:'13px 14px',borderRadius:14,border:'1px solid rgba(196,208,230,.9)',fontSize:14,background:'rgba(248,251,255,.9)',color:'#18304d' }} />
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop:14,marginBottom:18 }}>
+                        <label style={{ display:'block',fontSize:12,fontWeight:800,color:'#7086a0',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8 }}>Admin note</label>
+                        <textarea value={orderForm.adminNote} onChange={(e)=>setOrderForm((prev)=>({ ...prev, adminNote: e.target.value }))} placeholder="Internal fulfilment note, courier context, call outcome, delivery instruction..." style={{ width:'100%',minHeight:130,padding:'13px 14px',borderRadius:14,border:'1px solid rgba(196,208,230,.9)',fontSize:14,background:'rgba(248,251,255,.9)',color:'#18304d',resize:'vertical',fontFamily:'inherit',lineHeight:1.6 }} />
+                      </div>
+
+                      <div style={{ display:'flex',gap:10,flexWrap:'wrap' }}>
+                        <Btn onClick={saveOrderUpdate} style={{ minWidth:180 }}>{orderSaving ? 'Saving...' : 'Save Workflow Update'}</Btn>
+                        <Btn variant="ghost" onClick={()=>setOrderForm({ fulfillmentStatus:'processing', trackingNumber:selectedOrder.tracking_number || '', adminNote:selectedOrder.admin_note || '' })}>Set Processing</Btn>
+                        <Btn variant="ghost" onClick={()=>setOrderForm({ fulfillmentStatus:'shipped', trackingNumber:selectedOrder.tracking_number || '', adminNote:selectedOrder.admin_note || '' })}>Prepare Shipment</Btn>
+                        <Btn variant="ghost" onClick={()=>downloadReceipt(selectedOrder.receipt_data)}>View Receipt Payload</Btn>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              </div>
             </div>
           )}
 

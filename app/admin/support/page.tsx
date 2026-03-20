@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { adminPortalUrl } from '@/lib/adminPortal';
 
 // ─── Types ───────────────────────────────────────────────────
 interface Session {
@@ -312,7 +313,7 @@ export default function AdminSupportDashboard() {
         <div style={{ width: '100%', maxWidth: 420, borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(12,18,30,0.9)', padding: 24, color: '#e2e8f0', textAlign: 'center' }}>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Admin authentication required</h1>
           <p style={{ fontSize: 14, color: 'rgba(226,232,240,0.75)', marginBottom: 16 }}>Sign in from the admin panel to access support sessions.</p>
-          <button onClick={() => { window.location.href = '/admin'; }} style={{ border: 'none', borderRadius: 10, padding: '10px 16px', background: '#007AFF', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => { window.location.href = adminPortalUrl(); }} style={{ border: 'none', borderRadius: 10, padding: '10px 16px', background: '#007AFF', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
             Go to Admin Login
           </button>
         </div>
