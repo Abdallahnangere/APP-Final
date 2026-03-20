@@ -528,6 +528,152 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
   );
 }
 
+function ShareSaukiMartModal({
+  user,
+  dark,
+  onClose,
+  onToast,
+  onError,
+}: {
+  user: User;
+  dark: boolean;
+  onClose: () => void;
+  onToast: (msg: string) => void;
+  onError: (msg: string) => void;
+}) {
+  const shareRef = useRef<HTMLDivElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  const firstName = (user.firstName || 'Customer').trim();
+  const promoText = `I use SaukiMart for cheap data, device deals, and fast support. Join me today: https://play.google.com/store/apps/details?id=online.saukimart.app`;
+
+  const createImageBlob = useCallback(async () => {
+    if (!shareRef.current) throw new Error('Share card unavailable');
+    const { toPng } = await import('html-to-image');
+    const dataUrl = await toPng(shareRef.current, { pixelRatio: 2, quality: 1, cacheBust: true });
+    const response = await fetch(dataUrl);
+    return response.blob();
+  }, []);
+
+  const downloadImage = useCallback(async () => {
+    setBusy(true);
+    try {
+      const blob = await createImageBlob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `saukimart-share-${Date.now()}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 120);
+      onToast('Share image downloaded');
+    } catch {
+      onError('Could not generate image right now');
+    } finally {
+      setBusy(false);
+    }
+  }, [createImageBlob, onError, onToast]);
+
+  const shareToWhatsApp = useCallback(async () => {
+    setBusy(true);
+    try {
+      const blob = await createImageBlob();
+      const file = new File([blob], 'saukimart-share.png', { type: 'image/png' });
+
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        const canShareFiles = typeof (navigator as any).canShare === 'function'
+          ? (navigator as any).canShare({ files: [file] })
+          : false;
+
+        if (canShareFiles) {
+          await navigator.share({
+            title: 'SaukiMart',
+            text: promoText,
+            files: [file],
+          });
+          onToast('Shared successfully');
+          return;
+        }
+      }
+
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(promoText)}`;
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+      onToast('WhatsApp opened. Attach the downloaded image if needed.');
+    } catch {
+      onError('Unable to share to WhatsApp right now');
+    } finally {
+      setBusy(false);
+    }
+  }, [createImageBlob, onError, onToast, promoText]);
+
+  const copyMessage = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(promoText);
+      onToast('Invite message copied');
+    } catch {
+      onError('Clipboard not available on this device');
+    }
+  }, [onError, onToast, promoText]);
+
+  return (
+    <div style={{ position:'fixed',inset:0,zIndex:320,background:'rgba(0,8,20,.72)',backdropFilter:'blur(16px)',display:'flex',alignItems:'flex-end',justifyContent:'center' }}>
+      <div className="slide-up" style={{ width:'100%',maxWidth:430,background:dark?'#0F1625':'#F8FBFF',borderRadius:'30px 30px 0 0',padding:'18px 16px 28px',border:`1px solid ${dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.08)'}` }}>
+        <div style={{ width:54,height:5,borderRadius:999,background:dark?'rgba(255,255,255,.2)':'rgba(0,0,0,.14)',margin:'0 auto 14px' }} />
+        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12 }}>
+          <div>
+            <p style={{ fontSize:20,fontWeight:900,color:dark?'#F4F8FF':'#102246' }}>Share SaukiMart</p>
+            <p style={{ fontSize:12,color:dark?'#A7B6CF':'#5E6F90',marginTop:3 }}>Generate a branded image and share instantly</p>
+          </div>
+          <button onClick={onClose} style={{ width:36,height:36,borderRadius:10,background:dark?'rgba(255,255,255,.08)':'rgba(16,34,70,.08)',color:dark?'#E7EDFB':'#17386A',fontWeight:800 }}>X</button>
+        </div>
+
+        <div style={{ background:dark?'rgba(255,255,255,.03)':'rgba(0,71,204,.04)',border:'1px solid rgba(0,113,227,.2)',borderRadius:20,padding:10,marginBottom:14 }}>
+          <div ref={shareRef} style={{ borderRadius:18,overflow:'hidden',background:'#FFFFFF',boxShadow:'0 18px 34px rgba(7,18,44,.16)' }}>
+            <div style={{ background:'linear-gradient(140deg,#011A4D 0%,#003EAD 58%,#0071E3 100%)',padding:'18px 16px 16px',position:'relative',color:'#fff' }}>
+              <div style={{ position:'absolute',right:-36,top:-42,width:140,height:140,borderRadius:'50%',background:'rgba(255,255,255,.09)' }} />
+              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',position:'relative',zIndex:1 }}>
+                <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                  <img src="/images/logo-icon.png" alt="SaukiMart" style={{ width:34,height:34,borderRadius:9,border:'1px solid rgba(255,255,255,.24)' }} />
+                  <div>
+                    <p style={{ fontSize:14,fontWeight:800 }}>SaukiMart</p>
+                    <p style={{ fontSize:10,opacity:.78,letterSpacing:'0.07em',textTransform:'uppercase' }}>Data and Devices</p>
+                  </div>
+                </div>
+                <span style={{ fontSize:10,fontWeight:800,letterSpacing:'0.07em',background:'rgba(48,209,88,.16)',border:'1px solid rgba(48,209,88,.42)',borderRadius:999,padding:'5px 9px',color:'#A6F6BF' }}>TRUSTED</span>
+              </div>
+              <p style={{ fontSize:20,fontWeight:900,lineHeight:1.2,margin:'16px 0 6px',position:'relative',zIndex:1 }}>{firstName} recommends SaukiMart</p>
+              <p style={{ fontSize:12,opacity:.86,position:'relative',zIndex:1 }}>Fast airtime and data delivery, secure wallet transfers, and responsive support.</p>
+            </div>
+            <div style={{ padding:'14px 16px 16px' }}>
+              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:12 }}>
+                {['Affordable Plans','Instant Delivery','24/7 Support'].map((item) => (
+                  <div key={item} style={{ background:'#F3F7FF',border:'1px solid #DCE7FF',borderRadius:10,padding:'8px 6px',textAlign:'center',fontSize:10,fontWeight:700,color:'#16376A' }}>{item}</div>
+                ))}
+              </div>
+              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 10px',borderRadius:10,background:'#F7FAFF',border:'1px solid #E1EAFA' }}>
+                <p style={{ fontSize:10,color:'#4B628B' }}>Download SaukiMart on Android</p>
+                <p style={{ fontSize:11,fontWeight:800,color:'#0052C7' }}>saukimart.online</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10 }}>
+          <button onClick={downloadImage} disabled={busy} style={{ padding:'13px 10px',borderRadius:12,background:dark?'rgba(255,255,255,.08)':'#EAF1FF',color:dark?'#EAF1FF':'#18427D',fontSize:13,fontWeight:800,border:'1px solid rgba(0,113,227,.25)',opacity:busy ? .7 : 1 }}>
+            {busy ? 'Preparing...' : 'Download Image'}
+          </button>
+          <button onClick={shareToWhatsApp} disabled={busy} style={{ padding:'13px 10px',borderRadius:12,background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:13,fontWeight:800,border:'1px solid rgba(255,255,255,.08)',opacity:busy ? .7 : 1 }}>
+            {busy ? 'Please wait...' : 'Share to WhatsApp'}
+          </button>
+        </div>
+
+        <button onClick={copyMessage} style={{ width:'100%',padding:'12px 10px',borderRadius:12,background:dark?'rgba(255,255,255,.06)':'#EFF4FB',color:dark?'#D8E2F5':'#2A3F67',fontSize:13,fontWeight:700,border:`1px solid ${dark?'rgba(255,255,255,.08)':'rgba(20,52,99,.12)'}` }}>
+          Copy Invite Message
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ─────────────── MAIN APP ─────────────── */
 export default function AppPage() {
   const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'|'chat'>('splash');
@@ -559,6 +705,7 @@ export default function AppPage() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const [showHomeUpdateTip, setShowHomeUpdateTip] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [cashbackToast, setCashbackToast] = useState('');
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [redeemAmount, setRedeemAmount] = useState('');
@@ -2195,6 +2342,7 @@ export default function AppPage() {
           </SettingsGroup>
 
           <SettingsGroup title="Support">
+            <SettingsRow icon={Icons.sendIcon(BLUE, 20)} label="Share SaukiMart" onPress={()=>setShowShareModal(true)} />
             <SettingsRow icon={Icons.globe(PURPLE, 20)} label="About" onPress={()=>setScreen('about')} />
             <SettingsRow icon={Icons.phone(TEAL, 20)} label="Call: +234 704 464 7081" right={
               <div style={{ display:'flex',gap:8 }}>
@@ -2220,6 +2368,15 @@ export default function AppPage() {
         </div>
         </div>
       </div>
+      {showShareModal && user && (
+        <ShareSaukiMartModal
+          user={user}
+          dark={dark}
+          onClose={()=>setShowShareModal(false)}
+          onToast={showToast}
+          onError={showError}
+        />
+      )}
       <BottomNav active="profile" />
     </>
   );
