@@ -1868,7 +1868,7 @@ export default function AppPage() {
           )}
         </div>
       </div>
-      <BottomNav active="home" />
+      {BottomNav({ active: 'home' })}
     </>
   );
 
@@ -2272,7 +2272,7 @@ export default function AppPage() {
           )}
         </div>
       </div>
-      <BottomNav active="transactions" />
+      {BottomNav({ active: 'transactions' })}
     </>
   );
 
@@ -2312,7 +2312,7 @@ export default function AppPage() {
           )}
         </div>
       </div>
-      <BottomNav active="deposits" />
+      {BottomNav({ active: 'deposits' })}
     </>
   );
 
@@ -2476,7 +2476,7 @@ export default function AppPage() {
         </div>
         </div>
       </div>
-      <BottomNav active="profile" />
+      {BottomNav({ active: 'profile' })}
     </>
   );
 
@@ -2681,7 +2681,7 @@ export default function AppPage() {
           <SupportChat />
         </div>
       </div>
-      <BottomNav active="chat" />
+      {BottomNav({ active: 'chat' })}
     </>
   );
 
