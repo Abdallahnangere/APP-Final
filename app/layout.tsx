@@ -37,7 +37,13 @@ export const metadata: Metadata = {
     siteName: 'SaukiMart',
     locale: 'en_NG',
     images: [
-      { url: '/images/logo.png', width: 256, height: 256, alt: 'SaukiMart — Instant Data & Devices Nigeria' },
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'SaukiMart — Instant Data, Airtime & Devices in Nigeria',
+        type: 'image/png',
+      },
     ],
     type: 'website',
   },
@@ -47,20 +53,9 @@ export const metadata: Metadata = {
     description: 'Buy MTN, Airtel, Glo data cheaply. Premium devices. Trusted by thousands across Nigeria.',
     creator: '@SaukiMart',
     site: '@SaukiMart',
-    images: ['/images/logo.png'],
+    images: [{ url: '/twitter-image', width: 1200, height: 630, alt: 'SaukiMart' }],
   },
-  icons: {
-    icon: [
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/favicon-48x48.png', sizes: '48x48', type: 'image/png' },
-      { url: '/favicon.ico', sizes: 'any' },
-    ],
-    apple: '/apple-touch-icon.png',
-    other: [
-      { rel: 'mask-icon', url: '/favicon.ico' },
-    ],
-  },
+  // Icons are handled by app/icon.tsx and app/apple-icon.tsx file conventions
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
