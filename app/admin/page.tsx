@@ -1,7 +1,16 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const BLUE = '#007AFF'; const GREEN = '#34C759'; const RED = '#FF3B30'; const GOLD = '#FF9500';
+const BLUE = '#7cc7ff';
+const GREEN = '#63d9b0';
+const RED = '#ff7f8a';
+const GOLD = '#f4c36a';
+const BG = '#08111f';
+const PANEL = 'rgba(10, 20, 36, 0.86)';
+const PANEL_ALT = 'rgba(15, 28, 47, 0.92)';
+const BORDER = 'rgba(162, 194, 255, 0.14)';
+const MUTED = '#8ea3bf';
+const TEXT = '#eef4ff';
 
 type User = { id: string; first_name: string; last_name: string; phone: string; wallet_balance: number; cashback_balance: number; is_banned: boolean; created_at: string; flw_account_number: string; };
 type Plan = { id: string; network: string; network_id: number; plan_id: number; data_size: string; validity: string; selling_price: number; cost_price: number; is_active: boolean; };
@@ -33,47 +42,83 @@ type AdminChatMessage = {
 
 const GlobalStyle = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,system-ui,sans-serif;background:#F5F5F7;color:#1D1D1F;-webkit-font-smoothing:antialiased}
-    ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:#D5D5D7;border-radius:4px}
+    :root{
+      --admin-bg:${BG};
+      --admin-panel:${PANEL};
+      --admin-panel-alt:${PANEL_ALT};
+      --admin-border:${BORDER};
+      --admin-text:${TEXT};
+      --admin-muted:${MUTED};
+      --admin-blue:${BLUE};
+      --admin-green:${GREEN};
+      --admin-red:${RED};
+      --admin-gold:${GOLD};
+    }
+    html,body{background:radial-gradient(circle at top left, rgba(57,110,179,0.22), transparent 34%), radial-gradient(circle at top right, rgba(18,79,123,0.24), transparent 28%), linear-gradient(180deg, #08101b 0%, #0a1320 52%, #050b14 100%);color:var(--admin-text)}
+    body{font-family:'Manrope',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:rgba(146,171,205,.3);border-radius:999px}
     input,textarea,select{font-family:inherit;outline:none}
     button{border:none;cursor:pointer;font-family:inherit;background:none}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,10px,0)}}
     .fade-in{animation:fadeIn .2s ease both}
     a{color:inherit;text-decoration:none}
+    .admin-shell{position:relative;overflow:hidden}
+    .admin-shell::before{content:'';position:absolute;inset:-20% auto auto -10%;width:420px;height:420px;border-radius:999px;background:radial-gradient(circle, rgba(94,154,255,0.18), transparent 68%);filter:blur(8px);pointer-events:none;animation:drift 12s ease-in-out infinite}
+    .admin-shell::after{content:'';position:absolute;right:-120px;top:140px;width:300px;height:300px;border-radius:999px;background:radial-gradient(circle, rgba(90,226,184,0.12), transparent 70%);pointer-events:none;animation:drift 15s ease-in-out infinite reverse}
+    .admin-code{font-family:'IBM Plex Mono',monospace}
   `}</style>
 );
 
 const Card = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
-  <div style={{ background:'#FFFFFF',borderRadius:20,padding:'24px',boxShadow:'0 2px 8px rgba(0,0,0,0.08)',border:'1px solid rgba(0,0,0,0.08)', ...style }}>{children}</div>
+  <div style={{ background:'linear-gradient(180deg, rgba(250,252,255,0.96) 0%, rgba(240,246,255,0.94) 100%)',borderRadius:24,padding:'24px',boxShadow:'0 22px 70px rgba(0,0,0,0.18)',border:'1px solid rgba(205,220,244,0.82)', backdropFilter:'blur(18px)', color:'#14233a', ...style }}>{children}</div>
 );
 
 const Btn = ({ children, onClick, variant='primary', size='md', style: s }: { children: React.ReactNode; onClick?: ()=>void; variant?: 'primary'|'danger'|'ghost'|'success'; size?: 'sm'|'md'; style?: React.CSSProperties }) => {
-  const bg = variant==='primary'?BLUE:variant==='danger'?RED:variant==='success'?GREEN:'transparent';
-  const color = variant==='ghost'?'#3C3C43':'#fff';
-  const border = variant==='ghost'?'1px solid rgba(0,0,0,0.15)':'none';
-  const pad = size==='sm'?'8px 14px':'12px 20px';
+  const bg = variant==='primary'?'linear-gradient(135deg, #2359b8 0%, #5bb3ff 100%)':variant==='danger'?'linear-gradient(135deg, #7b2130 0%, #cf5466 100%)':variant==='success'?'linear-gradient(135deg, #0f6655 0%, #2ea486 100%)':'rgba(255,255,255,0.03)';
+  const color = variant==='ghost'?TEXT:'#fff';
+  const border = variant==='ghost'?`1px solid ${BORDER}`:'none';
+  const pad = size==='sm'?'9px 14px':'12px 20px';
   const font = size==='sm'?13:15;
-  return <button onClick={onClick} style={{ background:bg,color,border,borderRadius:12,padding:pad,fontSize:font,fontWeight:600,cursor:'pointer',transition:'all 0.2s cubic-bezier(0.25,0.1,0.25,1)', ...s }} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='scale(1.02)'}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform='scale(1)'}}>{children}</button>;
+  return <button onClick={onClick} style={{ background:bg,color,border,borderRadius:14,padding:pad,fontSize:font,fontWeight:700,cursor:'pointer',transition:'all 0.2s cubic-bezier(0.25,0.1,0.25,1)', boxShadow:variant==='ghost'?'none':'0 16px 30px rgba(0,0,0,0.18)', letterSpacing:'0.01em', ...s }} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(-1px)'}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(0)'}}>{children}</button>;
 };
 
 const Input = ({ value, onChange, placeholder, type='text', label, multiline=false }: { value: string; onChange: (v:string)=>void; placeholder?: string; type?: string; label?: string; multiline?: boolean; }) => (
   <div style={{ marginBottom:16 }}>
-    {label && <label style={{ display:'block',fontSize:13,fontWeight:600,color:'#6E6E73',marginBottom:8 }}>{label}</label>}
+    {label && <label style={{ display:'block',fontSize:12,fontWeight:700,color:MUTED,marginBottom:8,letterSpacing:'0.08em',textTransform:'uppercase' }}>{label}</label>}
     {multiline ? (
       <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-        style={{ width:'100%',padding:'12px 14px',borderRadius:12,border:'1px solid rgba(0,0,0,0.15)',fontSize:14,color:'#1D1D1F',minHeight:100,resize:'vertical',lineHeight:1.5,fontFamily:'inherit',transition:'border 0.2s' }} 
-        onFocus={e=>(e.currentTarget.style.borderColor='rgba(0,113,227,0.3)')}
-        onBlur={e=>(e.currentTarget.style.borderColor='rgba(0,0,0,0.15)')} />
+        style={{ width:'100%',padding:'13px 14px',borderRadius:14,border:`1px solid ${BORDER}`,fontSize:14,color:TEXT,background:'rgba(255,255,255,0.03)',minHeight:100,resize:'vertical',lineHeight:1.5,fontFamily:'inherit',transition:'border 0.2s, box-shadow 0.2s' }} 
+        onFocus={e=>{e.currentTarget.style.borderColor='rgba(124,199,255,0.45)';e.currentTarget.style.boxShadow='0 0 0 3px rgba(124,199,255,0.12)';}}
+        onBlur={e=>{e.currentTarget.style.borderColor=BORDER;e.currentTarget.style.boxShadow='none';}} />
     ) : (
       <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-        style={{ width:'100%',padding:'12px 14px',borderRadius:12,border:'1px solid rgba(0,0,0,0.15)',fontSize:14,color:'#1D1D1F',fontFamily:'inherit',transition:'border 0.2s' }}
-        onFocus={e=>(e.currentTarget.style.borderColor='rgba(0,113,227,0.3)')}
-        onBlur={e=>(e.currentTarget.style.borderColor='rgba(0,0,0,0.15)')} />
+        style={{ width:'100%',padding:'13px 14px',borderRadius:14,border:`1px solid ${BORDER}`,fontSize:14,color:TEXT,background:'rgba(255,255,255,0.03)',fontFamily:'inherit',transition:'border 0.2s, box-shadow 0.2s' }}
+        onFocus={e=>{e.currentTarget.style.borderColor='rgba(124,199,255,0.45)';e.currentTarget.style.boxShadow='0 0 0 3px rgba(124,199,255,0.12)';}}
+        onBlur={e=>{e.currentTarget.style.borderColor=BORDER;e.currentTarget.style.boxShadow='none';}} />
     )}
   </div>
 );
+
+const formatMoney = (value: unknown) => `₦${Number(value || 0).toLocaleString('en-NG')}`;
+const formatDateTime = (value?: string) => value ? new Date(value).toLocaleString('en-NG', { dateStyle:'medium', timeStyle:'short' }) : '—';
+const TAB_META: Record<string, { eyebrow: string; title: string; description: string }> = {
+  overview: { eyebrow:'Executive command center', title:'Operational Intelligence', description:'A consolidated view of customer growth, cash performance, fulfilment, and support escalation.' },
+  users: { eyebrow:'Customer capital', title:'User Lifecycle Control', description:'Review balances, security posture, and support intervention from one premium control surface.' },
+  plans: { eyebrow:'Pricing engine', title:'Data Catalogue Operations', description:'Shape retail margin, supplier cost discipline, and sell-side assortment in real time.' },
+  products: { eyebrow:'Commerce desk', title:'Inventory & Merchandising', description:'Manage premium catalogue presentation, stock readiness, and contribution margin.' },
+  transactions: { eyebrow:'Payments command', title:'Transaction Oversight', description:'Monitor cash movement, service fulfilment, and exception handling across the platform.' },
+  orders: { eyebrow:'Fulfilment pipeline', title:'Order Operations', description:'Current order view while product fulfilment operations mature into a full workflow.' },
+  analytics: { eyebrow:'Board reporting', title:'Performance Analytics', description:'Interrogate revenue quality, product mix, velocity, and platform efficiency across time.' },
+  broadcasts: { eyebrow:'Comms control', title:'Broadcast Messaging', description:'Coordinate customer-facing in-app messaging with production-grade clarity and governance.' },
+  push: { eyebrow:'Engagement desk', title:'Push Campaign Studio', description:'Target all users or precision cohorts with accountable delivery metrics and campaign hygiene.' },
+  chat: { eyebrow:'Support floor', title:'Agent Intervention Console', description:'Escalation-aware live support with direct agent control, notes, and instant message continuity.' },
+  sim: { eyebrow:'Identity services', title:'SIM Activation Review', description:'Operational review for onboarding requests, evidence checks, and approval state management.' },
+  webhooks: { eyebrow:'Integration observability', title:'Webhook Audit Trail', description:'Inspect upstream provider events and payload integrity without leaving the control room.' },
+  console: { eyebrow:'Integration sandbox', title:'API Console', description:'Issue controlled requests to upstream providers and capture payload-level diagnostics.' },
+};
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
@@ -228,9 +273,24 @@ export default function AdminPage() {
     setChatBusy(true);
     try {
       await api('intervene', 'POST', { sessionId: activeChatSession.id, action, payload, agentId: 'admin-panel' });
-      if (action === 'send_message') setChatReply('');
+      if (action === 'send_message' && typeof payload?.content === 'string') {
+        const optimisticMessage: AdminChatMessage = {
+          id: `optimistic-${Date.now()}`,
+          session_id: activeChatSession.id,
+          sender: 'agent',
+          content: payload.content,
+          created_at: new Date().toISOString(),
+          read: true,
+        };
+        setChatMessages((prev) => [...prev, optimisticMessage]);
+        setActiveChatSession((prev) => prev ? { ...prev, last_message: payload.content as string, last_message_at: optimisticMessage.created_at, message_count: (prev.message_count || 0) + 1 } : prev);
+        setChatSessions((prev) => prev.map((session) => session.id === activeChatSession.id ? { ...session, last_message: payload.content as string, last_message_at: optimisticMessage.created_at, message_count: (session.message_count || 0) + 1 } : session));
+        setChatReply('');
+      }
       if (action === 'add_note') setChatNote('');
-      await openChatSession(activeChatSession.id);
+      if (action !== 'send_message') {
+        await openChatSession(activeChatSession.id);
+      }
       await loadAdminSessions();
       showToast('Action completed');
     } catch (e: unknown) {
@@ -327,15 +387,25 @@ export default function AdminPage() {
   if (!authed) return (
     <>
       <GlobalStyle />
-      <div style={{ height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(160deg,#F0F7FF,#F2F2F7)' }}>
-        <Card style={{ width:380,padding:'40px 36px',textAlign:'center' }}>
-          <div style={{ width:60,height:60,borderRadius:18,background:'linear-gradient(135deg,#007AFF,#0040FF)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,margin:'0 auto 16px' }}>⚡</div>
-          <h1 style={{ fontSize:24,fontWeight:900,color:'#1C1C1E',marginBottom:4 }}>SaukiMart Admin</h1>
-          <p style={{ color:'#8E8E93',fontSize:14,marginBottom:28 }}>Enter admin password to continue</p>
-          {error && <div style={{ padding:'10px 14px',borderRadius:10,background:'rgba(255,59,48,.1)',color:RED,fontSize:14,marginBottom:14 }}>{error}</div>}
+      <div className="admin-shell" style={{ height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'transparent',padding:24 }}>
+        <Card style={{ width:460,padding:'44px 40px',textAlign:'center',position:'relative',overflow:'hidden' }}>
+          <div style={{ position:'absolute', inset:'auto -80px -90px auto', width:220, height:220, borderRadius:'50%', background:'radial-gradient(circle, rgba(91,179,255,.18), transparent 68%)' }} />
+          <div style={{ width:68,height:68,borderRadius:22,background:'linear-gradient(135deg,#1f4384,#5bb3ff)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,margin:'0 auto 18px',boxShadow:'0 18px 42px rgba(13,45,95,.48)' }}>◆</div>
+          <p style={{ fontSize:11,fontWeight:800,color:MUTED,marginBottom:8,letterSpacing:'0.18em',textTransform:'uppercase' }}>SaukiMart executive console</p>
+          <h1 style={{ fontSize:32,fontWeight:900,color:TEXT,marginBottom:8,letterSpacing:'-0.04em' }}>Admin Control Room</h1>
+          <p style={{ color:MUTED,fontSize:14,marginBottom:28,lineHeight:1.7 }}>Authenticated access to revenue, operations, customer support, notifications, and platform governance.</p>
+          {error && <div style={{ padding:'11px 14px',borderRadius:12,background:'rgba(172,48,72,.16)',color:'#ffc2cd',fontSize:14,marginBottom:14,border:'1px solid rgba(255,127,138,.18)' }}>{error}</div>}
           <input type="password" value={adminPass} onChange={e=>setAdminPass(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
-            placeholder="Admin password" style={{ width:'100%',padding:'13px 16px',borderRadius:12,border:'1.5px solid #E5E5EA',fontSize:15,marginBottom:14 }} />
+            placeholder="Admin password" style={{ width:'100%',padding:'15px 16px',borderRadius:14,border:`1px solid ${BORDER}`,fontSize:15,marginBottom:14,background:'rgba(255,255,255,.03)',color:TEXT }} />
           <Btn onClick={login} style={{ width:'100%',justifyContent:'center',padding:'14px' }}>{loading?'Signing in…':'Sign In →'}</Btn>
+          <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginTop:20 }}>
+            {['Finance','Support','Growth'].map((item) => (
+              <div key={item} style={{ border:`1px solid ${BORDER}`,borderRadius:14,padding:'10px 8px',background:'rgba(255,255,255,.025)' }}>
+                <p style={{ fontSize:11,color:MUTED,textTransform:'uppercase',letterSpacing:'0.08em' }}>{item}</p>
+                <p className="admin-code" style={{ fontSize:12,color:TEXT,marginTop:4 }}>secured</p>
+              </div>
+            ))}
+          </div>
         </Card>
       </div>
     </>
@@ -368,9 +438,9 @@ export default function AdminPage() {
       {/* Receipt Modal */}
       {receiptModal && (
         <div style={{ position:'fixed',inset:0,zIndex:500,background:'rgba(0,0,0,.6)',display:'flex',alignItems:'center',justifyContent:'center',padding:20 }}>
-          <div style={{ background:'#fff',borderRadius:20,padding:32,maxWidth:420,width:'100%' }}>
+          <div style={{ background:'linear-gradient(180deg, rgba(20,34,56,0.98), rgba(10,18,32,0.98))',borderRadius:24,padding:32,maxWidth:460,width:'100%',border:`1px solid ${BORDER}`,color:TEXT }}>
             <h3 style={{ fontWeight:800,fontSize:18,marginBottom:16 }}>Transaction Receipt</h3>
-            <pre style={{ fontSize:12,background:'#F2F2F7',borderRadius:12,padding:14,overflowX:'auto',whiteSpace:'pre-wrap',maxHeight:400,overflow:'auto' }}>{JSON.stringify(receiptModal,null,2)}</pre>
+            <pre style={{ fontSize:12,background:'rgba(255,255,255,.03)',borderRadius:14,padding:14,overflowX:'auto',whiteSpace:'pre-wrap',maxHeight:400,overflow:'auto',border:`1px solid ${BORDER}`,color:'#d7e4f5' }}>{JSON.stringify(receiptModal,null,2)}</pre>
             <div style={{ display:'flex',gap:10,marginTop:16 }}>
               <Btn onClick={()=>setReceiptModal(null)} variant="ghost" style={{ flex:1 }}>Close</Btn>
             </div>
@@ -378,35 +448,60 @@ export default function AdminPage() {
         </div>
       )}
 
-      <div style={{ display:'flex',height:'100vh',background:'#F2F2F7' }}>
+      <div className="admin-shell" style={{ display:'flex',height:'100vh',background:'transparent',position:'relative' }}>
         {/* Sidebar */}
-        <div style={{ width:220,background:'#1C1C1E',display:'flex',flexDirection:'column',flexShrink:0,overflowY:'auto' }}>
-          <div style={{ padding:'24px 20px 20px' }}>
+        <div style={{ width:280,background:'linear-gradient(180deg, rgba(7,14,25,0.98) 0%, rgba(8,18,31,0.94) 100%)',display:'flex',flexDirection:'column',flexShrink:0,overflowY:'auto',borderRight:`1px solid ${BORDER}`,paddingBottom:22,boxShadow:'inset -1px 0 0 rgba(255,255,255,0.03)' }}>
+          <div style={{ padding:'28px 22px 18px' }}>
             <div style={{ display:'flex',alignItems:'center',gap:10 }}>
-              <div style={{ width:36,height:36,borderRadius:10,background:'linear-gradient(135deg,#007AFF,#0040FF)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18 }}>⚡</div>
+              <div style={{ width:42,height:42,borderRadius:14,background:'linear-gradient(135deg,#204a8f,#5bb3ff)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,boxShadow:'0 14px 26px rgba(30,78,145,.35)' }}>◆</div>
               <div>
-                <p style={{ color:'#fff',fontWeight:800,fontSize:15 }}>SaukiMart</p>
-                <p style={{ color:'#8E8E93',fontSize:11 }}>Admin Panel</p>
+                <p style={{ color:TEXT,fontWeight:800,fontSize:16,letterSpacing:'-0.02em' }}>SaukiMart</p>
+                <p style={{ color:MUTED,fontSize:11,letterSpacing:'0.12em',textTransform:'uppercase' }}>Executive Admin</p>
               </div>
             </div>
+            <Card style={{ marginTop:20,padding:'16px 16px 14px',background:'linear-gradient(180deg, rgba(16,35,60,0.9), rgba(8,19,34,0.95))' }}>
+              <p style={{ color:MUTED,fontSize:11,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8 }}>Command posture</p>
+              <p style={{ color:TEXT,fontWeight:800,fontSize:20,letterSpacing:'-0.03em',marginBottom:6 }}>Premium operator mode</p>
+              <p style={{ color:MUTED,fontSize:12,lineHeight:1.6 }}>Unified control across customers, payments, support, campaigns, and partner integrations.</p>
+            </Card>
           </div>
-          <nav style={{ flex:1,padding:'0 10px' }}>
+          <nav style={{ flex:1,padding:'0 14px' }}>
             {TABS.map(t => (
               <button key={t.id} onClick={()=>setTab(t.id as typeof tab)}
-                style={{ width:'100%',display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:10,marginBottom:2,background: tab===t.id?'rgba(0,122,255,.15)':'transparent',border:tab===t.id?'1px solid rgba(0,122,255,.2)':'1px solid transparent',transition:'all .15s' }}>
-                <span style={{ fontSize:16 }}>{t.icon}</span>
-                <span style={{ fontSize:14,fontWeight:tab===t.id?700:500,color:tab===t.id?BLUE:'rgba(255,255,255,.7)' }}>{t.label}</span>
+                style={{ width:'100%',display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderRadius:14,marginBottom:6,background: tab===t.id?'linear-gradient(135deg, rgba(38,95,180,.26), rgba(47,140,210,.12))':'transparent',border:tab===t.id?`1px solid rgba(124,199,255,.28)`:'1px solid transparent',transition:'all .15s',boxShadow:tab===t.id?'inset 0 1px 0 rgba(255,255,255,.04)':'none' }}>
+                <span style={{ fontSize:16, width:26, textAlign:'center', opacity:tab===t.id?1:.9 }}>{t.icon}</span>
+                <span style={{ fontSize:14,fontWeight:tab===t.id?800:600,color:tab===t.id?TEXT:'rgba(231,241,255,.76)',letterSpacing:'0.01em' }}>{t.label}</span>
               </button>
             ))}
           </nav>
-          <div style={{ padding:'20px' }}>
+          <div style={{ padding:'0 20px 0' }}>
             <button onClick={()=>{ localStorage.removeItem('sm_admin_token'); setAuthed(false); setAdminToken(''); }}
-              style={{ color:'rgba(255,59,48,.8)',fontSize:14,fontWeight:600 }}>Sign Out</button>
+              style={{ color:'rgba(255,182,191,.9)',fontSize:14,fontWeight:700,background:'rgba(160,58,78,.16)',border:'1px solid rgba(255,127,138,.18)',width:'100%',padding:'12px 14px',borderRadius:14 }}>Sign Out</button>
           </div>
         </div>
 
         {/* Main */}
-        <div style={{ flex:1,overflowY:'auto',padding:'32px' }}>
+        <div style={{ flex:1,overflowY:'auto',padding:'26px 28px 34px',position:'relative',zIndex:1 }}>
+          <Card style={{ marginBottom:22,padding:'24px 26px',background:'linear-gradient(125deg, rgba(16,36,63,0.95) 0%, rgba(8,19,34,0.96) 58%, rgba(11,30,52,0.94) 100%)',overflow:'hidden',position:'relative' }}>
+            <div style={{ position:'absolute',right:-70,top:-50,width:240,height:240,borderRadius:'50%',background:'radial-gradient(circle, rgba(91,179,255,.22), transparent 68%)' }} />
+            <div style={{ position:'relative',zIndex:1,display:'flex',justifyContent:'space-between',gap:18,alignItems:'flex-start',flexWrap:'wrap' }}>
+              <div style={{ maxWidth:780 }}>
+                <p style={{ fontSize:11,fontWeight:800,color:MUTED,marginBottom:10,letterSpacing:'0.14em',textTransform:'uppercase' }}>{TAB_META[tab].eyebrow}</p>
+                <h1 style={{ fontSize:34,fontWeight:900,color:TEXT,marginBottom:10,letterSpacing:'-0.05em' }}>{TAB_META[tab].title}</h1>
+                <p style={{ color:MUTED,fontSize:14,lineHeight:1.75,maxWidth:760 }}>{TAB_META[tab].description}</p>
+              </div>
+              <div style={{ display:'grid',gridTemplateColumns:'repeat(2,minmax(140px,1fr))',gap:10,minWidth:300 }}>
+                <div style={{ border:`1px solid ${BORDER}`,borderRadius:16,padding:'14px 16px',background:'rgba(255,255,255,.03)' }}>
+                  <p style={{ fontSize:11,color:MUTED,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8 }}>Security posture</p>
+                  <p className="admin-code" style={{ fontSize:20,color:TEXT,fontWeight:700 }}>verified</p>
+                </div>
+                <div style={{ border:`1px solid ${BORDER}`,borderRadius:16,padding:'14px 16px',background:'rgba(255,255,255,.03)' }}>
+                  <p style={{ fontSize:11,color:MUTED,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8 }}>Session</p>
+                  <p className="admin-code" style={{ fontSize:20,color:TEXT,fontWeight:700 }}>{new Date().toLocaleDateString('en-NG')}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
 
           {/* ─── OVERVIEW ─── */}
           {tab === 'overview' && (
@@ -921,19 +1016,19 @@ export default function AdminPage() {
                       <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14 }}>
                         <div style={{ background:'rgba(0,122,255,.08)',borderRadius:12,padding:12 }}>
                           <p style={{ fontSize:12,color:'#8E8E93' }}>Targeted</p>
-                          <p style={{ fontSize:24,fontWeight:900,color:BLUE }}>{String(pushResult.targeted ?? 0)}</p>
+                          <p style={{ fontSize:24,fontWeight:900,color:BLUE }}>{String(pushResult.targetedTokens ?? 0)}</p>
                         </div>
                         <div style={{ background:'rgba(52,199,89,.08)',borderRadius:12,padding:12 }}>
                           <p style={{ fontSize:12,color:'#8E8E93' }}>Sent</p>
-                          <p style={{ fontSize:24,fontWeight:900,color:GREEN }}>{String(pushResult.sent ?? 0)}</p>
+                          <p style={{ fontSize:24,fontWeight:900,color:GREEN }}>{String(pushResult.sentCount ?? 0)}</p>
                         </div>
                         <div style={{ background:'rgba(255,59,48,.08)',borderRadius:12,padding:12 }}>
                           <p style={{ fontSize:12,color:'#8E8E93' }}>Failed</p>
-                          <p style={{ fontSize:24,fontWeight:900,color:RED }}>{String(pushResult.failed ?? 0)}</p>
+                          <p style={{ fontSize:24,fontWeight:900,color:RED }}>{String(pushResult.failedCount ?? 0)}</p>
                         </div>
                         <div style={{ background:'rgba(255,149,0,.08)',borderRadius:12,padding:12 }}>
                           <p style={{ fontSize:12,color:'#8E8E93' }}>Deactivated Tokens</p>
-                          <p style={{ fontSize:24,fontWeight:900,color:GOLD }}>{String(pushResult.deactivated ?? 0)}</p>
+                          <p style={{ fontSize:24,fontWeight:900,color:GOLD }}>{String(pushResult.deactivatedCount ?? 0)}</p>
                         </div>
                       </div>
                       <pre style={{ fontSize:12,background:'#F2F2F7',borderRadius:10,padding:12,whiteSpace:'pre-wrap' }}>{JSON.stringify(pushResult, null, 2)}</pre>
@@ -1067,16 +1162,16 @@ export default function AdminPage() {
                       <Input label="Reply as Agent" value={chatReply} onChange={setChatReply} multiline placeholder="Type your response to the customer" />
                       <div style={{ display:'flex',justifyContent:'flex-end',marginBottom:12 }}>
                         <Btn
-                          onClick={()=>chatAction('send_message', { content: chatReply })}
-                          style={{ opacity: !chatReply.trim() || chatBusy ? .6 : 1 }}
+                          onClick={()=>chatReply.trim() && chatAction('send_message', { content: chatReply.trim() })}
+                          style={{ opacity: !chatReply.trim() || chatBusy ? .6 : 1, pointerEvents: !chatReply.trim() || chatBusy ? 'none' : 'auto' }}
                         >
-                          Send Reply
+                          {chatBusy ? 'Sending...' : 'Send Reply'}
                         </Btn>
                       </div>
 
                       <Input label="Internal Note" value={chatNote} onChange={setChatNote} multiline placeholder="Add private note for support team" />
                       <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center' }}>
-                        <Btn variant="ghost" onClick={()=>chatAction('add_note', { note: chatNote })} style={{ opacity: !chatNote.trim() || chatBusy ? .6 : 1 }}>Add Note</Btn>
+                        <Btn variant="ghost" onClick={()=>chatNote.trim() && chatAction('add_note', { note: chatNote.trim() })} style={{ opacity: !chatNote.trim() || chatBusy ? .6 : 1, pointerEvents: !chatNote.trim() || chatBusy ? 'none' : 'auto' }}>Add Note</Btn>
                         <Btn variant="ghost" onClick={()=>openChatSession(activeChatSession.id)}>Reload Conversation</Btn>
                       </div>
 
