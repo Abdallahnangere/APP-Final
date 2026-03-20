@@ -532,12 +532,14 @@ function ShareSaukiMartModal({
   user,
   dark,
   onClose,
+  onShareSuccess,
   onToast,
   onError,
 }: {
   user: User;
   dark: boolean;
   onClose: () => void;
+  onShareSuccess: () => void;
   onToast: (msg: string) => void;
   onError: (msg: string) => void;
 }) {
@@ -573,7 +575,7 @@ function ShareSaukiMartModal({
     }
   }, [createImageBlob, onError, onToast]);
 
-  const shareToWhatsApp = useCallback(async () => {
+  const shareViaPhone = useCallback(async () => {
     setBusy(true);
     try {
       const blob = await createImageBlob();
@@ -587,10 +589,23 @@ function ShareSaukiMartModal({
             files: [file],
           });
           onToast('Shared successfully');
+          onShareSuccess();
           return;
         } catch (shareError: unknown) {
           const isAbort = shareError instanceof Error && shareError.name === 'AbortError';
           if (isAbort) return;
+
+          try {
+            await navigator.share({
+              title: 'SaukiMart',
+              text: promoText,
+              url: 'https://www.saukimart.online',
+            });
+            onToast('Shared successfully');
+            return;
+          } catch {
+            // Continue to fallback download below.
+          }
         }
       }
 
@@ -600,15 +615,13 @@ function ShareSaukiMartModal({
       a.download = `saukimart-share-${Date.now()}.png`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 120);
-      const waUrl = `https://wa.me/?text=${encodeURIComponent(promoText)}`;
-      window.open(waUrl, '_blank', 'noopener,noreferrer');
-      onToast('WhatsApp opened and image downloaded for sharing.');
+      onToast('Image downloaded. Open your phone share options to post it.');
     } catch {
-      onError('Unable to share to WhatsApp right now');
+      onError('Unable to open phone share right now');
     } finally {
       setBusy(false);
     }
-  }, [createImageBlob, onError, onToast, promoText]);
+  }, [createImageBlob, onError, onShareSuccess, onToast, promoText]);
 
   const copyMessage = useCallback(async () => {
     try {
@@ -620,8 +633,8 @@ function ShareSaukiMartModal({
   }, [onError, onToast, promoText]);
 
   return (
-    <div style={{ position:'fixed',inset:0,zIndex:320,background:'rgba(0,8,20,.72)',backdropFilter:'blur(16px)',display:'flex',alignItems:'flex-end',justifyContent:'center' }}>
-      <div className="slide-up" style={{ width:'100%',maxWidth:430,background:dark?'#0F1625':'#F8FBFF',borderRadius:'30px 30px 0 0',padding:'18px 16px 28px',border:`1px solid ${dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.08)'}` }}>
+    <div onClick={onClose} style={{ position:'fixed',inset:0,zIndex:320,background:'rgba(0,8,20,.72)',backdropFilter:'blur(16px)',display:'flex',alignItems:'flex-end',justifyContent:'center' }}>
+      <div onClick={(e)=>e.stopPropagation()} className="slide-up" style={{ width:'100%',maxWidth:430,background:dark?'#0F1625':'#F8FBFF',borderRadius:'30px 30px 0 0',padding:'18px 16px 28px',border:`1px solid ${dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.08)'}` }}>
         <div style={{ width:54,height:5,borderRadius:999,background:dark?'rgba(255,255,255,.2)':'rgba(0,0,0,.14)',margin:'0 auto 14px' }} />
         <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12 }}>
           <div>
@@ -675,8 +688,8 @@ function ShareSaukiMartModal({
           <button onClick={downloadImage} disabled={busy} style={{ padding:'13px 10px',borderRadius:12,background:dark?'rgba(255,255,255,.08)':'#EAF1FF',color:dark?'#EAF1FF':'#18427D',fontSize:13,fontWeight:800,border:'1px solid rgba(0,113,227,.25)',opacity:busy ? .7 : 1 }}>
             {busy ? 'Preparing...' : 'Download Image'}
           </button>
-          <button onClick={shareToWhatsApp} disabled={busy} style={{ padding:'13px 10px',borderRadius:12,background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:13,fontWeight:800,border:'1px solid rgba(255,255,255,.08)',opacity:busy ? .7 : 1 }}>
-            {busy ? 'Please wait...' : 'Share to WhatsApp'}
+          <button onClick={shareViaPhone} disabled={busy} style={{ padding:'13px 10px',borderRadius:12,background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:13,fontWeight:800,border:'1px solid rgba(255,255,255,.08)',opacity:busy ? .7 : 1 }}>
+            {busy ? 'Please wait...' : 'Share via Phone'}
           </button>
         </div>
 
@@ -720,6 +733,8 @@ export default function AppPage() {
   const [toast, setToast] = useState('');
   const [showHomeUpdateTip, setShowHomeUpdateTip] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showShareCoach, setShowShareCoach] = useState(false);
+  const [shareModalGuardUntil, setShareModalGuardUntil] = useState(0);
   const [cashbackToast, setCashbackToast] = useState('');
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [redeemAmount, setRedeemAmount] = useState('');
@@ -760,6 +775,21 @@ export default function AppPage() {
 
   const showToast = (msg: string) => { playSound('success'); setToast(msg); setTimeout(() => setToast(''), 3000); };
   const showError = (msg: string) => { playSound('error'); setError(msg); setTimeout(() => setError(''), 4000); };
+
+  const openShareModal = useCallback(() => {
+    if (Date.now() < shareModalGuardUntil) return;
+    setShowShareModal(true);
+  }, [shareModalGuardUntil]);
+
+  const closeShareModal = useCallback(() => {
+    setShowShareModal(false);
+    setShareModalGuardUntil(Date.now() + 280);
+  }, []);
+
+  const markShareCompleted = useCallback(() => {
+    if (typeof window !== 'undefined') localStorage.setItem('sm_share_completed', '1');
+    setShowShareCoach(false);
+  }, []);
 
   // Back Navigation Handler
   const goBack = useCallback(() => {
@@ -1011,6 +1041,8 @@ export default function AppPage() {
       setScreen('home');
       window.dispatchEvent(new Event('sm-login-success'));
       setShowHomeUpdateTip(true);
+      const shareDone = typeof window !== 'undefined' && localStorage.getItem('sm_share_completed') === '1';
+      setShowShareCoach(!shareDone);
     } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Login failed'); }
     finally { setLoading(false); setShowPin(false); }
   };
@@ -1550,7 +1582,8 @@ export default function AppPage() {
         <ShareSaukiMartModal
           user={user}
           dark={dark}
-          onClose={()=>setShowShareModal(false)}
+          onClose={closeShareModal}
+          onShareSuccess={markShareCompleted}
           onToast={showToast}
           onError={showError}
         />
@@ -1566,7 +1599,7 @@ export default function AppPage() {
           const isShare = item.id === 'share';
           const isActive = active === item.id;
           return (
-            <button key={item.id} onClick={()=> isShare ? setShowShareModal(true) : setScreen(item.id as typeof screen)}
+            <button key={item.id} onClick={()=> isShare ? openShareModal() : setScreen(item.id as typeof screen)}
               style={{ padding:isShare?'0 0 12px':'12px 0 16px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,background:'none',borderTop: isActive ? `3px solid ${BLUE}` : 'none',paddingTop: isActive ? '9px' : (isShare ? '0' : '12px'),transition:'all .2s',opacity: isActive || isShare ? 1 : 0.65,cursor:'pointer' }}
               onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}}
               onMouseLeave={e=>{e.currentTarget.style.opacity = isActive || isShare ? '1' : '0.65'}}>
@@ -1613,6 +1646,19 @@ export default function AppPage() {
           >
             Update Now
           </button>
+        </div>
+      )}
+      {showShareCoach && (
+        <div style={{ position:'fixed',inset:0,zIndex:560,background:'rgba(1,9,24,.48)',backdropFilter:'blur(6px)' }}>
+          <div style={{ position:'absolute',left:'50%',transform:'translateX(-50%)',bottom:102,width:72,height:72,borderRadius:'50%',border:'2px solid rgba(90,200,250,.9)',boxShadow:'0 0 0 12px rgba(90,200,250,.15), 0 0 0 26px rgba(90,200,250,.08)',animation:'pulse 1.4s ease-in-out infinite' }} />
+          <div style={{ position:'absolute',left:16,right:16,bottom:186,maxWidth:420,margin:'0 auto',background:dark?'#101A2D':'#FFFFFF',border:dark?'1px solid rgba(255,255,255,.12)':'1px solid rgba(0,0,0,.09)',borderRadius:16,padding:'16px 14px',boxShadow:dark?'0 18px 40px rgba(0,0,0,.45)':'0 16px 34px rgba(12,28,54,.16)' }}>
+            <p style={{ fontSize:13,fontWeight:900,color:BLUE,letterSpacing:'0.05em',textTransform:'uppercase',marginBottom:8 }}>Share SaukiMart</p>
+            <p style={{ fontSize:14,color:'var(--text)',lineHeight:1.55,marginBottom:14 }}>Please help us share SaukiMart on your WhatsApp status. Thank you.</p>
+            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
+              <button onClick={()=>setShowShareCoach(false)} style={{ height:40,borderRadius:11,border:'1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text)',fontSize:13,fontWeight:700 }}>Skip</button>
+              <button onClick={()=>{ setShowShareCoach(false); openShareModal(); }} style={{ height:40,borderRadius:11,border:'none',background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:13,fontWeight:800 }}>Share Now</button>
+            </div>
+          </div>
         </div>
       )}
       {redeemOpen && (
