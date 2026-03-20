@@ -579,15 +579,27 @@ function ShareSaukiMartModal({
     setBusy(true);
     try {
       const blob = await createImageBlob();
-      const file = new File([blob], 'saukimart-share.png', { type: 'image/png' });
 
+      // 1. Android WebView native bridge (injected by MainActivity via addJavascriptInterface)
+      const androidBridge = (typeof window !== 'undefined') && (window as unknown as Record<string, unknown>)['saukiShareFile'];
+      if (typeof androidBridge === 'function') {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          (androidBridge as (b: string, m: string, n: string) => void)(base64, 'image/png', 'saukimart-share.png');
+        };
+        reader.readAsDataURL(blob);
+        onToast('Opening share sheet…');
+        onShareSuccess();
+        onClose();
+        return;
+      }
+
+      // 2. Standard Web Share API (browser / PWA)
+      const file = new File([blob], 'saukimart-share.png', { type: 'image/png' });
       if (typeof navigator !== 'undefined' && navigator.share) {
         try {
-          await navigator.share({
-            title: 'SaukiMart',
-            text: promoText,
-            files: [file],
-          });
+          await navigator.share({ title: 'SaukiMart', text: promoText, files: [file] });
           onToast('Shared successfully');
           onShareSuccess();
           onClose();
@@ -595,30 +607,26 @@ function ShareSaukiMartModal({
         } catch (shareError: unknown) {
           const isAbort = shareError instanceof Error && shareError.name === 'AbortError';
           if (isAbort) return;
-
           try {
-            await navigator.share({
-              title: 'SaukiMart',
-              text: promoText,
-              url: 'https://www.saukimart.online',
-            });
+            await navigator.share({ title: 'SaukiMart', text: promoText, url: 'https://www.saukimart.online' });
             onToast('Shared successfully');
             onShareSuccess();
             onClose();
             return;
           } catch {
-            // Continue to fallback download below.
+            // fall through to download
           }
         }
       }
 
+      // 3. Last resort: download
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
       a.download = `saukimart-share-${Date.now()}.png`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 120);
-      onToast('Image downloaded. Open your phone share options to post it.');
+      onToast('Image downloaded. Share it on WhatsApp status!');
     } catch {
       onError('Unable to open phone share right now');
     } finally {
