@@ -590,6 +590,7 @@ function ShareSaukiMartModal({
           });
           onToast('Shared successfully');
           onShareSuccess();
+          onClose();
           return;
         } catch (shareError: unknown) {
           const isAbort = shareError instanceof Error && shareError.name === 'AbortError';
@@ -602,6 +603,8 @@ function ShareSaukiMartModal({
               url: 'https://www.saukimart.online',
             });
             onToast('Shared successfully');
+            onShareSuccess();
+            onClose();
             return;
           } catch {
             // Continue to fallback download below.
@@ -735,6 +738,7 @@ export default function AppPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showShareCoach, setShowShareCoach] = useState(false);
   const [shareModalGuardUntil, setShareModalGuardUntil] = useState(0);
+  const [shareFabAnchor, setShareFabAnchor] = useState<{ x: number; y: number } | null>(null);
   const [cashbackToast, setCashbackToast] = useState('');
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [redeemAmount, setRedeemAmount] = useState('');
@@ -770,6 +774,7 @@ export default function AppPage() {
   const hasSeenCashbackRef = useRef(false);
   const screenHistoryRef = useRef<string[]>([]);
   const isBackNavigationRef = useRef(false);
+  const shareFabRef = useRef<HTMLDivElement | null>(null);
 
   const authHeader = useCallback(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
 
@@ -789,6 +794,13 @@ export default function AppPage() {
   const markShareCompleted = useCallback(() => {
     if (typeof window !== 'undefined') localStorage.setItem('sm_share_completed', '1');
     setShowShareCoach(false);
+  }, []);
+
+  const updateShareFabAnchor = useCallback(() => {
+    const node = shareFabRef.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    setShareFabAnchor({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
   }, []);
 
   // Back Navigation Handler
@@ -934,6 +946,20 @@ export default function AppPage() {
       refreshUser();
     }
   }, [screen, loadHomeData, refreshUser]);
+
+  useEffect(() => {
+    if (!showShareCoach) return;
+    updateShareFabAnchor();
+    const onResize = () => updateShareFabAnchor();
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    const timer = setTimeout(() => updateShareFabAnchor(), 120);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+      clearTimeout(timer);
+    };
+  }, [showShareCoach, updateShareFabAnchor]);
 
   // Real-time wallet balance refresh (no caching)
   useEffect(() => {
@@ -1604,7 +1630,7 @@ export default function AppPage() {
               onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}}
               onMouseLeave={e=>{e.currentTarget.style.opacity = isActive || isShare ? '1' : '0.65'}}>
               {isShare ? (
-                <div style={{ width:54,height:54,borderRadius:999,marginTop:-18,background:'linear-gradient(135deg,#0047CC,#0071E3)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 12px 24px rgba(0,113,227,.35)',border:'3px solid var(--card)' }}>
+                <div ref={shareFabRef} style={{ width:54,height:54,borderRadius:999,marginTop:-18,background:'linear-gradient(135deg,#0047CC,#0071E3)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:showShareCoach?'0 14px 30px rgba(0,113,227,.5)':'0 12px 24px rgba(0,113,227,.35)',border:'3px solid var(--card)',animation:showShareCoach?'pulse 1.1s ease-in-out infinite':'none' }}>
                   {item.icon}
                 </div>
               ) : (
@@ -1650,8 +1676,9 @@ export default function AppPage() {
       )}
       {showShareCoach && (
         <div style={{ position:'fixed',inset:0,zIndex:560,background:'rgba(1,9,24,.48)',backdropFilter:'blur(6px)' }}>
-          <div style={{ position:'absolute',left:'50%',transform:'translateX(-50%)',bottom:102,width:72,height:72,borderRadius:'50%',border:'2px solid rgba(90,200,250,.9)',boxShadow:'0 0 0 12px rgba(90,200,250,.15), 0 0 0 26px rgba(90,200,250,.08)',animation:'pulse 1.4s ease-in-out infinite' }} />
+          <div style={{ position:'absolute',left:(shareFabAnchor?.x || 0) - 36,top:(shareFabAnchor?.y || 0) - 36,width:72,height:72,borderRadius:'50%',border:'2px solid rgba(90,200,250,.92)',boxShadow:'0 0 0 12px rgba(90,200,250,.15), 0 0 0 26px rgba(90,200,250,.08)',animation:'pulse 1.2s ease-in-out infinite',opacity:shareFabAnchor ? 1 : 0 }} />
           <div style={{ position:'absolute',left:16,right:16,bottom:186,maxWidth:420,margin:'0 auto',background:dark?'#101A2D':'#FFFFFF',border:dark?'1px solid rgba(255,255,255,.12)':'1px solid rgba(0,0,0,.09)',borderRadius:16,padding:'16px 14px',boxShadow:dark?'0 18px 40px rgba(0,0,0,.45)':'0 16px 34px rgba(12,28,54,.16)' }}>
+            <div style={{ position:'absolute',left:'50%',transform:'translateX(-50%)',bottom:-8,width:16,height:16,background:dark?'#101A2D':'#FFFFFF',borderLeft:dark?'1px solid rgba(255,255,255,.12)':'1px solid rgba(0,0,0,.09)',borderBottom:dark?'1px solid rgba(255,255,255,.12)':'1px solid rgba(0,0,0,.09)',rotate:'-45deg' }} />
             <p style={{ fontSize:13,fontWeight:900,color:BLUE,letterSpacing:'0.05em',textTransform:'uppercase',marginBottom:8 }}>Share SaukiMart</p>
             <p style={{ fontSize:14,color:'var(--text)',lineHeight:1.55,marginBottom:14 }}>Please help us share SaukiMart on your WhatsApp status. Thank you.</p>
             <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
