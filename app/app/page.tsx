@@ -742,7 +742,7 @@ export default function AppPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
-  const [showHomeUpdateTip, setShowHomeUpdateTip] = useState(false);
+
   const [showShareModal, setShowShareModal] = useState(false);
   const [showShareCoach, setShowShareCoach] = useState(false);
   const [shareModalGuardUntil, setShareModalGuardUntil] = useState(0);
@@ -1074,7 +1074,6 @@ export default function AppPage() {
       setShowPin(false);
       setScreen('home');
       window.dispatchEvent(new Event('sm-login-success'));
-      setShowHomeUpdateTip(true);
       const shareDone = typeof window !== 'undefined' && localStorage.getItem('sm_share_completed') === '1';
       setShowShareCoach(!shareDone);
     } catch(e:unknown) { showError(e instanceof Error ? e.message : 'Login failed'); }
@@ -1662,26 +1661,7 @@ export default function AppPage() {
       {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} dark={dark} />}
       {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500,whiteSpace:'nowrap' }}>{toast}</div>}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
-      {showHomeUpdateTip && (
-        <div className="fade-in" style={{ position:'fixed',top:88,right:16,zIndex:520,width:'min(320px, calc(100vw - 32px))',background:dark?'#101A2D':'#FFFFFF',border:dark?'1px solid rgba(255,255,255,.12)':'1px solid rgba(0,0,0,.09)',borderRadius:14,boxShadow:dark?'0 18px 40px rgba(0,0,0,.45)':'0 16px 34px rgba(12,28,54,.16)',padding:'12px 12px 10px' }}>
-          <button
-            onClick={() => setShowHomeUpdateTip(false)}
-            style={{ position:'absolute',top:8,right:8,width:24,height:24,borderRadius:8,border:'none',background:dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.06)',color:'var(--text-secondary)',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}
-            aria-label="Dismiss update tip"
-          >
-            ×
-          </button>
-          <p style={{ fontSize:11,fontWeight:800,letterSpacing:'0.07em',textTransform:'uppercase',color:BLUE,marginBottom:6 }}>New Version Available</p>
-          <p style={{ fontSize:13,color:'var(--text)',lineHeight:1.5,paddingRight:20,marginBottom:10 }}>Update now for AI support, smarter alerts, and smoother wallet transfers.</p>
-          <button
-            onClick={() => window.open('https://play.google.com/store/apps/details?id=online.saukimart.twa', '_blank')}
-            className="tactile-btn"
-            style={{ width:'100%',height:38,borderRadius:10,border:'none',background:'linear-gradient(135deg,#C9A84C,#E2C57C)',color:'#1A1A1A',fontSize:13,fontWeight:800,cursor:'pointer' }}
-          >
-            Update Now
-          </button>
-        </div>
-      )}
+
       {showShareCoach && (
         <div style={{ position:'fixed',inset:0,zIndex:560,background:'rgba(1,9,24,.48)',backdropFilter:'blur(6px)' }}>
           <div style={{ position:'absolute',left:(shareFabAnchor?.x || 0) - 36,top:(shareFabAnchor?.y || 0) - 36,width:72,height:72,borderRadius:'50%',border:'2px solid rgba(90,200,250,.92)',boxShadow:'0 0 0 12px rgba(90,200,250,.15), 0 0 0 26px rgba(90,200,250,.08)',animation:'pulse 1.2s ease-in-out infinite',opacity:shareFabAnchor ? 1 : 0 }} />
@@ -1770,7 +1750,7 @@ export default function AppPage() {
         {/* Broadcast Ticker */}
         {broadcasts.length > 0 && (
           <div style={{ margin:'20px 16px 0',background:'var(--bg-secondary)',borderRadius:14,padding:'12px 16px',overflow:'hidden',border:'1px solid var(--border)' }}>
-            <div style={{ display:'flex',gap:40,whiteSpace:'nowrap',animation:'tick 30s linear infinite' }}>
+            <div style={{ display:'flex',gap:40,whiteSpace:'nowrap',animation:'tick 10s linear infinite' }}>
               {[...broadcasts,...broadcasts].map((b,i)=>(
                 <span key={i} style={{ fontSize:13,color:'var(--text)',fontWeight:500 }}>{b}</span>
               ))}

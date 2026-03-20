@@ -29,7 +29,7 @@ async function generateIcons() {
       name: "SaukiMart - Nigeria's Fastest Mobile Commerce",
       short_name: "SaukiMart",
       description: "Buy instant mobile data, airtime, and premium gadgets across Nigeria",
-      start_url: "/",
+      start_url: "/app",
       display: "standalone",
       background_color: "#ffffff",
       theme_color: "#007AFF",

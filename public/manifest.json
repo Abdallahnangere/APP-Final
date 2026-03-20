@@ -1,26 +1,51 @@
 {
-  "name": "SaukiMart",
+  "name": "SaukiMart — Instant Data, Airtime & Devices in Nigeria",
   "short_name": "SaukiMart",
-  "description": "Buy instant mobile data and airtime across Nigeria",
-  "start_url": "/",
+  "description": "Buy MTN, Airtel & Glo data bundles instantly. Premium devices, best prices, secure payments. Nigeria's fastest mobile commerce platform.",
+  "start_url": "/app",
+  "scope": "/",
+  "id": "/app",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#007AFF",
+  "categories": ["shopping", "finance", "productivity"],
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/android-chrome-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/apple-touch-icon.png",
       "sizes": "180x180",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/logo.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "SaukiMart Home Screen"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Buy Data",
+      "short_name": "Data",
+      "description": "Buy MTN, Airtel or Glo data bundles",
+      "url": "/app",
+      "icons": [{ "src": "/android-chrome-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

@@ -1,160 +1,113 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAppVersion } from '@/hooks/useAppVersion';
 
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=online.saukimart.twa';
+const DISMISSED_KEY = 'sm_update_dismissed';
 
 export default function AppUpdateModal() {
   const pathname = usePathname();
   const isAppRoute = pathname?.startsWith('/app') ?? false;
   const { latestVersionName } = useAppVersion();
   const [visible, setVisible] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [mounted, setMounted] = useState(false);
   const safeVersionName = (latestVersionName || '4.2').trim();
-  const versionStorageKey = `sm_update_notice_seen_${safeVersionName.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
-  const checkAndShowNotice = useCallback(() => {
-    if (!isAppRoute || typeof window === 'undefined') {
-      setVisible(false);
-      return;
-    }
-
+  const checkAndShow = useCallback(() => {
+    if (!isAppRoute || typeof window === 'undefined') return;
     const hasSession = Boolean(localStorage.getItem('sm_token'));
-    const hasSeen = localStorage.getItem(versionStorageKey) === '1';
+    const dismissed = localStorage.getItem(DISMISSED_KEY) === '1';
+    if (hasSession && !dismissed) setVisible(true);
+  }, [isAppRoute]);
 
-    if (hasSession && !hasSeen) {
-      localStorage.setItem(versionStorageKey, '1');
-      setVisible(true);
-      return;
-    }
+  useEffect(() => {
+    setMounted(true);
+    checkAndShow();
+    window.addEventListener('sm-login-success', checkAndShow);
+    return () => window.removeEventListener('sm-login-success', checkAndShow);
+  }, [checkAndShow]);
 
+  const dismiss = useCallback((andUpdate?: boolean) => {
+    localStorage.setItem(DISMISSED_KEY, '1');
     setVisible(false);
-  }, [isAppRoute, versionStorageKey]);
+    if (andUpdate) window.open(PLAY_STORE_URL, '_blank');
+  }, []);
 
-  useEffect(() => {
-    checkAndShowNotice();
-
-    const handleLoginSuccess = () => checkAndShowNotice();
-    window.addEventListener('sm-login-success', handleLoginSuccess);
-
-    return () => {
-      window.removeEventListener('sm-login-success', handleLoginSuccess);
-    };
-  }, [checkAndShowNotice]);
-
-  useEffect(() => {
-    if (!visible) return;
-
-    // Block body scroll
-    document.body.style.overflow = 'hidden';
-
-    // Auto-focus the update badge button when notice opens
-    buttonRef.current?.focus();
-
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [visible]);
-
-  if (!isAppRoute || !visible) return null;
+  if (!mounted || !isAppRoute || !visible) return null;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="update-heading"
-      aria-describedby="update-description"
+      aria-labelledby="upd-heading"
+      onClick={() => dismiss()}
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(13,13,26,.8)',
+        background: 'rgba(0,0,0,.55)',
+        backdropFilter: 'blur(6px)',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         justifyContent: 'center',
-        padding: '20px',
+        padding: '0 0 env(safe-area-inset-bottom)',
+        animation: 'fadeIn .22s ease',
       }}
     >
       <div
+        onClick={e => e.stopPropagation()}
         style={{
-          background: '#1A1A2E',
-          border: '1px solid #C9A84C',
-          borderRadius: '16px',
-          padding: '28px',
-          maxWidth: '520px',
-          width: '94%',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '14px',
+          width: '100%',
+          maxWidth: 480,
+          background: 'linear-gradient(160deg,#0E1B33 0%,#0A1221 100%)',
+          border: '1px solid rgba(255,255,255,.1)',
+          borderRadius: '24px 24px 0 0',
+          padding: '10px 20px 28px',
+          animation: 'slideUp .28s cubic-bezier(.32,1,.38,1)',
         }}
       >
-        <span
-          style={{
-            fontSize: '28px',
-            fontWeight: 700,
-            color: '#C9A84C',
-            letterSpacing: '-0.5px',
-            textAlign: 'center',
-          }}
-        >
-          SaukiMart
-        </span>
+        {/* Drag handle */}
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.18)', margin: '0 auto 20px' }} />
 
-        <h1
-          id="update-heading"
-          style={{
-            fontSize: '22px',
-            fontWeight: 700,
-            color: '#FFFFFF',
-            margin: 0,
-            textAlign: 'center',
-          }}
-        >
-          New Version Available on Play Store
-        </h1>
+        {/* Icon + title row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <img src="/images/logo-icon.png" alt="SaukiMart" width={42} height={42} style={{ borderRadius: 12, flexShrink: 0 }} />
+          <div>
+            <p id="upd-heading" style={{ fontSize: 16, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-.2px' }}>
+              Update Available
+            </p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,.5)', margin: 0 }}>Version {safeVersionName} is ready</p>
+          </div>
+          <button
+            onClick={() => dismiss()}
+            aria-label="Dismiss"
+            style={{ marginLeft: 'auto', width: 28, height: 28, borderRadius: 8, border: 'none', background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.6)', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          >
+            ×
+          </button>
+        </div>
 
-        <p
-          id="update-description"
-          style={{
-            fontSize: '14px',
-            color: '#AAAAAA',
-            lineHeight: 1.6,
-            textAlign: 'left',
-            margin: 0,
-            whiteSpace: 'pre-line',
-          }}
-        >
-          {'Sauki Mart just got a major upgrade. Here\'s what\'s new:\n🤖 AI Support — 24/7, Instant\nGet help anytime without waiting. Our new in-app AI assistant handles complaints, answers questions, and resolves issues around the clock — no human queue, no delays.\n📲 User-to-User Transfers\nSend money directly to any Sauki Mart user in seconds. Fast, seamless, and built right into your wallet.\n🔔 Smart Alert System\nStay in the loop with real-time notifications for transactions, transfers, promotions, and account activity — so you never miss a beat.\n✨ Refreshed UI & UX\nA cleaner, faster, and more intuitive experience from top to bottom. Everything feels smoother, looks sharper, and works better.'}
-        </p>
+        {/* Feature pills */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+          {['🤖 AI Support', '📲 Transfers', '🔔 Smart Alerts', '✨ New UI'].map(f => (
+            <span key={f} style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,.75)', background: 'rgba(255,255,255,.08)', borderRadius: 999, padding: '5px 11px', border: '1px solid rgba(255,255,255,.1)' }}>{f}</span>
+          ))}
+        </div>
 
-        <p style={{ margin: 0, color: '#8A93AA', fontSize: 13, textAlign: 'center' }}>
-          Tap the official Play Store badge to update to version {safeVersionName} and continue.
-        </p>
-
+        {/* Update button */}
         <button
-          ref={buttonRef}
-          onClick={() => {
-            window.open(PLAY_STORE_URL, '_blank');
-            setVisible(false);
-          }}
-          style={{
-            border: 'none',
-            background: 'transparent',
-            cursor: 'pointer',
-            padding: 0,
-            margin: '0 auto',
-            display: 'inline-flex',
-            alignSelf: 'center',
-          }}
-          aria-label="Update from Google Play"
+          onClick={() => dismiss(true)}
+          style={{ width: '100%', height: 50, borderRadius: 14, border: 'none', background: 'linear-gradient(135deg,#0047CC,#0071E3)', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', letterSpacing: '-.1px', boxShadow: '0 8px 24px rgba(0,71,204,.4)' }}
         >
-          <img
-            src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
-            alt="Get it on Google Play"
-            style={{ width: 'min(320px, 80vw)', height: 'auto' }}
-          />
+          Update Now
+        </button>
+        <button
+          onClick={() => dismiss()}
+          style={{ width: '100%', height: 40, borderRadius: 12, border: 'none', background: 'none', color: 'rgba(255,255,255,.4)', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 8 }}
+        >
+          Not now
         </button>
       </div>
     </div>

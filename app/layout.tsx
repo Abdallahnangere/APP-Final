@@ -4,28 +4,49 @@ import dynamic from 'next/dynamic';
 const AppUpdateModal = dynamic(() => import('@/components/AppUpdateModal'), { ssr: false });
 
 export const metadata: Metadata = {
-  title: 'SaukiMart — Instant Data, Airtime & Devices',
-  description: 'Buy MTN, Airtel & Glo data bundles instantly. Quality devices, competitive prices, trusted service.',
-  keywords: 'data bundle, MTN data, Airtel data, Glo data, Nigeria, instant delivery, mobile data',
+  title: {
+    default: 'SaukiMart — Instant Data, Airtime & Devices in Nigeria',
+    template: '%s | SaukiMart',
+  },
+  description: 'Buy MTN, Airtel & Glo data bundles instantly in Nigeria. Premium smartphones, accessories, secure wallet payments and real-time delivery. Nigeria\'s fastest mobile commerce platform.',
+  keywords: [
+    'data bundle Nigeria', 'MTN data bundle', 'Airtel data plan', 'Glo data', '9mobile data',
+    'buy airtime online Nigeria', 'cheap data Nigeria', 'instant data delivery',
+    'SaukiMart', 'sauki mart', 'saukimart.online',
+    'online data shop Nigeria', 'Nigeria mobile data', 'data subscription',
+    'buy smartphone Nigeria', 'Android phone Nigeria', 'phone accessories Nigeria',
+    'mobile wallet Nigeria', 'online payment Nigeria', 'fintech Nigeria',
+    'Kano online store', 'Northern Nigeria ecommerce',
+  ],
   metadataBase: new URL('https://www.saukimart.online'),
   authors: [{ name: 'SaukiMart', url: 'https://www.saukimart.online' }],
   creator: 'SaukiMart',
   publisher: 'SaukiMart',
-  robots: 'index, follow',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+  },
+  alternates: {
+    canonical: 'https://www.saukimart.online',
+  },
   openGraph: {
-    title: 'SaukiMart — Instant Data, Airtime & Devices',
-    description: 'Nigeria\'s fastest digital commerce platform. Instant data delivery, best prices, secure payments.',
+    title: 'SaukiMart — Instant Data, Airtime & Devices in Nigeria',
+    description: 'Nigeria\'s fastest digital commerce platform. Instant data delivery, best prices, secure mobile wallet payments.',
     url: 'https://www.saukimart.online',
     siteName: 'SaukiMart',
     locale: 'en_NG',
-    images: [{ url: '/images/logo.png', width: 256, height: 256, alt: 'SaukiMart Logo' }],
+    images: [
+      { url: '/images/logo.png', width: 256, height: 256, alt: 'SaukiMart — Instant Data & Devices Nigeria' },
+    ],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SaukiMart — Instant Data & Devices',
-    description: 'Buy data bundles instantly. Trusted by thousands.',
+    title: 'SaukiMart — Instant Data & Devices Nigeria',
+    description: 'Buy MTN, Airtel, Glo data cheaply. Premium devices. Trusted by thousands across Nigeria.',
     creator: '@SaukiMart',
+    site: '@SaukiMart',
     images: ['/images/logo.png'],
   },
   icons: {
@@ -36,6 +57,9 @@ export const metadata: Metadata = {
       { url: '/favicon.ico', sizes: 'any' },
     ],
     apple: '/apple-touch-icon.png',
+    other: [
+      { rel: 'mask-icon', url: '/favicon.ico' },
+    ],
   },
   manifest: '/manifest.json',
   appleWebApp: {
@@ -48,6 +72,10 @@ export const metadata: Metadata = {
     email: true,
     address: true,
   },
+  verification: {
+    google: 'f1fbd4c14879f3c3',
+  },
+  category: 'shopping',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -113,7 +141,54 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#0071E3" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="description" content="Nigeria's premium data reseller platform. Instant delivery, best prices, trusted by thousands." />
+        <meta name="description" content="Buy MTN, Airtel & Glo data bundles instantly. Premium devices, best prices, secure mobile wallet. Nigeria's fastest mobile commerce platform." />
+        <meta name="geo.region" content="NG" />
+        <meta name="geo.placename" content="Nigeria" />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              "@id": "https://www.saukimart.online/#org",
+              "name": "SaukiMart",
+              "url": "https://www.saukimart.online",
+              "logo": {
+                "@type": "ImageObject",
+                "url": "https://www.saukimart.online/images/logo.png",
+                "width": 256,
+                "height": 256
+              },
+              "description": "Nigeria's fastest mobile commerce platform for instant data bundles, airtime, and premium devices.",
+              "sameAs": [
+                "https://play.google.com/store/apps/details?id=online.saukimart.twa"
+              ]
+            },
+            {
+              "@type": "WebSite",
+              "@id": "https://www.saukimart.online/#website",
+              "url": "https://www.saukimart.online",
+              "name": "SaukiMart",
+              "description": "Buy instant mobile data, airtime and devices in Nigeria",
+              "publisher": { "@id": "https://www.saukimart.online/#org" },
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": { "@type": "EntryPoint", "urlTemplate": "https://www.saukimart.online/app?q={search_term_string}" },
+                "query-input": "required name=search_term_string"
+              }
+            },
+            {
+              "@type": "MobileApplication",
+              "name": "SaukiMart",
+              "operatingSystem": "Android",
+              "applicationCategory": "ShoppingApplication",
+              "url": "https://www.saukimart.online/app",
+              "downloadUrl": "https://play.google.com/store/apps/details?id=online.saukimart.twa",
+              "offers": { "@type": "Offer", "price": "0", "priceCurrency": "NGN" },
+              "description": "Buy MTN, Airtel, Glo data instantly. Mobile wallet. Premium devices.",
+              "publisher": { "@id": "https://www.saukimart.online/#org" }
+            }
+          ]
+        }) }} />
       </head>
       <body style={{ margin: 0, padding: 0 }}>
         <AppUpdateModal />
