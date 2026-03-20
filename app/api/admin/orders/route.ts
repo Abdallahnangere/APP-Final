@@ -92,13 +92,20 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json() as {
       orderId?: string;
+      orderIds?: string[];
       fulfillmentStatus?: string;
       trackingNumber?: string;
       adminNote?: string;
     };
 
-    if (!body.orderId) {
-      return NextResponse.json({ error: 'orderId is required' }, { status: 400 });
+    const targetIds = Array.isArray(body.orderIds)
+      ? body.orderIds.filter(Boolean)
+      : body.orderId
+        ? [body.orderId]
+        : [];
+
+    if (targetIds.length === 0) {
+      return NextResponse.json({ error: 'orderId or orderIds is required' }, { status: 400 });
     }
 
     const patch: Record<string, string> = {};
@@ -110,13 +117,35 @@ export async function PATCH(req: NextRequest) {
     await db.query(
       `UPDATE transactions
        SET receipt_data = COALESCE(receipt_data, '{}'::jsonb) || $2::jsonb
-       WHERE id = $1 AND type = 'product'`,
-      [body.orderId, JSON.stringify(patch)],
+       WHERE id = ANY($1::uuid[]) AND type = 'product'`,
+      [targetIds, JSON.stringify(patch)],
     );
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, count: targetIds.length });
   } catch (err) {
     console.error('Admin order update error:', err);
     return NextResponse.json({ error: 'Failed to update order' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    if (!await auth(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    const body = await req.json().catch(() => ({})) as { orderIds?: string[] };
+    const ids = Array.isArray(body.orderIds) ? body.orderIds.filter(Boolean) : [];
+    if (ids.length === 0) {
+      return NextResponse.json({ error: 'orderIds is required' }, { status: 400 });
+    }
+
+    await db.query(
+      `DELETE FROM transactions WHERE id = ANY($1::uuid[]) AND type = 'product'`,
+      [ids],
+    );
+
+    return NextResponse.json({ ok: true, deleted: ids.length });
+  } catch (err) {
+    console.error('Admin order delete error:', err);
+    return NextResponse.json({ error: 'Failed to delete orders' }, { status: 500 });
   }
 }

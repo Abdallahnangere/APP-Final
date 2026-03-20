@@ -171,6 +171,11 @@ export default function AdminPage() {
   const [orderSearch, setOrderSearch] = useState('');
   const [orderForm, setOrderForm] = useState({ fulfillmentStatus:'paid', trackingNumber:'', adminNote:'' });
   const [orderSaving, setOrderSaving] = useState(false);
+  const [selectedTransactionIds, setSelectedTransactionIds] = useState<string[]>([]);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [batchTxStatus, setBatchTxStatus] = useState('success');
+  const [batchOrderStatus, setBatchOrderStatus] = useState('processing');
+  const [batchBusy, setBatchBusy] = useState(false);
   const [chatFilter, setChatFilter] = useState('all');
   const [chatSearch, setChatSearch] = useState('');
   const [chatReply, setChatReply] = useState('');
@@ -541,6 +546,80 @@ export default function AdminPage() {
     }
   };
 
+  const runTransactionBatchStatus = async () => {
+    if (!selectedTransactionIds.length) return;
+    setBatchBusy(true);
+    try {
+      await api('transactions', 'PATCH', { ids: selectedTransactionIds, status: batchTxStatus });
+      showToast(`Updated ${selectedTransactionIds.length} transactions`);
+      const refreshed = await load('transactions');
+      setTransactions(Array.isArray(refreshed) ? refreshed : []);
+      setSelectedTransactionIds([]);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Batch update failed');
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
+  const runTransactionBatchDelete = async () => {
+    if (!selectedTransactionIds.length) return;
+    const confirmed = window.confirm(`Delete ${selectedTransactionIds.length} selected transactions? This cannot be undone.`);
+    if (!confirmed) return;
+    setBatchBusy(true);
+    try {
+      await api('transactions', 'DELETE', { ids: selectedTransactionIds });
+      showToast(`Deleted ${selectedTransactionIds.length} transactions`);
+      const refreshed = await load('transactions');
+      setTransactions(Array.isArray(refreshed) ? refreshed : []);
+      setSelectedTransactionIds([]);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Batch delete failed');
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
+  const runOrderBatchStatus = async () => {
+    if (!selectedOrderIds.length) return;
+    setBatchBusy(true);
+    try {
+      await api('orders', 'PATCH', { orderIds: selectedOrderIds, fulfillmentStatus: batchOrderStatus });
+      showToast(`Updated ${selectedOrderIds.length} orders`);
+      await loadOrders();
+      setSelectedOrderIds([]);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Order batch update failed');
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
+  const runOrderBatchDelete = async () => {
+    if (!selectedOrderIds.length) return;
+    const confirmed = window.confirm(`Delete ${selectedOrderIds.length} selected orders? This cannot be undone.`);
+    if (!confirmed) return;
+    setBatchBusy(true);
+    try {
+      await api('orders', 'DELETE', { orderIds: selectedOrderIds });
+      showToast(`Deleted ${selectedOrderIds.length} orders`);
+      await loadOrders();
+      setSelectedOrderIds([]);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Order batch delete failed');
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    setSelectedTransactionIds((prev) => prev.filter((id) => transactions.some((tx) => tx.id === id)));
+  }, [transactions]);
+
+  useEffect(() => {
+    setSelectedOrderIds((prev) => prev.filter((id) => orders.some((order) => order.id === id)));
+  }, [orders]);
+
   /* ── LOGIN SCREEN ── */
   if (!authed) return (
     <>
@@ -571,19 +650,19 @@ export default function AdminPage() {
 
   /* ── TABS ── */
   const TABS = [
-    { id:'overview', label:'Overview', icon:'OV' },
-    { id:'users', label:'Users', icon:'US' },
-    { id:'plans', label:'Data Plans', icon:'DP' },
-    { id:'products', label:'Products', icon:'PR' },
-    { id:'transactions', label:'Transactions', icon:'TX' },
-    { id:'orders', label:'Orders', icon:'OR' },
-    { id:'analytics', label:'Analytics', icon:'AN' },
-    { id:'broadcasts', label:'Broadcasts', icon:'BC' },
-    { id:'push', label:'Push Notifications', icon:'PN' },
-    { id:'chat', label:'Support Chat', icon:'SC' },
-    { id:'sim', label:'SIM Activations', icon:'SA' },
-    { id:'webhooks', label:'Webhooks', icon:'WH' },
-    { id:'console', label:'API Console', icon:'API' },
+    { id:'overview', label:'Overview', icon:'📊' },
+    { id:'users', label:'Users', icon:'👥' },
+    { id:'plans', label:'Data Plans', icon:'📶' },
+    { id:'products', label:'Products', icon:'📦' },
+    { id:'transactions', label:'Transactions', icon:'💳' },
+    { id:'orders', label:'Orders', icon:'🧾' },
+    { id:'analytics', label:'Analytics', icon:'📈' },
+    { id:'broadcasts', label:'Broadcasts', icon:'📢' },
+    { id:'push', label:'Push Notifications', icon:'🔔' },
+    { id:'chat', label:'Support Chat', icon:'💬' },
+    { id:'sim', label:'SIM Activations', icon:'📡' },
+    { id:'webhooks', label:'Webhooks', icon:'🔗' },
+    { id:'console', label:'API Console', icon:'🛠️' },
   ];
 
   /* ── RENDER ── */
@@ -937,15 +1016,34 @@ export default function AdminPage() {
           {/* ─── TRANSACTIONS ─── */}
           {tab === 'transactions' && (
             <div className="fade-in">
-              <h1 style={{ fontSize:22,fontWeight:900,marginBottom:20 }}>All Transactions ({transactions.length})</h1>
+              <h1 style={{ fontSize:22,fontWeight:900,marginBottom:12 }}>All Transactions ({transactions.length})</h1>
+              <Card style={{ marginBottom:14,padding:'14px 16px' }}>
+                <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,flexWrap:'wrap' }}>
+                  <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+                    <button onClick={()=>setSelectedTransactionIds(transactions.map((tx)=>tx.id))} style={{ padding:'8px 11px',borderRadius:10,border:'1px solid rgba(196,208,230,.9)',background:'#fff',fontSize:12,fontWeight:700,color:'#38587f' }}>Select all</button>
+                    <button onClick={()=>setSelectedTransactionIds([])} style={{ padding:'8px 11px',borderRadius:10,border:'1px solid rgba(196,208,230,.9)',background:'#fff',fontSize:12,fontWeight:700,color:'#38587f' }}>Clear</button>
+                    <span style={{ fontSize:12,fontWeight:800,color:'#5f738f' }}>{selectedTransactionIds.length} selected</span>
+                  </div>
+                  <div style={{ display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' }}>
+                    <select value={batchTxStatus} onChange={(e)=>setBatchTxStatus(e.target.value)} style={{ padding:'8px 10px',borderRadius:10,border:'1px solid rgba(196,208,230,.9)',fontSize:12,color:'#204066' }}>
+                      {['pending','success','failed'].map((status) => <option key={status} value={status}>{status}</option>)}
+                    </select>
+                    <Btn size="sm" variant="ghost" onClick={runTransactionBatchStatus} style={{ opacity: selectedTransactionIds.length === 0 || batchBusy ? .6 : 1, pointerEvents: selectedTransactionIds.length === 0 || batchBusy ? 'none' : 'auto' }}>{batchBusy ? 'Working…' : 'Batch Update'}</Btn>
+                    <Btn size="sm" variant="danger" onClick={runTransactionBatchDelete} style={{ opacity: selectedTransactionIds.length === 0 || batchBusy ? .6 : 1, pointerEvents: selectedTransactionIds.length === 0 || batchBusy ? 'none' : 'auto' }}>Batch Delete</Btn>
+                  </div>
+                </div>
+              </Card>
               <Card>
                 <div style={{ overflowX:'auto' }}>
                   <table style={{ width:'100%',borderCollapse:'collapse' }}>
                     <thead><tr style={{ background:'#F9F9F9' }}>
-                      {['User/Phone','Type','Description','Amount','Status','Date','Receipt'].map(h=><th key={h} style={{ padding:'10px 14px',fontSize:12,fontWeight:700,color:'#8E8E93',textAlign:'left',borderBottom:'1px solid #F2F2F7',whiteSpace:'nowrap' }}>{h}</th>)}
+                      {['','User/Phone','Type','Description','Amount','Status','Date','Receipt'].map(h=><th key={h} style={{ padding:'10px 14px',fontSize:12,fontWeight:700,color:'#8E8E93',textAlign:'left',borderBottom:'1px solid #F2F2F7',whiteSpace:'nowrap' }}>{h}</th>)}
                     </tr></thead>
                     <tbody>{transactions.map(tx=>(
                       <tr key={tx.id} style={{ borderBottom:'1px solid #F9F9F9' }}>
+                        <td style={{ padding:'12px 10px' }}>
+                          <input type="checkbox" checked={selectedTransactionIds.includes(tx.id)} onChange={(e)=>setSelectedTransactionIds((prev)=>e.target.checked ? [...prev, tx.id] : prev.filter((id)=>id!==tx.id))} />
+                        </td>
                         <td style={{ padding:'12px 14px',fontSize:13 }}>{tx.first_name && tx.last_name ? `${tx.first_name} ${tx.last_name}` : tx.phone_number||'—'}</td>
                         <td style={{ padding:'12px 14px',fontSize:13 }}><span style={{ background:tx.type==='data'?'rgba(0,122,255,.1)':'rgba(52,199,89,.1)',color:tx.type==='data'?BLUE:GREEN,padding:'3px 9px',borderRadius:20,fontSize:11,fontWeight:700 }}>{tx.type}</span></td>
                         <td style={{ padding:'12px 14px',fontSize:13,maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{tx.description}</td>
@@ -1429,14 +1527,32 @@ export default function AdminPage() {
                     <Btn variant="ghost" onClick={()=>loadOrders(orderFilter, orderSearch)}>Refresh</Btn>
                   </div>
 
+                  <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:14,flexWrap:'wrap' }}>
+                    <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+                      <button onClick={()=>setSelectedOrderIds(orders.map((order)=>order.id))} style={{ padding:'8px 11px',borderRadius:10,border:'1px solid rgba(196,208,230,.9)',background:'#fff',fontSize:12,fontWeight:700,color:'#38587f' }}>Select all</button>
+                      <button onClick={()=>setSelectedOrderIds([])} style={{ padding:'8px 11px',borderRadius:10,border:'1px solid rgba(196,208,230,.9)',background:'#fff',fontSize:12,fontWeight:700,color:'#38587f' }}>Clear</button>
+                      <span style={{ fontSize:12,fontWeight:800,color:'#5f738f' }}>{selectedOrderIds.length} selected</span>
+                    </div>
+                    <div style={{ display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' }}>
+                      <select value={batchOrderStatus} onChange={(e)=>setBatchOrderStatus(e.target.value)} style={{ padding:'8px 10px',borderRadius:10,border:'1px solid rgba(196,208,230,.9)',fontSize:12,color:'#204066' }}>
+                        {['paid','processing','packed','shipped','delivered','cancelled'].map((status) => <option key={status} value={status}>{status}</option>)}
+                      </select>
+                      <Btn size="sm" variant="ghost" onClick={runOrderBatchStatus} style={{ opacity: selectedOrderIds.length === 0 || batchBusy ? .6 : 1, pointerEvents: selectedOrderIds.length === 0 || batchBusy ? 'none' : 'auto' }}>{batchBusy ? 'Working…' : 'Batch Update'}</Btn>
+                      <Btn size="sm" variant="danger" onClick={runOrderBatchDelete} style={{ opacity: selectedOrderIds.length === 0 || batchBusy ? .6 : 1, pointerEvents: selectedOrderIds.length === 0 || batchBusy ? 'none' : 'auto' }}>Batch Delete</Btn>
+                    </div>
+                  </div>
+
                   <div style={{ overflowX:'auto' }}>
                     <table style={{ width:'100%',borderCollapse:'collapse' }}>
                       <thead><tr style={{ background:'rgba(239,244,252,.9)' }}>
-                        {['Customer','Product','Amount','Fulfilment','Payment','Ordered'].map(h=><th key={h} style={{ padding:'11px 12px',fontSize:11,fontWeight:800,color:'#647793',textAlign:'left',borderBottom:'1px solid rgba(210,221,240,.9)',textTransform:'uppercase',letterSpacing:'0.07em' }}>{h}</th>)}
+                        {['','Customer','Product','Amount','Fulfilment','Payment','Ordered'].map(h=><th key={h} style={{ padding:'11px 12px',fontSize:11,fontWeight:800,color:'#647793',textAlign:'left',borderBottom:'1px solid rgba(210,221,240,.9)',textTransform:'uppercase',letterSpacing:'0.07em' }}>{h}</th>)}
                       </tr></thead>
                       <tbody>
                         {orders.map((order) => (
                           <tr key={order.id} onClick={()=>setSelectedOrder(order)} style={{ borderBottom:'1px solid rgba(224,231,244,.8)',cursor:'pointer',background:selectedOrder?.id===order.id?'rgba(53,105,194,.08)':'transparent' }}>
+                            <td style={{ padding:'13px 8px' }} onClick={(e)=>e.stopPropagation()}>
+                              <input type="checkbox" checked={selectedOrderIds.includes(order.id)} onChange={(e)=>setSelectedOrderIds((prev)=>e.target.checked ? [...prev, order.id] : prev.filter((id)=>id!==order.id))} />
+                            </td>
                             <td style={{ padding:'13px 12px' }}>
                               <p style={{ fontSize:13,fontWeight:800,color:'#132843' }}>{order.first_name} {order.last_name}</p>
                               <p style={{ fontSize:12,color:'#6d809a',marginTop:3 }}>{order.phone}</p>

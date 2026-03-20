@@ -545,7 +545,7 @@ function ShareSaukiMartModal({
   const [busy, setBusy] = useState(false);
 
   const firstName = (user.firstName || 'Customer').trim();
-  const promoText = `I use SaukiMart for cheap data, device deals, and fast support. Join me today: https://play.google.com/store/apps/details?id=online.saukimart.app`;
+  const promoText = 'I use SaukiMart for cheap data bundles and device deals. Download SaukiMart on Android at www.saukimart.online';
 
   const createImageBlob = useCallback(async () => {
     if (!shareRef.current) throw new Error('Share card unavailable');
@@ -580,11 +580,7 @@ function ShareSaukiMartModal({
       const file = new File([blob], 'saukimart-share.png', { type: 'image/png' });
 
       if (typeof navigator !== 'undefined' && navigator.share) {
-        const canShareFiles = typeof (navigator as any).canShare === 'function'
-          ? (navigator as any).canShare({ files: [file] })
-          : false;
-
-        if (canShareFiles) {
+        try {
           await navigator.share({
             title: 'SaukiMart',
             text: promoText,
@@ -592,12 +588,21 @@ function ShareSaukiMartModal({
           });
           onToast('Shared successfully');
           return;
+        } catch (shareError: unknown) {
+          const isAbort = shareError instanceof Error && shareError.name === 'AbortError';
+          if (isAbort) return;
         }
       }
 
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `saukimart-share-${Date.now()}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 120);
       const waUrl = `https://wa.me/?text=${encodeURIComponent(promoText)}`;
       window.open(waUrl, '_blank', 'noopener,noreferrer');
-      onToast('WhatsApp opened. Attach the downloaded image if needed.');
+      onToast('WhatsApp opened and image downloaded for sharing.');
     } catch {
       onError('Unable to share to WhatsApp right now');
     } finally {
@@ -644,13 +649,22 @@ function ShareSaukiMartModal({
               <p style={{ fontSize:12,opacity:.86,position:'relative',zIndex:1 }}>Fast airtime and data delivery, secure wallet transfers, and responsive support.</p>
             </div>
             <div style={{ padding:'14px 16px 16px' }}>
-              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:12 }}>
-                {['Affordable Plans','Instant Delivery','24/7 Support'].map((item) => (
-                  <div key={item} style={{ background:'#F3F7FF',border:'1px solid #DCE7FF',borderRadius:10,padding:'8px 6px',textAlign:'center',fontSize:10,fontWeight:700,color:'#16376A' }}>{item}</div>
-                ))}
+              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12 }}>
+                <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+                  {[
+                    { src:'/images/mtn.png', alt:'MTN' },
+                    { src:'/images/glo.png', alt:'GLO' },
+                    { src:'/images/airtel.png', alt:'Airtel' },
+                  ].map((net) => (
+                    <div key={net.alt} style={{ width:26,height:26,borderRadius:999,background:'#F2F6FF',border:'1px solid #D6E2F9',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden' }}>
+                      <img src={net.src} alt={net.alt} style={{ width:18,height:18,objectFit:'contain' }} />
+                    </div>
+                  ))}
+                </div>
+                <img src="/images/google-play-badge.png" alt="Get it on Google Play" style={{ width:136,height:'auto',display:'block' }} />
               </div>
               <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 10px',borderRadius:10,background:'#F7FAFF',border:'1px solid #E1EAFA' }}>
-                <p style={{ fontSize:10,color:'#4B628B' }}>Download SaukiMart on Android</p>
+                <p style={{ fontSize:10,color:'#4B628B' }}>Download SaukiMart on Android at www.saukimart.online</p>
                 <p style={{ fontSize:11,fontWeight:800,color:'#0052C7' }}>saukimart.online</p>
               </div>
             </div>
@@ -1531,24 +1545,46 @@ export default function AppPage() {
   );
 
   const BottomNav = ({ active }: { active: string }) => (
-    <div style={{ position:'fixed',bottom:0,left:0,right:0,background:'var(--card)',borderTop:'1px solid var(--border)',display:'grid',gridTemplateColumns:'repeat(4,1fr)',paddingBottom:'env(safe-area-inset-bottom)',zIndex:50,boxShadow:'0 -8px 24px rgba(0,0,0,.12)',backdropFilter:'blur(10px)' }}>
-      {[
-        { id:'home', label:'Home', icon: Icons.bolt(BLUE, 24) },
-        { id:'transactions', label:'Activity', icon: Icons.arrowDown(BLUE, 24) },
-        { id:'profile', label:'Account', icon: Icons.user(BLUE, 24) },
-        { id:'chat', label:'Chat', icon: Icons.messageSquare(BLUE, 24) },
-      ].map(item => (
-        <button key={item.id} onClick={()=>setScreen(item.id as typeof screen)}
-          style={{ padding:'12px 0 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,background:'none',borderTop: active===item.id ? `3px solid ${BLUE}` : 'none',paddingTop: active===item.id ? '9px' : '12px',transition:'all .2s',opacity: active===item.id ? 1 : 0.65,cursor:'pointer' }}
-          onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}}
-          onMouseLeave={e=>{e.currentTarget.style.opacity = active===item.id ? '1' : '0.65'}}>
-          <div style={{ color: active===item.id?BLUE:'var(--text-secondary)',transition:'all .2s' }}>
-            {item.icon}
-          </div>
-          <span style={{ fontSize:11,fontWeight: active===item.id?700:500, color: active===item.id?BLUE:'var(--text-secondary)',transition:'all .2s' }}>{item.label}</span>
-        </button>
-      ))}
-    </div>
+    <>
+      {showShareModal && user && (
+        <ShareSaukiMartModal
+          user={user}
+          dark={dark}
+          onClose={()=>setShowShareModal(false)}
+          onToast={showToast}
+          onError={showError}
+        />
+      )}
+      <div style={{ position:'fixed',bottom:0,left:0,right:0,background:'var(--card)',borderTop:'1px solid var(--border)',display:'grid',gridTemplateColumns:'repeat(5,1fr)',paddingBottom:'env(safe-area-inset-bottom)',zIndex:50,boxShadow:'0 -8px 24px rgba(0,0,0,.12)',backdropFilter:'blur(10px)' }}>
+        {[
+          { id:'home', label:'Home', icon: Icons.bolt(BLUE, 24) },
+          { id:'transactions', label:'Activity', icon: Icons.arrowDown(BLUE, 24) },
+          { id:'share', label:'Share', icon: Icons.sendIcon('#fff', 20) },
+          { id:'profile', label:'Account', icon: Icons.user(BLUE, 24) },
+          { id:'chat', label:'Chat', icon: Icons.messageSquare(BLUE, 24) },
+        ].map(item => {
+          const isShare = item.id === 'share';
+          const isActive = active === item.id;
+          return (
+            <button key={item.id} onClick={()=> isShare ? setShowShareModal(true) : setScreen(item.id as typeof screen)}
+              style={{ padding:isShare?'0 0 12px':'12px 0 16px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,background:'none',borderTop: isActive ? `3px solid ${BLUE}` : 'none',paddingTop: isActive ? '9px' : (isShare ? '0' : '12px'),transition:'all .2s',opacity: isActive || isShare ? 1 : 0.65,cursor:'pointer' }}
+              onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}}
+              onMouseLeave={e=>{e.currentTarget.style.opacity = isActive || isShare ? '1' : '0.65'}}>
+              {isShare ? (
+                <div style={{ width:54,height:54,borderRadius:999,marginTop:-18,background:'linear-gradient(135deg,#0047CC,#0071E3)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 12px 24px rgba(0,113,227,.35)',border:'3px solid var(--card)' }}>
+                  {item.icon}
+                </div>
+              ) : (
+                <div style={{ color: isActive?BLUE:'var(--text-secondary)',transition:'all .2s' }}>
+                  {item.icon}
+                </div>
+              )}
+              <span style={{ fontSize:11,fontWeight: isShare || isActive ? 700 : 500, color: isShare ? BLUE : (isActive?BLUE:'var(--text-secondary)'),transition:'all .2s' }}>{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </>
   );
 
   /* HOME */
@@ -2342,7 +2378,6 @@ export default function AppPage() {
           </SettingsGroup>
 
           <SettingsGroup title="Support">
-            <SettingsRow icon={Icons.sendIcon(BLUE, 20)} label="Share SaukiMart" onPress={()=>setShowShareModal(true)} />
             <SettingsRow icon={Icons.globe(PURPLE, 20)} label="About" onPress={()=>setScreen('about')} />
             <SettingsRow icon={Icons.phone(TEAL, 20)} label="Call: +234 704 464 7081" right={
               <div style={{ display:'flex',gap:8 }}>
@@ -2368,15 +2403,6 @@ export default function AppPage() {
         </div>
         </div>
       </div>
-      {showShareModal && user && (
-        <ShareSaukiMartModal
-          user={user}
-          dark={dark}
-          onClose={()=>setShowShareModal(false)}
-          onToast={showToast}
-          onError={showError}
-        />
-      )}
       <BottomNav active="profile" />
     </>
   );
