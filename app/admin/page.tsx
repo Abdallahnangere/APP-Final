@@ -55,6 +55,7 @@ type AdminChatMessage = {
   session_id: string;
   sender: string;
   content: string;
+  message?: string;
   created_at: string;
   read?: boolean;
 };
@@ -106,39 +107,23 @@ const Btn = ({ children, onClick, variant='primary', size='md', style: s }: { ch
 
 const Input = ({ value, onChange, placeholder, type='text', label, multiline=false }: { value: string; onChange: (v:string)=>void; placeholder?: string; type?: string; label?: string; multiline?: boolean; }) => (
   <div style={{ marginBottom:16 }}>
-    {label && <label style={{ display:'block',fontSize:12,fontWeight:700,color:MUTED,marginBottom:8,letterSpacing:'0.08em',textTransform:'uppercase' }}>{label}</label>}
+    {label && <label style={{ display:'block',fontSize:12,fontWeight:700,color:'#5f738f',marginBottom:8,letterSpacing:'0.08em',textTransform:'uppercase' }}>{label}</label>}
     {multiline ? (
       <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-        style={{ width:'100%',padding:'13px 14px',borderRadius:14,border:`1px solid ${BORDER}`,fontSize:14,color:TEXT,background:'rgba(255,255,255,0.03)',minHeight:100,resize:'vertical',lineHeight:1.5,fontFamily:'inherit',transition:'border 0.2s, box-shadow 0.2s' }} 
+        style={{ width:'100%',padding:'13px 14px',borderRadius:14,border:'1px solid rgba(196,208,230,.9)',fontSize:14,color:'#18304d',background:'rgba(248,251,255,.95)',minHeight:100,resize:'vertical',lineHeight:1.5,fontFamily:'inherit',transition:'border 0.2s, box-shadow 0.2s' }} 
         onFocus={e=>{e.currentTarget.style.borderColor='rgba(124,199,255,0.45)';e.currentTarget.style.boxShadow='0 0 0 3px rgba(124,199,255,0.12)';}}
-        onBlur={e=>{e.currentTarget.style.borderColor=BORDER;e.currentTarget.style.boxShadow='none';}} />
+        onBlur={e=>{e.currentTarget.style.borderColor='rgba(196,208,230,.9)';e.currentTarget.style.boxShadow='none';}} />
     ) : (
       <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-        style={{ width:'100%',padding:'13px 14px',borderRadius:14,border:`1px solid ${BORDER}`,fontSize:14,color:TEXT,background:'rgba(255,255,255,0.03)',fontFamily:'inherit',transition:'border 0.2s, box-shadow 0.2s' }}
+        style={{ width:'100%',padding:'13px 14px',borderRadius:14,border:'1px solid rgba(196,208,230,.9)',fontSize:14,color:'#18304d',background:'rgba(248,251,255,.95)',fontFamily:'inherit',transition:'border 0.2s, box-shadow 0.2s' }}
         onFocus={e=>{e.currentTarget.style.borderColor='rgba(124,199,255,0.45)';e.currentTarget.style.boxShadow='0 0 0 3px rgba(124,199,255,0.12)';}}
-        onBlur={e=>{e.currentTarget.style.borderColor=BORDER;e.currentTarget.style.boxShadow='none';}} />
+        onBlur={e=>{e.currentTarget.style.borderColor='rgba(196,208,230,.9)';e.currentTarget.style.boxShadow='none';}} />
     )}
   </div>
 );
 
 const formatMoney = (value: unknown) => `₦${Number(value || 0).toLocaleString('en-NG')}`;
 const formatDateTime = (value?: string) => value ? new Date(value).toLocaleString('en-NG', { dateStyle:'medium', timeStyle:'short' }) : '—';
-const TAB_META: Record<string, { eyebrow: string; title: string; description: string }> = {
-  overview: { eyebrow:'Executive command center', title:'Operational Intelligence', description:'A consolidated view of customer growth, cash performance, fulfilment, and support escalation.' },
-  users: { eyebrow:'Customer capital', title:'User Lifecycle Control', description:'Review balances, security posture, and support intervention from one premium control surface.' },
-  plans: { eyebrow:'Pricing engine', title:'Data Catalogue Operations', description:'Shape retail margin, supplier cost discipline, and sell-side assortment in real time.' },
-  products: { eyebrow:'Commerce desk', title:'Inventory & Merchandising', description:'Manage premium catalogue presentation, stock readiness, and contribution margin.' },
-  transactions: { eyebrow:'Payments command', title:'Transaction Oversight', description:'Monitor cash movement, service fulfilment, and exception handling across the platform.' },
-  orders: { eyebrow:'Fulfilment pipeline', title:'Order Operations', description:'Current order view while product fulfilment operations mature into a full workflow.' },
-  analytics: { eyebrow:'Board reporting', title:'Performance Analytics', description:'Interrogate revenue quality, product mix, velocity, and platform efficiency across time.' },
-  broadcasts: { eyebrow:'Comms control', title:'Broadcast Messaging', description:'Coordinate customer-facing in-app messaging with production-grade clarity and governance.' },
-  push: { eyebrow:'Engagement desk', title:'Push Campaign Studio', description:'Target all users or precision cohorts with accountable delivery metrics and campaign hygiene.' },
-  chat: { eyebrow:'Support floor', title:'Agent Intervention Console', description:'Escalation-aware live support with direct agent control, notes, and instant message continuity.' },
-  sim: { eyebrow:'Identity services', title:'SIM Activation Review', description:'Operational review for onboarding requests, evidence checks, and approval state management.' },
-  webhooks: { eyebrow:'Integration observability', title:'Webhook Audit Trail', description:'Inspect upstream provider events and payload integrity without leaving the control room.' },
-  console: { eyebrow:'Integration sandbox', title:'API Console', description:'Issue controlled requests to upstream providers and capture payload-level diagnostics.' },
-};
-
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [adminPass, setAdminPass] = useState('');
@@ -191,11 +176,14 @@ export default function AdminPage() {
   const [chatReply, setChatReply] = useState('');
   const [chatNote, setChatNote] = useState('');
   const [chatBusy, setChatBusy] = useState(false);
+  const [chatStreamConnected, setChatStreamConnected] = useState(false);
+  const [customerTypingMap, setCustomerTypingMap] = useState<Record<string, boolean>>({});
   const [userSearch, setUserSearch] = useState('');
   const [analyticsFilter, setAnalyticsFilter] = useState('all');
   const [analyticsDate, setAnalyticsDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [receiptModal, setReceiptModal] = useState<Record<string,unknown>|null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const typingStopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''), 3000); };
   const showError = (msg: string) => { setError(msg); setTimeout(()=>setError(''), 5000); };
@@ -305,7 +293,11 @@ export default function AdminPage() {
       if (!res.ok) throw new Error('Failed to load conversation');
       const data = await res.json();
       setActiveChatSession((data?.session || null) as AdminChatSession | null);
-      setChatMessages(Array.isArray(data?.messages) ? data.messages : []);
+      const normalizedMessages: AdminChatMessage[] = (Array.isArray(data?.messages) ? data.messages : []).map((msg: Record<string, unknown>) => ({
+        ...(msg as unknown as AdminChatMessage),
+        content: String(msg.content || msg.message || ''),
+      }));
+      setChatMessages(normalizedMessages);
     } catch (e: unknown) {
       showError(e instanceof Error ? e.message : 'Failed to open conversation');
     }
@@ -422,12 +414,92 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!authed || tab !== 'chat') return;
-    const id = setInterval(() => {
+    const token = localStorage.getItem('sm_admin_token') || adminToken;
+    if (!token) return;
+
+    const stream = new EventSource(`/api/admin/stream?token=${encodeURIComponent(token)}`);
+
+    stream.addEventListener('ping', () => {
+      setChatStreamConnected(true);
+    });
+
+    stream.addEventListener('sessions', (event) => {
+      try {
+        const rows = JSON.parse((event as MessageEvent).data) as AdminChatSession[];
+        setChatSessions(Array.isArray(rows) ? rows : []);
+        setActiveChatSession((prev) => prev ? rows.find((session) => session.id === prev.id) || prev : prev);
+      } catch {
+        // no-op
+      }
+    });
+
+    stream.addEventListener('new_messages', (event) => {
+      try {
+        const rows = JSON.parse((event as MessageEvent).data) as Array<Record<string, unknown>>;
+        if (!Array.isArray(rows) || rows.length === 0) return;
+        const normalized: AdminChatMessage[] = rows.map((row) => ({
+          ...(row as unknown as AdminChatMessage),
+          content: String(row.content || row.message || ''),
+        }));
+        if (activeChatSession?.id) {
+          const relevant = normalized.filter((msg) => msg.session_id === activeChatSession.id);
+          if (relevant.length > 0) {
+            setChatMessages((prev) => {
+              const seen = new Set(prev.map((message) => message.id));
+              return [...prev, ...relevant.filter((message) => !seen.has(message.id))];
+            });
+          }
+        }
+      } catch {
+        // no-op
+      }
+    });
+
+    stream.addEventListener('typing', (event) => {
+      try {
+        const rows = JSON.parse((event as MessageEvent).data) as Array<{ session_id: string; sender: string; is_typing: boolean }>;
+        if (!Array.isArray(rows)) return;
+        const map: Record<string, boolean> = {};
+        rows.forEach((row) => {
+          if (row.sender === 'customer') {
+            map[row.session_id] = row.is_typing;
+          }
+        });
+        setCustomerTypingMap((prev) => ({ ...prev, ...map }));
+      } catch {
+        // no-op
+      }
+    });
+
+    stream.onerror = () => {
+      setChatStreamConnected(false);
+    };
+
+    const fallbackPoll = setInterval(() => {
       loadAdminSessions();
       if (activeChatSession?.id) openChatSession(activeChatSession.id);
-    }, 10000);
-    return () => clearInterval(id);
-  }, [authed, tab, activeChatSession?.id, loadAdminSessions, openChatSession]);
+    }, 12000);
+
+    return () => {
+      setChatStreamConnected(false);
+      stream.close();
+      clearInterval(fallbackPoll);
+      if (typingStopTimer.current) clearTimeout(typingStopTimer.current);
+    };
+  }, [authed, tab, activeChatSession?.id, adminToken, loadAdminSessions, openChatSession]);
+
+  const sendAgentTyping = useCallback(async (isTyping: boolean) => {
+    if (!activeChatSession?.id) return;
+    try {
+      await fetch('/api/chat/typing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: activeChatSession.id, sender: 'agent', isTyping }),
+      });
+    } catch {
+      // no-op
+    }
+  }, [activeChatSession?.id]);
 
   const api = async (path: string, method: string, body?: unknown) => {
     const res = await fetch(`/api/admin/${path}`, { method, headers: authH(), body: body ? JSON.stringify(body) : undefined });
@@ -499,19 +571,19 @@ export default function AdminPage() {
 
   /* ── TABS ── */
   const TABS = [
-    { id:'overview', label:'Overview', icon:'📊' },
-    { id:'users', label:'Users', icon:'👥' },
-    { id:'plans', label:'Data Plans', icon:'📶' },
-    { id:'products', label:'Products', icon:'📦' },
-    { id:'transactions', label:'Transactions', icon:'💳' },
-    { id:'orders', label:'Orders', icon:'🛒' },
-    { id:'analytics', label:'Analytics', icon:'📈' },
-    { id:'broadcasts', label:'Broadcasts', icon:'📢' },
-    { id:'push', label:'Push Notifications', icon:'🔔' },
-    { id:'chat', label:'Support Chat', icon:'💬' },
-    { id:'sim', label:'SIM Activations', icon:'📡' },
-    { id:'webhooks', label:'Webhooks', icon:'🔗' },
-    { id:'console', label:'API Console', icon:'⚙️' },
+    { id:'overview', label:'Overview', icon:'OV' },
+    { id:'users', label:'Users', icon:'US' },
+    { id:'plans', label:'Data Plans', icon:'DP' },
+    { id:'products', label:'Products', icon:'PR' },
+    { id:'transactions', label:'Transactions', icon:'TX' },
+    { id:'orders', label:'Orders', icon:'OR' },
+    { id:'analytics', label:'Analytics', icon:'AN' },
+    { id:'broadcasts', label:'Broadcasts', icon:'BC' },
+    { id:'push', label:'Push Notifications', icon:'PN' },
+    { id:'chat', label:'Support Chat', icon:'SC' },
+    { id:'sim', label:'SIM Activations', icon:'SA' },
+    { id:'webhooks', label:'Webhooks', icon:'WH' },
+    { id:'console', label:'API Console', icon:'API' },
   ];
 
   /* ── RENDER ── */
@@ -539,23 +611,18 @@ export default function AdminPage() {
         <div style={{ width:280,background:'linear-gradient(180deg, rgba(7,14,25,0.98) 0%, rgba(8,18,31,0.94) 100%)',display:'flex',flexDirection:'column',flexShrink:0,overflowY:'auto',borderRight:`1px solid ${BORDER}`,paddingBottom:22,boxShadow:'inset -1px 0 0 rgba(255,255,255,0.03)' }}>
           <div style={{ padding:'28px 22px 18px' }}>
             <div style={{ display:'flex',alignItems:'center',gap:10 }}>
-              <div style={{ width:42,height:42,borderRadius:14,background:'linear-gradient(135deg,#204a8f,#5bb3ff)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,boxShadow:'0 14px 26px rgba(30,78,145,.35)' }}>◆</div>
+              <img src="/images/logo-sm.png" alt="SaukiMart" style={{ width:42,height:42,borderRadius:12,objectFit:'cover',boxShadow:'0 14px 26px rgba(30,78,145,.35)' }} />
               <div>
                 <p style={{ color:TEXT,fontWeight:800,fontSize:16,letterSpacing:'-0.02em' }}>SaukiMart</p>
                 <p style={{ color:MUTED,fontSize:11,letterSpacing:'0.12em',textTransform:'uppercase' }}>Executive Admin</p>
               </div>
             </div>
-            <Card style={{ marginTop:20,padding:'16px 16px 14px',background:'linear-gradient(180deg, rgba(16,35,60,0.9), rgba(8,19,34,0.95))' }}>
-              <p style={{ color:MUTED,fontSize:11,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8 }}>Command posture</p>
-              <p style={{ color:TEXT,fontWeight:800,fontSize:20,letterSpacing:'-0.03em',marginBottom:6 }}>Premium operator mode</p>
-              <p style={{ color:MUTED,fontSize:12,lineHeight:1.6 }}>Unified control across customers, payments, support, campaigns, and partner integrations.</p>
-            </Card>
           </div>
           <nav style={{ flex:1,padding:'0 14px' }}>
             {TABS.map(t => (
               <button key={t.id} onClick={()=>setTab(t.id as typeof tab)}
                 style={{ width:'100%',display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderRadius:14,marginBottom:6,background: tab===t.id?'linear-gradient(135deg, rgba(38,95,180,.26), rgba(47,140,210,.12))':'transparent',border:tab===t.id?`1px solid rgba(124,199,255,.28)`:'1px solid transparent',transition:'all .15s',boxShadow:tab===t.id?'inset 0 1px 0 rgba(255,255,255,.04)':'none' }}>
-                <span style={{ fontSize:16, width:26, textAlign:'center', opacity:tab===t.id?1:.9 }}>{t.icon}</span>
+                <span className="admin-code" style={{ fontSize:11, width:28, textAlign:'center', opacity:tab===t.id?1:.85, background:'rgba(255,255,255,.08)',borderRadius:7,padding:'4px 0' }}>{t.icon}</span>
                 <span style={{ fontSize:14,fontWeight:tab===t.id?800:600,color:tab===t.id?TEXT:'rgba(231,241,255,.76)',letterSpacing:'0.01em' }}>{t.label}</span>
               </button>
             ))}
@@ -568,26 +635,6 @@ export default function AdminPage() {
 
         {/* Main */}
         <div style={{ flex:1,overflowY:'auto',padding:'26px 28px 34px',position:'relative',zIndex:1 }}>
-          <Card style={{ marginBottom:22,padding:'24px 26px',background:'linear-gradient(125deg, rgba(16,36,63,0.95) 0%, rgba(8,19,34,0.96) 58%, rgba(11,30,52,0.94) 100%)',overflow:'hidden',position:'relative' }}>
-            <div style={{ position:'absolute',right:-70,top:-50,width:240,height:240,borderRadius:'50%',background:'radial-gradient(circle, rgba(91,179,255,.22), transparent 68%)' }} />
-            <div style={{ position:'relative',zIndex:1,display:'flex',justifyContent:'space-between',gap:18,alignItems:'flex-start',flexWrap:'wrap' }}>
-              <div style={{ maxWidth:780 }}>
-                <p style={{ fontSize:11,fontWeight:800,color:MUTED,marginBottom:10,letterSpacing:'0.14em',textTransform:'uppercase' }}>{TAB_META[tab].eyebrow}</p>
-                <h1 style={{ fontSize:34,fontWeight:900,color:TEXT,marginBottom:10,letterSpacing:'-0.05em' }}>{TAB_META[tab].title}</h1>
-                <p style={{ color:MUTED,fontSize:14,lineHeight:1.75,maxWidth:760 }}>{TAB_META[tab].description}</p>
-              </div>
-              <div style={{ display:'grid',gridTemplateColumns:'repeat(2,minmax(140px,1fr))',gap:10,minWidth:300 }}>
-                <div style={{ border:`1px solid ${BORDER}`,borderRadius:16,padding:'14px 16px',background:'rgba(255,255,255,.03)' }}>
-                  <p style={{ fontSize:11,color:MUTED,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8 }}>Security posture</p>
-                  <p className="admin-code" style={{ fontSize:20,color:TEXT,fontWeight:700 }}>verified</p>
-                </div>
-                <div style={{ border:`1px solid ${BORDER}`,borderRadius:16,padding:'14px 16px',background:'rgba(255,255,255,.03)' }}>
-                  <p style={{ fontSize:11,color:MUTED,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8 }}>Session</p>
-                  <p className="admin-code" style={{ fontSize:20,color:TEXT,fontWeight:700 }}>{new Date().toLocaleDateString('en-NG')}</p>
-                </div>
-              </div>
-            </div>
-          </Card>
 
           {/* ─── OVERVIEW ─── */}
           {tab === 'overview' && (
@@ -1133,9 +1180,14 @@ export default function AdminPage() {
               <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16 }}>
                 <div>
                   <h1 style={{ fontSize:22,fontWeight:900,marginBottom:4 }}>Support Chat</h1>
-                  <p style={{ color:'#8E8E93',fontSize:13 }}>Monitor conversations and intervene live when needed.</p>
+                  <p style={{ color:'#8E8E93',fontSize:13 }}>Monitor conversations, take over instantly, and respond with real-time synchronization.</p>
                 </div>
-                <Btn variant="ghost" onClick={()=>loadAdminSessions()}>Refresh</Btn>
+                <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                  <span className="admin-code" style={{ fontSize:11,padding:'5px 8px',borderRadius:999,border:'1px solid rgba(196,208,230,.9)',background:chatStreamConnected?'rgba(34,132,96,.12)':'rgba(191,120,42,.12)',color:chatStreamConnected?'#1f6d5c':'#a17018' }}>
+                    {chatStreamConnected ? 'LIVE' : 'POLL'}
+                  </span>
+                  <Btn variant="ghost" onClick={()=>loadAdminSessions()}>Refresh</Btn>
+                </div>
               </div>
 
               <div style={{ display:'grid',gridTemplateColumns:'340px 1fr',gap:16 }}>
@@ -1190,6 +1242,7 @@ export default function AdminPage() {
                         </div>
                         <p style={{ fontSize:11,color:'#8E8E93',marginBottom:4 }}>{s.customer_id}</p>
                         <p style={{ fontSize:12,color:'#3C3C43',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{s.last_message || 'No message yet'}</p>
+                        {customerTypingMap[s.id] && <p style={{ fontSize:11,color:'#2a6dad',marginTop:4,fontWeight:700 }}>Customer is typing…</p>}
                         <div style={{ display:'flex',justifyContent:'space-between',marginTop:6 }}>
                           <span style={{ fontSize:10,color:'#8E8E93' }}>{s.last_message_at ? new Date(s.last_message_at).toLocaleString('en-NG',{ dateStyle:'short', timeStyle:'short' }) : '-'}</span>
                           <span style={{ fontSize:10,fontWeight:700,color:s.status==='agent_required'?GOLD:s.status==='resolved'?GREEN:'#8E8E93' }}>{s.status}</span>
@@ -1236,7 +1289,7 @@ export default function AdminPage() {
                                 }}
                               >
                                 <p style={{ fontSize:11,color:'#8E8E93',marginBottom:3,textTransform:'capitalize' }}>{m.sender}</p>
-                                <p style={{ fontSize:13,lineHeight:1.4,whiteSpace:'pre-wrap' }}>{m.content}</p>
+                                <p style={{ fontSize:13,lineHeight:1.4,whiteSpace:'pre-wrap' }}>{m.content || m.message || ''}</p>
                                 <p style={{ fontSize:10,color:'#8E8E93',marginTop:4,textAlign:'right' }}>{new Date(m.created_at).toLocaleString('en-NG',{ dateStyle:'short', timeStyle:'short' })}</p>
                               </div>
                             </div>
@@ -1245,10 +1298,22 @@ export default function AdminPage() {
                         {chatMessages.length === 0 && <p style={{ textAlign:'center',fontSize:13,color:'#8E8E93',paddingTop:20 }}>No messages yet.</p>}
                       </div>
 
-                      <Input label="Reply as Agent" value={chatReply} onChange={setChatReply} multiline placeholder="Type your response to the customer" />
+                      <Input label="Reply as Agent" value={chatReply} onChange={(value)=>{
+                        setChatReply(value);
+                        sendAgentTyping(true);
+                        if (typingStopTimer.current) clearTimeout(typingStopTimer.current);
+                        typingStopTimer.current = setTimeout(() => {
+                          sendAgentTyping(false);
+                        }, 1800);
+                      }} multiline placeholder="Type your response to the customer" />
                       <div style={{ display:'flex',justifyContent:'flex-end',marginBottom:12 }}>
                         <Btn
-                          onClick={()=>chatReply.trim() && chatAction('send_message', { content: chatReply.trim() })}
+                          onClick={()=>{
+                            if (!chatReply.trim()) return;
+                            sendAgentTyping(false);
+                            if (typingStopTimer.current) clearTimeout(typingStopTimer.current);
+                            chatAction('send_message', { content: chatReply.trim() });
+                          }}
                           style={{ opacity: !chatReply.trim() || chatBusy ? .6 : 1, pointerEvents: !chatReply.trim() || chatBusy ? 'none' : 'auto' }}
                         >
                           {chatBusy ? 'Sending...' : 'Send Reply'}

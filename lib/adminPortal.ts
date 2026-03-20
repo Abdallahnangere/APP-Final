@@ -1,10 +1,10 @@
-const RAW_ADMIN_PORTAL_PATH = process.env.NEXT_PUBLIC_ADMIN_PORTAL_PATH || process.env.ADMIN_PORTAL_PATH || '/control/meridian-black-26m';
+const RAW_ADMIN_PORTAL_PATH = process.env.NEXT_PUBLIC_ADMIN_PORTAL_PATH || process.env.ADMIN_PORTAL_PATH || '/zmytcd';
 
 function normalizePath(path: string): string {
   const trimmed = (path || '').trim();
-  if (!trimmed) return '/control/meridian-black-26m';
+  if (!trimmed) return '/zmytcd';
   const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  return withLeadingSlash.replace(/\/+$/, '') || '/control/meridian-black-26m';
+  return withLeadingSlash.replace(/\/+$/, '') || '/zmytcd';
 }
 
 export const ADMIN_PORTAL_PATH = normalizePath(RAW_ADMIN_PORTAL_PATH);
