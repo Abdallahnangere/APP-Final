@@ -26,6 +26,27 @@ type Developer = {
   last_used_at?: string;
   created_at: string;
 };
+type DeveloperKey = {
+  id: string;
+  key_prefix: string;
+  key_last4: string;
+  is_active: boolean;
+  created_at: string;
+  last_used_at?: string;
+  revoked_at?: string;
+};
+type DeveloperActivity = {
+  id: string;
+  status: string;
+  endpoint: string;
+  network?: string;
+  plan_code?: string;
+  phone_number?: string;
+  app_price?: number;
+  developer_price?: number;
+  amigo_reference?: string;
+  created_at: string;
+};
 type Plan = { id: string; network: string; network_id: number; plan_id: number; data_size: string; validity: string; selling_price: number; cost_price: number; is_active: boolean; };
 type Product = { id: string; name: string; description: string; price: number; cost_price: number; image_url: string; image_base64?: string; in_stock: boolean; shipping_terms: string; pickup_terms: string; category: string; };
 type Transaction = { id: string; user_id: string; type: string; description: string; amount: number; status: string; created_at: string; network: string; phone_number: string; product_name: string; receipt_data: Record<string,unknown>; first_name?: string; last_name?: string; phone?: string; };
@@ -149,6 +170,9 @@ export default function AdminPage() {
   // Data
   const [users, setUsers] = useState<User[]>([]);
   const [developers, setDevelopers] = useState<Developer[]>([]);
+  const [developerKeys, setDeveloperKeys] = useState<DeveloperKey[]>([]);
+  const [developerActivity, setDeveloperActivity] = useState<DeveloperActivity[]>([]);
+  const [developerStats, setDeveloperStats] = useState<Record<string, unknown>>({});
   const [plans, setPlans] = useState<Plan[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -164,6 +188,7 @@ export default function AdminPage() {
   const [chatMessages, setChatMessages] = useState<AdminChatMessage[]>([]);
   const [selectedUser, setSelectedUser] = useState<User|null>(null);
   const [selectedDeveloper, setSelectedDeveloper] = useState<Developer|null>(null);
+  const [developerBusy, setDeveloperBusy] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order|null>(null);
 
   // Forms
@@ -533,6 +558,20 @@ export default function AdminPage() {
     return data;
   };
 
+  const loadDeveloperDetail = useCallback(async (userId: string) => {
+    try {
+      const payload = await load(`developers?userId=${encodeURIComponent(userId)}`) as Record<string, unknown>;
+      if (!payload || Array.isArray(payload)) return;
+      const dev = (payload.developer || null) as Developer | null;
+      if (dev) setSelectedDeveloper(dev);
+      setDeveloperKeys(Array.isArray(payload.keys) ? payload.keys as DeveloperKey[] : []);
+      setDeveloperActivity(Array.isArray(payload.activity) ? payload.activity as DeveloperActivity[] : []);
+      setDeveloperStats((payload.stats || {}) as Record<string, unknown>);
+    } catch {
+      showError('Failed to load developer details');
+    }
+  }, [load]);
+
   /* ── RECEIPT DOWNLOAD ── */
   const downloadReceipt = async (data: Record<string,unknown>) => {
     setReceiptModal(data);
@@ -885,6 +924,99 @@ export default function AdminPage() {
           {tab === 'developers' && (
             <div className="fade-in">
               <h1 style={{ fontSize:22,fontWeight:900,marginBottom:20 }}>Developer Management</h1>
+              {selectedDeveloper && (
+                <div style={{ marginBottom:20 }}>
+                  <Card>
+                    <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:14,flexWrap:'wrap' }}>
+                      <div>
+                        <p style={{ fontSize:18,fontWeight:900,color:'#10253E' }}>{selectedDeveloper.first_name} {selectedDeveloper.last_name}</p>
+                        <p style={{ fontSize:13,color:'#5F738F',marginTop:4 }}>{selectedDeveloper.phone} · Discount {Number(selectedDeveloper.developer_discount_percent || 0).toFixed(2)}%</p>
+                      </div>
+                      <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
+                        <Btn size="sm" variant="ghost" onClick={async()=>{
+                          if (!selectedDeveloper) return;
+                          setDeveloperBusy(true);
+                          try {
+                            await api('developers', 'PATCH', { userId: selectedDeveloper.id, action: 'revoke-keys' });
+                            showToast('All API keys revoked');
+                            await loadDeveloperDetail(selectedDeveloper.id);
+                            load('developers').then(rows => setDevelopers(Array.isArray(rows) ? rows as Developer[] : []));
+                          } catch (e: unknown) {
+                            showError(e instanceof Error ? e.message : 'Failed to revoke keys');
+                          } finally {
+                            setDeveloperBusy(false);
+                          }
+                        }} style={{ opacity: developerBusy ? .6 : 1, pointerEvents: developerBusy ? 'none' : 'auto' }}>Revoke Keys</Btn>
+                        <Btn size="sm" variant="danger" onClick={async()=>{
+                          if (!selectedDeveloper) return;
+                          const confirmed = window.confirm(`Demote ${selectedDeveloper.first_name} ${selectedDeveloper.last_name} to regular user?`);
+                          if (!confirmed) return;
+                          setDeveloperBusy(true);
+                          try {
+                            await api('developers', 'PATCH', { userId: selectedDeveloper.id, action: 'demote' });
+                            showToast('Developer demoted to user');
+                            setSelectedDeveloper(null);
+                            setDeveloperKeys([]);
+                            setDeveloperActivity([]);
+                            setDeveloperStats({});
+                            load('developers').then(rows => setDevelopers(Array.isArray(rows) ? rows as Developer[] : []));
+                          } catch (e: unknown) {
+                            showError(e instanceof Error ? e.message : 'Failed to demote developer');
+                          } finally {
+                            setDeveloperBusy(false);
+                          }
+                        }} style={{ opacity: developerBusy ? .6 : 1, pointerEvents: developerBusy ? 'none' : 'auto' }}>Demote to User</Btn>
+                        <Btn size="sm" variant="ghost" onClick={()=>{ setSelectedDeveloper(null); setDeveloperKeys([]); setDeveloperActivity([]); setDeveloperStats({}); }}>Close</Btn>
+                      </div>
+                    </div>
+
+                    <div style={{ display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10,marginBottom:14 }}>
+                      {[
+                        { label:'Active Keys', value: Number(selectedDeveloper.active_keys || 0) },
+                        { label:'Total Requests', value: Number(developerStats.total_requests || 0) },
+                        { label:'Successful', value: Number(developerStats.successful_requests || 0) },
+                        { label:'Spend', value: `₦${Number(developerStats.total_developer_spend || 0).toLocaleString('en-NG')}` },
+                      ].map((item) => (
+                        <div key={item.label} style={{ border:'1px solid #E6ECF6',borderRadius:14,padding:'10px 12px',background:'#F7FAFF' }}>
+                          <p style={{ fontSize:11,fontWeight:800,color:'#7B8DA8',textTransform:'uppercase',letterSpacing:'0.06em' }}>{item.label}</p>
+                          <p style={{ fontSize:16,fontWeight:900,color:'#17385F',marginTop:4 }}>{item.value as string | number}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14 }}>
+                      <div>
+                        <p style={{ fontSize:13,fontWeight:900,color:'#17385F',marginBottom:8 }}>API Keys</p>
+                        <div style={{ maxHeight:220,overflowY:'auto',border:'1px solid #E6ECF6',borderRadius:12,padding:8,background:'#FBFDFF' }}>
+                          {developerKeys.length === 0 ? (
+                            <p style={{ fontSize:12,color:'#7B8DA8',padding:8 }}>No keys found</p>
+                          ) : developerKeys.map((k) => (
+                            <div key={k.id} style={{ padding:'8px 10px',borderBottom:'1px solid #EDF2FA' }}>
+                              <p style={{ fontSize:12,fontWeight:800,color:'#17385F' }}>{k.key_prefix}••••{k.key_last4}</p>
+                              <p style={{ fontSize:11,color:'#7B8DA8',marginTop:3 }}>Status: {k.is_active ? 'Active' : 'Revoked'} · Last used: {k.last_used_at ? new Date(k.last_used_at).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'}) : 'Never'}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p style={{ fontSize:13,fontWeight:900,color:'#17385F',marginBottom:8 }}>Past Activities</p>
+                        <div style={{ maxHeight:220,overflowY:'auto',border:'1px solid #E6ECF6',borderRadius:12,padding:8,background:'#FBFDFF' }}>
+                          {developerActivity.length === 0 ? (
+                            <p style={{ fontSize:12,color:'#7B8DA8',padding:8 }}>No developer activity yet</p>
+                          ) : developerActivity.map((a) => (
+                            <div key={a.id} style={{ padding:'8px 10px',borderBottom:'1px solid #EDF2FA' }}>
+                              <p style={{ fontSize:12,fontWeight:800,color:a.status === 'success' ? '#0E9F6E' : '#C2414F' }}>{a.status.toUpperCase()} · {a.plan_code || 'N/A'}</p>
+                              <p style={{ fontSize:11,color:'#455D80',marginTop:3 }}>{a.phone_number || 'N/A'} · ₦{Number(a.developer_price || 0).toLocaleString('en-NG',{minimumFractionDigits:2})}</p>
+                              <p style={{ fontSize:10,color:'#7B8DA8',marginTop:3 }}>{new Date(a.created_at).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              )}
+
               <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:20 }}>
                 <Card>
                   <h3 style={{ fontWeight:800,fontSize:16,marginBottom:16 }}>{selectedDeveloper ? 'Update Developer' : 'Add Developer'}</h3>
@@ -957,6 +1089,14 @@ export default function AdminPage() {
                             <td style={{ padding:'10px 12px',fontSize:12,color:'#8E8E93' }}>{d.last_used_at ? new Date(d.last_used_at).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'}) : 'Never'}</td>
                             <td style={{ padding:'10px 12px' }}>
                               <div style={{ display:'flex',gap:6 }}>
+                                <Btn size="sm" variant="ghost" onClick={async()=>{
+                                  await loadDeveloperDetail(d.id);
+                                  setDeveloperForm({
+                                    userId: d.id,
+                                    discountPercent: String(Number(d.developer_discount_percent || 0).toFixed(2)),
+                                    termsVersion: d.developer_terms_version || 'v1.0',
+                                  });
+                                }}>View</Btn>
                                 <Btn size="sm" variant="ghost" onClick={()=>{
                                   setSelectedDeveloper(d);
                                   setDeveloperForm({
@@ -966,16 +1106,22 @@ export default function AdminPage() {
                                   });
                                 }}>Edit</Btn>
                                 <Btn size="sm" variant="danger" onClick={async()=>{
-                                  const confirmed = window.confirm(`Revoke developer access for ${d.first_name} ${d.last_name}?`);
+                                  const confirmed = window.confirm(`Demote ${d.first_name} ${d.last_name} to regular user?`);
                                   if (!confirmed) return;
                                   try {
-                                    await api('developers', 'DELETE', { userId: d.id });
-                                    showToast('Developer access revoked');
+                                    await api('developers', 'PATCH', { userId: d.id, action: 'demote' });
+                                    showToast('Developer demoted to user');
+                                    if (selectedDeveloper?.id === d.id) {
+                                      setSelectedDeveloper(null);
+                                      setDeveloperKeys([]);
+                                      setDeveloperActivity([]);
+                                      setDeveloperStats({});
+                                    }
                                     load('developers').then(rows => setDevelopers(Array.isArray(rows) ? rows : []));
                                   } catch (e: unknown) {
-                                    showError(e instanceof Error ? e.message : 'Failed to revoke developer');
+                                    showError(e instanceof Error ? e.message : 'Failed to demote developer');
                                   }
-                                }}>Revoke</Btn>
+                                }}>Demote</Btn>
                               </div>
                             </td>
                           </tr>
