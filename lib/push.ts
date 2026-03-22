@@ -305,15 +305,6 @@ type DeveloperPortalAccessAlertInput = {
 };
 
 export async function sendDeveloperPortalAccessAlert(input: DeveloperPortalAccessAlertInput): Promise<void> {
-  const [user] = await sql`
-    SELECT notifications_enabled
-    FROM users
-    WHERE id = ${input.userId}
-    LIMIT 1
-  `;
-
-  if (!user || user.notifications_enabled === false) return;
-
   const tokens = await sql`
     SELECT token
     FROM user_push_tokens

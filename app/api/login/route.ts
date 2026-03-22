@@ -2,10 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { verifyPin } from '@/lib/utils';
 import { signToken } from '@/lib/auth';
+import { sendDeveloperPortalAccessAlert } from '@/lib/push';
+
+async function ensureDeveloperPortalAccessLogSchema() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS developer_portal_access_logs (
+      id BIGSERIAL PRIMARY KEY,
+      user_id UUID NOT NULL,
+      phone TEXT,
+      context TEXT NOT NULL DEFAULT 'app',
+      ip_address TEXT,
+      user_agent TEXT,
+      push_triggered BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { phone, pin } = await req.json();
+    const { phone, pin, context } = await req.json();
 
     if (!/^\d{11}$/.test(phone) || !/^\d{4}$/.test(pin)) {
       return NextResponse.json({ error: 'Invalid credentials format' }, { status: 400 });
@@ -30,6 +46,27 @@ export async function POST(req: NextRequest) {
     const valid = await verifyPin(pin, user.pin_hash);
     if (!valid) {
       return NextResponse.json({ error: 'Incorrect PIN' }, { status: 401 });
+    }
+
+    if (context === 'developers') {
+      const xff = req.headers.get('x-forwarded-for') || '';
+      const ipAddress = xff.split(',')[0]?.trim() || req.headers.get('x-real-ip') || null;
+      const userAgent = req.headers.get('user-agent') || null;
+
+      await ensureDeveloperPortalAccessLogSchema();
+
+      let pushTriggered = false;
+      try {
+        await sendDeveloperPortalAccessAlert({ userId: user.id as string, accessedAt: new Date() });
+        pushTriggered = true;
+      } catch (pushErr) {
+        console.error('Developer portal login push failed:', pushErr);
+      }
+
+      await sql`
+        INSERT INTO developer_portal_access_logs (user_id, phone, context, ip_address, user_agent, push_triggered)
+        VALUES (${user.id as string}, ${user.phone as string}, 'developers', ${ipAddress}, ${userAgent}, ${pushTriggered})
+      `;
     }
 
     const token = await signToken({ userId: user.id, phone: user.phone });

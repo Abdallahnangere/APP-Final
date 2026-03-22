@@ -353,20 +353,13 @@ export default function DevelopersPage() {
   const doLogin = async () => {
     setError(''); setLoading(true);
     try {
-      const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone, pin: loginPin }) });
+      const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone, pin: loginPin, context: 'developers' }) });
       const d = await res.json();
       if (!res.ok) { setError(d.error || 'Login failed'); return; }
       localStorage.setItem('dev_portal_token', d.token);
       localStorage.setItem('dev_portal_user', JSON.stringify(d.user));
       setToken(d.token); setUser(d.user);
       setSuccess('Welcome back!');
-      fetch('/api/developer/portal-access', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${d.token}`,
-          'Content-Type': 'application/json',
-        },
-      }).catch(() => {});
       if (d.user.isDeveloper) loadDevData(d.token);
     } catch { setError('Network error. Please try again.'); }
     finally { setLoading(false); }
