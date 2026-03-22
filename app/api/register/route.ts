@@ -60,7 +60,9 @@ export async function POST(req: NextRequest) {
     const [user] = await sql`
       INSERT INTO users (first_name, last_name, phone, pin_hash, flw_account_number, flw_bank_name, flw_order_ref)
       VALUES (${firstName.trim()}, ${lastName.trim()}, ${phone}, ${pinHash}, ${accountNumber}, ${bankName}, ${orderRef})
-      RETURNING id, first_name, last_name, phone, flw_account_number, flw_bank_name, wallet_balance, cashback_balance, referral_bonus, created_at
+      RETURNING id, first_name, last_name, phone, flw_account_number, flw_bank_name,
+                wallet_balance, cashback_balance, referral_bonus,
+                is_developer, developer_discount_percent, created_at
     `;
 
     const token = await signToken({ userId: user.id, phone: user.phone });
@@ -78,6 +80,8 @@ export async function POST(req: NextRequest) {
         walletBalance: user.wallet_balance,
         cashbackBalance: user.cashback_balance,
         referralBonus: user.referral_bonus,
+        isDeveloper: Boolean(user.is_developer),
+        developerDiscountPercent: Number(user.developer_discount_percent || 0),
         createdAt: user.created_at,
       },
       token,

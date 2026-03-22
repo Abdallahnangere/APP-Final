@@ -11,7 +11,8 @@ async function getUser(req: NextRequest) {
   const [u] = await sql`
     SELECT id, first_name, last_name, phone, wallet_balance, cashback_balance,
            referral_bonus, flw_account_number, flw_bank_name, is_banned,
-           theme, notifications_enabled, haptics_enabled, created_at
+           theme, notifications_enabled, haptics_enabled,
+           is_developer, developer_discount_percent, created_at
     FROM users WHERE id = ${payload.userId as string}
   `;
   return u;
@@ -35,6 +36,8 @@ export async function GET(req: NextRequest) {
     theme: user.theme,
     notificationsEnabled: user.notifications_enabled,
     hapticsEnabled: user.haptics_enabled,
+    isDeveloper: Boolean(user.is_developer),
+    developerDiscountPercent: Number(user.developer_discount_percent || 0),
     createdAt: user.created_at,
   });
   response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');

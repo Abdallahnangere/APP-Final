@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
     const [user] = await sql`
       SELECT id, first_name, last_name, phone, pin_hash, wallet_balance,
              cashback_balance, referral_bonus, flw_account_number, flw_bank_name,
-             is_banned, theme, notifications_enabled, haptics_enabled, created_at
+             is_banned, theme, notifications_enabled, haptics_enabled,
+             is_developer, developer_discount_percent, created_at
       FROM users WHERE phone = ${phone}
     `;
 
@@ -49,6 +50,8 @@ export async function POST(req: NextRequest) {
         theme: user.theme,
         notificationsEnabled: user.notifications_enabled,
         hapticsEnabled: user.haptics_enabled,
+        isDeveloper: Boolean(user.is_developer),
+        developerDiscountPercent: Number(user.developer_discount_percent || 0),
         createdAt: user.created_at,
       },
     });

@@ -291,3 +291,57 @@ export async function sendAdminPushNotification(input: AdminPushInput): Promise<
     deactivatedCount: deactivatedTokens.size,
   };
 }
+
+type ApiDataPurchaseAlertInput = {
+  userId: string;
+  planLabel: string;
+  phoneNumber: string;
+  amount: number;
+};
+
+export async function sendApiDataPurchaseAlert(input: ApiDataPurchaseAlertInput): Promise<void> {
+  const [user] = await sql`
+    SELECT notifications_enabled
+    FROM users
+    WHERE id = ${input.userId}
+    LIMIT 1
+  `;
+
+  if (!user || user.notifications_enabled === false) return;
+
+  const tokens = await sql`
+    SELECT token
+    FROM user_push_tokens
+    WHERE user_id = ${input.userId}
+      AND is_active = TRUE
+    ORDER BY updated_at DESC
+  `;
+
+  if (!tokens.length) return;
+
+  const title = 'API Data Purchase Successful';
+  const body = `${input.planLabel} for ${input.phoneNumber} was successful. Debited ${formatNaira(input.amount)}.`;
+  const payload = {
+    type: 'api_data_purchase',
+    plan: input.planLabel,
+    phoneNumber: input.phoneNumber,
+    amount: String(input.amount),
+  };
+
+  for (const row of tokens) {
+    const token = String(row.token || '').trim();
+    if (!token) continue;
+
+    try {
+      const result = await sendFcmToToken(token, title, body, payload);
+      if (!result.ok) {
+        const errorCode = result?.json?.error?.details?.[0]?.errorCode || result?.json?.error?.status || '';
+        if (errorCode === 'UNREGISTERED' || errorCode === 'INVALID_ARGUMENT' || result.status === 404) {
+          await deactivateToken(token);
+        }
+      }
+    } catch (err) {
+      console.error('API data purchase alert push error:', err);
+    }
+  }
+}

@@ -9,7 +9,9 @@ type User = {
   id: string; firstName: string; lastName: string; phone: string;
   walletBalance: number; cashbackBalance: number; referralBonus: number;
   accountNumber: string; bankName: string; theme: string;
-  notificationsEnabled: boolean; hapticsEnabled: boolean; createdAt: string;
+  notificationsEnabled: boolean; hapticsEnabled: boolean;
+  isDeveloper?: boolean; developerDiscountPercent?: number;
+  createdAt: string;
 };
 type Transaction = {
   id: string; type: string; description: string; amount: number;
@@ -18,6 +20,28 @@ type Transaction = {
 };
 type Deposit = { id: string; amount: number; senderName: string; createdAt: string; narration: string; };
 type Plan = { id: string; network: string; networkId: number; planId: number; dataSize: string; validity: string; price: number; };
+type DeveloperPlan = {
+  id: string;
+  code: string;
+  network: string;
+  networkId: number;
+  planId: number;
+  dataSize: string;
+  validity: string;
+  appPrice: number;
+  developerPrice: number;
+};
+type DeveloperApiTx = {
+  id: string;
+  status: string;
+  phoneNumber: string;
+  network: string;
+  planCode: string;
+  developerPrice: number;
+  appPrice: number;
+  message?: string;
+  createdAt: string;
+};
 type Product = { id: string; name: string; description: string; price: number; imageUrl: string; imageBase64?: string; inStock: boolean; shippingTerms: string; pickupTerms: string; category: string; deliveryAddress?: string; };
 type SimActivation = { id: string; status: string; createdAt: string; serialNumber?: string; };
 
@@ -714,7 +738,7 @@ function ShareSaukiMartModal({
 
 /* ─────────────── MAIN APP ─────────────── */
 export default function AppPage() {
-  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'|'chat'>('splash');
+  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'|'chat'|'developer-terms'|'developer-dashboard'>('splash');
   const [dark, setDark] = useState(false);
   const [user, setUser] = useState<User|null>(null);
   const [token, setToken] = useState('');
@@ -731,6 +755,17 @@ export default function AppPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [simActivations, setSimActivations] = useState<SimActivation[]>([]);
+  const [developerPlans, setDeveloperPlans] = useState<DeveloperPlan[]>([]);
+  const [developerTx, setDeveloperTx] = useState<DeveloperApiTx[]>([]);
+  const [developerDocs, setDeveloperDocs] = useState<{ baseUrl: string; plansEndpoint: string; purchaseEndpoint: string; discountPercent: number }>({
+    baseUrl: 'https://www.saukimart.online',
+    plansEndpoint: '/api/v1/developer/data-plans',
+    purchaseEndpoint: '/api/v1/developer/purchase-data',
+    discountPercent: 0,
+  });
+  const [developerApiPreview, setDeveloperApiPreview] = useState('');
+  const [freshDeveloperKey, setFreshDeveloperKey] = useState('');
+  const [developerBusy, setDeveloperBusy] = useState(false);
 
   // Selection
   const [selectedNetwork, setSelectedNetwork] = useState<typeof NETWORKS[0]|null>(null);
@@ -933,6 +968,95 @@ export default function AppPage() {
     }
   }, [token, authHeader]);
 
+  const loadDeveloperDashboard = useCallback(async () => {
+    if (!token) return;
+    setDeveloperBusy(true);
+    try {
+      const [credentialsRes, plansRes, txRes] = await Promise.all([
+        fetch('/api/developer/credentials', { headers: authHeader(), cache: 'no-store' as RequestCache }),
+        fetch('/api/developer/plans', { headers: authHeader(), cache: 'no-store' as RequestCache }),
+        fetch('/api/developer/transactions?limit=80', { headers: authHeader(), cache: 'no-store' as RequestCache }),
+      ]);
+
+      if (credentialsRes.ok) {
+        const c = await credentialsRes.json();
+        setDeveloperDocs({
+          baseUrl: c.baseUrl || 'https://www.saukimart.online',
+          plansEndpoint: c.plansEndpoint || '/api/v1/developer/data-plans',
+          purchaseEndpoint: c.purchaseEndpoint || '/api/v1/developer/purchase-data',
+          discountPercent: Number(c.discountPercent || 0),
+        });
+        if (Array.isArray(c.keys) && c.keys.length > 0) {
+          setDeveloperApiPreview(String(c.keys[0].preview || ''));
+        }
+      }
+
+      if (plansRes.ok) {
+        const p = await plansRes.json();
+        setDeveloperPlans(Array.isArray(p.plans) ? p.plans : []);
+      }
+
+      if (txRes.ok) {
+        const t = await txRes.json();
+        setDeveloperTx(Array.isArray(t.transactions) ? t.transactions : []);
+      }
+    } catch {
+      showError('Unable to load developer dashboard');
+    } finally {
+      setDeveloperBusy(false);
+    }
+  }, [token, authHeader]);
+
+  const upgradeToDeveloper = useCallback(async () => {
+    if (!token) return;
+    setDeveloperBusy(true);
+    try {
+      const res = await fetch('/api/developer/upgrade', {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({ acceptTerms: true, termsVersion: 'v1.0' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upgrade failed');
+
+      if (data.apiKey) {
+        setFreshDeveloperKey(String(data.apiKey));
+        setDeveloperApiPreview(`${String(data.apiKey).slice(0, 20)}...`);
+      }
+
+      await refreshUser();
+      await loadDeveloperDashboard();
+      showToast('Developer mode activated successfully');
+      setScreen('developer-dashboard');
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Failed to activate developer mode');
+    } finally {
+      setDeveloperBusy(false);
+    }
+  }, [token, authHeader, refreshUser, loadDeveloperDashboard]);
+
+  const rotateDeveloperKey = useCallback(async () => {
+    if (!token) return;
+    setDeveloperBusy(true);
+    try {
+      const res = await fetch('/api/developer/credentials', {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({ action: 'rotate' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to rotate key');
+      setFreshDeveloperKey(String(data.apiKey || ''));
+      setDeveloperApiPreview(String(data?.key?.preview || ''));
+      showToast('API key rotated. Update your integrations now.');
+      await loadDeveloperDashboard();
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Failed to rotate API key');
+    } finally {
+      setDeveloperBusy(false);
+    }
+  }, [token, authHeader, loadDeveloperDashboard]);
+
   /* ── LOAD PLANS ── */
   const loadPlans = useCallback(async (network: string) => {
     const res = await fetch(`/api/data-plans?network=${network}`, { cache: 'no-store' as RequestCache });
@@ -1023,6 +1147,12 @@ export default function AppPage() {
       loadPlans(selectedNetwork.name);
     }
   }, [screen, selectedNetwork?.name, loadPlans]);
+
+  useEffect(() => {
+    if (screen === 'developer-dashboard') {
+      loadDeveloperDashboard();
+    }
+  }, [screen, loadDeveloperDashboard]);
 
   useEffect(() => {
     if (!isBuyingData) {
@@ -1792,6 +1922,16 @@ export default function AppPage() {
                 <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:2 }}>To Friends</p>
               </div>
             </button>
+            <button onClick={()=>setScreen(user?.isDeveloper ? 'developer-dashboard' : 'developer-terms')}
+              style={{ background:'linear-gradient(145deg,rgba(191,90,242,.12),rgba(191,90,242,.03))',borderRadius:18,padding:'20px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:12,border:'1px solid rgba(191,90,242,.25)',boxShadow:'0 10px 24px rgba(191,90,242,.14)',transition:'all .3s',cursor:'pointer' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
+              <IconBox icon={Icons.chartBar(PURPLE, 24)} bg={'rgba(191,90,242,.10)'} />
+              <div style={{ textAlign:'left' }}>
+                <p style={{ fontWeight:700,fontSize:15,color:'var(--text)' }}>{user?.isDeveloper ? 'Developer API' : 'Upgrade API'}</p>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:2 }}>{user?.isDeveloper ? 'Dashboard & Keys' : `${Number(user?.developerDiscountPercent || 8)}% off plans`}</p>
+              </div>
+            </button>
           </div>
         </div>
 
@@ -2438,6 +2578,25 @@ export default function AppPage() {
             <SettingsRow icon={Icons.lock(RED, 20)} label="Change PIN" onPress={()=>setScreen('change-pin')} />
           </SettingsGroup>
 
+          <SettingsGroup title="Developer">
+            <SettingsRow
+              icon={Icons.chartBar(BLUE, 20)}
+              label={user.isDeveloper ? 'Developer Dashboard' : 'Upgrade to Developer'}
+              right={
+                <span style={{ background:'rgba(0,113,227,.1)',borderRadius:999,padding:'4px 10px',color:BLUE,fontSize:11,fontWeight:700 }}>
+                  {user.isDeveloper ? 'Active' : `${Number(user.developerDiscountPercent || 8)}% off API`}
+                </span>
+              }
+              onPress={()=>{
+                if (user.isDeveloper) {
+                  setScreen('developer-dashboard');
+                } else {
+                  setScreen('developer-terms');
+                }
+              }}
+            />
+          </SettingsGroup>
+
           <SettingsGroup title="Support">
             <SettingsRow icon={Icons.globe(PURPLE, 20)} label="About" onPress={()=>setScreen('about')} />
             <SettingsRow icon={Icons.phone(TEAL, 20)} label="Call: +234 704 464 7081" right={
@@ -2617,6 +2776,123 @@ export default function AppPage() {
               <p style={{ fontSize:12,marginTop:8,lineHeight:1.6 }}>Find recipient, enter amount, then authorize with your PIN.</p>
             </div>
           )}
+        </div>
+      </div>
+    </>
+  );
+
+  /* DEVELOPER TERMS */
+  if (screen === 'developer-terms') return (
+    <>
+      <GlobalStyle dark={dark} />
+      {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500 }}>{toast}</div>}
+      {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#040810 0%,#071322 100%)' : 'linear-gradient(180deg,#F3F8FF 0%,#EFF4FB 100%)',display:'flex',flexDirection:'column' }}>
+        <div style={{ padding:'58px 20px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:`1px solid ${dark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)'}` }}>
+          <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+          <h2 style={{ fontSize:21,fontWeight:900,color:'var(--text)',letterSpacing:-0.4 }}>Developer Upgrade</h2>
+        </div>
+
+        <div style={{ padding:'18px 16px 28px',overflowY:'auto',flex:1 }}>
+          <div style={{ background:'linear-gradient(145deg,#011F5B 0%, #0047CC 65%, #0071E3 100%)',borderRadius:20,padding:'18px 18px 20px',marginBottom:16,color:'#fff',boxShadow:'0 20px 42px rgba(0,71,204,.32)' }}>
+            <p style={{ fontSize:11,fontWeight:800,opacity:.76,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8 }}>Sauki Developers</p>
+            <p style={{ fontSize:23,fontWeight:900,letterSpacing:-.6,marginBottom:8 }}>Integrate Data API in your app</p>
+            <p style={{ fontSize:13,opacity:.9,lineHeight:1.55 }}>Get discounted developer pricing and automate data purchases via secure API calls.</p>
+          </div>
+
+          <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:14 }}>
+            <p style={{ fontSize:12,fontWeight:800,color:BLUE,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:10 }}>Short Terms</p>
+            <ul style={{ paddingLeft:18,color:'var(--text)',fontSize:13,lineHeight:1.7 }}>
+              <li>Developer prices apply only to API-triggered data purchases.</li>
+              <li>You must protect your API key and rotate immediately if leaked.</li>
+              <li>Abuse, fraud, or prohibited traffic can lead to instant key revocation.</li>
+              <li>All successful API transactions are final and fully logged.</li>
+              <li>You are responsible for compliance in your integrated app/system.</li>
+            </ul>
+          </div>
+
+          <button
+            onClick={upgradeToDeveloper}
+            disabled={developerBusy}
+            className="tactile-btn"
+            style={{ width:'100%',padding:'16px',borderRadius:14,background:developerBusy?'rgba(142,142,147,.35)':'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:16,fontWeight:800,border:'none',cursor:developerBusy?'not-allowed':'pointer',boxShadow:developerBusy?'none':'0 12px 26px rgba(0,113,227,.36)' }}
+          >
+            {developerBusy ? 'Activating Developer Mode...' : 'Accept Terms and Activate'}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  /* DEVELOPER DASHBOARD */
+  if (screen === 'developer-dashboard') return (
+    <>
+      <GlobalStyle dark={dark} />
+      {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500 }}>{toast}</div>}
+      {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#040810 0%,#071322 100%)' : 'linear-gradient(180deg,#F3F8FF 0%,#EFF4FB 100%)',display:'flex',flexDirection:'column' }}>
+        <div style={{ padding:'58px 20px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:`1px solid ${dark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)'}` }}>
+          <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+          <div>
+            <h2 style={{ fontSize:21,fontWeight:900,color:'var(--text)',letterSpacing:-0.4 }}>Developer Dashboard</h2>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>{developerDocs.discountPercent}% API discount active</p>
+          </div>
+        </div>
+
+        <div style={{ padding:'16px',overflowY:'auto',flex:1 }}>
+          <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:14,marginBottom:12 }}>
+            <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8 }}>API Credentials</p>
+            <p style={{ fontSize:13,color:'var(--text)',marginBottom:8 }}>Key preview: <span style={{ fontWeight:800 }}>{developerApiPreview || 'No key yet'}</span></p>
+            {freshDeveloperKey && (
+              <div style={{ background:'rgba(0,113,227,.08)',border:'1px solid rgba(0,113,227,.2)',borderRadius:12,padding:'10px 12px',marginBottom:8 }}>
+                <p style={{ fontSize:11,color:'var(--text-secondary)',marginBottom:6 }}>Copy now (shown once):</p>
+                <p style={{ fontSize:12,fontWeight:700,color:BLUE,wordBreak:'break-all' }}>{freshDeveloperKey}</p>
+              </div>
+            )}
+            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
+              <button onClick={rotateDeveloperKey} disabled={developerBusy} style={{ height:40,borderRadius:11,border:'none',background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:13,fontWeight:800,cursor:'pointer' }}>{developerBusy ? 'Please wait...' : 'Rotate API Key'}</button>
+              <button onClick={()=>{ if (freshDeveloperKey) navigator.clipboard.writeText(freshDeveloperKey); else if (developerApiPreview) navigator.clipboard.writeText(developerApiPreview); showToast('Copied'); }} style={{ height:40,borderRadius:11,border:'1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text)',fontSize:13,fontWeight:700,cursor:'pointer' }}>Copy Key</button>
+            </div>
+          </div>
+
+          <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:14,marginBottom:12 }}>
+            <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8 }}>Integration Guide</p>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginBottom:6 }}>Plans endpoint</p>
+            <p style={{ fontSize:12,fontWeight:700,color:BLUE,wordBreak:'break-all',marginBottom:8 }}>{developerDocs.baseUrl}{developerDocs.plansEndpoint}</p>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginBottom:6 }}>Purchase endpoint</p>
+            <p style={{ fontSize:12,fontWeight:700,color:BLUE,wordBreak:'break-all',marginBottom:8 }}>{developerDocs.baseUrl}{developerDocs.purchaseEndpoint}</p>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginBottom:6 }}>Sample payload</p>
+            <pre style={{ background:'var(--bg-secondary)',border:'1px solid var(--border)',borderRadius:12,padding:10,fontSize:11,color:'var(--text)',whiteSpace:'pre-wrap',lineHeight:1.5 }}>{`{\n  "phoneNumber": "08012345678",\n  "network": "MTN",\n  "planCode": "1-123",\n  "idempotencyKey": "my-unique-reference-001"\n}`}</pre>
+          </div>
+
+          <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:14,marginBottom:12 }}>
+            <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10 }}>Plans Code List</p>
+            <div style={{ display:'grid',gap:8 }}>
+              {developerPlans.slice(0, 120).map((p) => (
+                <div key={p.id} style={{ display:'grid',gridTemplateColumns:'0.9fr 1fr 1fr 1fr',gap:8,alignItems:'center',padding:'8px 10px',borderRadius:10,background:'var(--bg-secondary)',border:'1px solid var(--border)' }}>
+                  <span style={{ fontSize:11,fontWeight:800,color:BLUE }}>{p.code}</span>
+                  <span style={{ fontSize:12,color:'var(--text)' }}>{p.network}</span>
+                  <span style={{ fontSize:12,color:'var(--text)' }}>{p.dataSize}</span>
+                  <span style={{ fontSize:12,fontWeight:700,color:'var(--text)' }}>₦{Number(p.developerPrice).toLocaleString('en-NG',{minimumFractionDigits:2})}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:14 }}>
+            <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10 }}>API Transaction Records</p>
+            <div style={{ display:'grid',gap:8 }}>
+              {developerTx.length === 0 ? (
+                <p style={{ fontSize:13,color:'var(--text-secondary)' }}>No API transactions yet.</p>
+              ) : developerTx.map((t) => (
+                <div key={t.id} style={{ padding:'10px 12px',borderRadius:10,background:'var(--bg-secondary)',border:'1px solid var(--border)' }}>
+                  <p style={{ fontSize:13,fontWeight:800,color:t.status === 'success' ? GREEN : RED }}>{t.status.toUpperCase()} · {t.network} · {t.planCode}</p>
+                  <p style={{ fontSize:12,color:'var(--text)',marginTop:4 }}>{t.phoneNumber} · ₦{Number(t.developerPrice).toLocaleString('en-NG',{minimumFractionDigits:2})}</p>
+                  <p style={{ fontSize:11,color:'var(--text-secondary)',marginTop:3 }}>{new Date(t.createdAt).toLocaleString('en-NG')}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </>
