@@ -138,6 +138,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const userId = String(body?.userId || '').trim();
   const action = String(body?.action || '').trim();
+  const keyId = String(body?.keyId || '').trim();
   const discountPercent = body?.discountPercent;
   const termsVersion = body?.termsVersion;
 
@@ -162,6 +163,18 @@ export async function PATCH(req: NextRequest) {
       WHERE user_id = ${userId} AND is_active = TRUE
     `;
     return NextResponse.json({ success: true, action: 'revoke-keys' });
+  }
+
+  if (action === 'revoke-key') {
+    if (!keyId) return NextResponse.json({ error: 'keyId is required for revoke-key action' }, { status: 400 });
+    await sql`
+      UPDATE developer_api_keys
+      SET is_active = FALSE,
+          revoked_at = NOW(),
+          updated_at = NOW()
+      WHERE id = ${keyId} AND user_id = ${userId}
+    `;
+    return NextResponse.json({ success: true, action: 'revoke-key' });
   }
 
   const parsedDiscount = discountPercent === undefined ? null : Number(discountPercent);

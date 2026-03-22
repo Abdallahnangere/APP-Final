@@ -994,6 +994,23 @@ export default function AdminPage() {
                             <div key={k.id} style={{ padding:'8px 10px',borderBottom:'1px solid #EDF2FA' }}>
                               <p style={{ fontSize:12,fontWeight:800,color:'#17385F' }}>{k.key_prefix}••••{k.key_last4}</p>
                               <p style={{ fontSize:11,color:'#7B8DA8',marginTop:3 }}>Status: {k.is_active ? 'Active' : 'Revoked'} · Last used: {k.last_used_at ? new Date(k.last_used_at).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'}) : 'Never'}</p>
+                              {k.is_active && (
+                                <div style={{ marginTop:6 }}>
+                                  <Btn size="sm" variant="danger" onClick={async()=>{
+                                    if (!selectedDeveloper) return;
+                                    const ok = window.confirm('Revoke this key?');
+                                    if (!ok) return;
+                                    try {
+                                      await api('developers', 'PATCH', { userId: selectedDeveloper.id, keyId: k.id, action: 'revoke-key' });
+                                      showToast('Key revoked');
+                                      await loadDeveloperDetail(selectedDeveloper.id);
+                                      load('developers').then(rows => setDevelopers(Array.isArray(rows) ? rows as Developer[] : []));
+                                    } catch (e: unknown) {
+                                      showError(e instanceof Error ? e.message : 'Failed to revoke key');
+                                    }
+                                  }}>Revoke This Key</Btn>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>

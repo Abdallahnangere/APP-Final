@@ -51,13 +51,25 @@ export async function POST(req: NextRequest) {
 
     if (existing) {
       const isSuccess = existing.status === 'success';
+      const isPending = existing.status === 'pending';
+      if (isPending) {
+        return NextResponse.json({
+          success: false,
+          message: 'Previous request with this idempotency key is still processing',
+          status: 'processing',
+          transactionId: existing.id,
+          idempotencyKey,
+        }, { status: 202 });
+      }
       return NextResponse.json({
         success: isSuccess,
-        message: isSuccess ? 'Data purchase successful' : 'Previous request failed - please retry',
+        message: isSuccess ? 'Duplicate idempotency key: returning previous successful result' : 'Previous request failed - please retry with a new idempotency key',
         status: isSuccess ? 'completed' : 'failed',
         transactionId: existing.id,
         idempotencyKey,
         receipt: existing.receipt_data || {},
+        duplicate: true,
+        deducted: false,
       }, { status: isSuccess ? 200 : 400 });
     }
 
@@ -82,6 +94,18 @@ export async function POST(req: NextRequest) {
 
     // Check balance for every request.
     if (balance < developerPrice) {
+      await sql`
+        INSERT INTO developer_api_transactions (
+          user_id, api_key_id, transaction_id, endpoint, request_payload, response_data,
+          status, network, plan_code, phone_number, app_price, developer_price,
+          idempotency_key, amigo_reference, created_at
+        ) VALUES (
+          ${auth.user.id}, ${auth.keyId}, NULL, '/api/v1/developer/purchase-data',
+          ${JSON.stringify(body || {})}, ${JSON.stringify({ error: 'Insufficient balance', available: balance, required: developerPrice })},
+          'failed', NULL, ${planCode}, ${phoneNumber}, ${appPrice}, ${developerPrice},
+          ${idempotencyKey}, NULL, NOW()
+        )
+      `;
       return NextResponse.json({
         error: `Insufficient balance`,
         details: { available: balance, required: developerPrice },
@@ -187,6 +211,18 @@ export async function POST(req: NextRequest) {
 
     if (!balanceUpdate) {
       await sql`UPDATE transactions SET status = 'failed' WHERE id = ${txn.id}`;
+      await sql`
+        INSERT INTO developer_api_transactions (
+          user_id, api_key_id, transaction_id, endpoint, request_payload, response_data,
+          status, network, plan_code, phone_number, app_price, developer_price,
+          idempotency_key, amigo_reference, created_at
+        ) VALUES (
+          ${auth.user.id}, ${auth.keyId}, ${txn.id}, '/api/v1/developer/purchase-data',
+          ${JSON.stringify(body || {})}, ${JSON.stringify({ error: 'Balance check failed during transaction - insufficient funds' })},
+          'failed', ${plan.network}, ${planCode}, ${phoneNumber}, ${appPrice}, ${developerPrice},
+          ${idempotencyKey}, ${amigoData?.reference || null}, NOW()
+        )
+      `;
       return NextResponse.json({
         error: 'Balance check failed during transaction - insufficient funds',
         status: 'balance_error',
