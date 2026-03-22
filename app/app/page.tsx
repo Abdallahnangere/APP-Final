@@ -1913,7 +1913,7 @@ export default function AppPage() {
               {Icons.sendIcon(TEAL, 22)}
               <span style={{ fontSize:11,fontWeight:700,color:'var(--text)',textAlign:'center' }}>Send</span>
             </button>
-            <button onClick={()=>{ window.lastDeveloperClick = Date.now(); setScreen(user?.isDeveloper ? 'developer-dashboard' : 'developer-terms'); }} className="tactile-btn"
+            <button onClick={()=>{ setScreen(user?.isDeveloper ? 'developer-dashboard' : 'developer-terms'); }} className="tactile-btn"
               style={{ minWidth:110,height:110,borderRadius:16,padding:'12px',background:'linear-gradient(145deg,rgba(191,90,242,.14),rgba(191,90,242,.05))',border:'1px solid rgba(191,90,242,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer',transition:'all .2s',flexShrink:0 }}
               onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 8px 20px rgba(191,90,242,.24)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='none'}}>
