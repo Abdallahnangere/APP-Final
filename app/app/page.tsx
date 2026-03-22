@@ -2871,7 +2871,7 @@ export default function AppPage() {
               <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:16 }}>
                 <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12 }}>
                   <h3 style={{ fontSize:14,fontWeight:900,color:'var(--text)',margin:0 }}>🔑 Active API Key</h3>
-                  <button onClick={rotateDeveloperKey} disabled={developerBusy} style={{ fontSize:12,fontWeight:800,color:BLUE,background:PURPLE,color:'#fff',padding:'6px 12px',borderRadius:8,border:'none',cursor:'pointer' }}>{developerBusy?'Rotating...':'Rotate'}</button>
+                  <button onClick={rotateDeveloperKey} disabled={developerBusy} style={{ fontSize:12,fontWeight:800,background:PURPLE,color:'#fff',padding:'6px 12px',borderRadius:8,border:'none',cursor:'pointer' }}>{developerBusy?'Rotating...':'Rotate'}</button>
                 </div>
                 <p style={{ fontSize:12,color:'var(--text-secondary)',marginBottom:10 }}>Keep this safe. Never paste it in public code or websites.</p>
                 <div style={{ background:dark?'rgba(0,113,227,.08)':'rgba(0,113,227,.12)',border:`1px solid ${BLUE}30`,borderRadius:12,padding:12,marginBottom:12,fontFamily:'monospace',fontSize:11,color:BLUE,fontWeight:700,wordBreak:'break-all' }}>
