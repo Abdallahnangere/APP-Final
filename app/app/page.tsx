@@ -2959,16 +2959,15 @@ console.log(response);
               </div>
 
               <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:16 }}>
-                <h4 style={{ fontSize:13,fontWeight:900,color:'var(--text)',margin:'0 0 10px' }}>⚠️ Debug Mode</h4>
-                <p style={{ fontSize:12,color:'var(--text-secondary)',margin:'0 0 10px',lineHeight:1.6 }}>Test with sandbox number <span style={{ fontFamily:'monospace',fontWeight:700,background:dark?'rgba(255,255,255,.1)':'rgba(0,0,0,.06)',padding:'2px 6px',borderRadius:4 }}>09000000000</span> — deducts wallet but doesn't deliver.</p>
+                <h4 style={{ fontSize:13,fontWeight:900,color:'var(--text)',margin:'0 0 10px' }}>⚠️ Production Note</h4>
+                <p style={{ fontSize:12,color:'var(--text-secondary)',margin:'0 0 10px',lineHeight:1.6 }}>All phone numbers are processed as real purchase requests. Ensure your app validates user intent before sending requests.</p>
                 <pre style={{ background:dark?'rgba(0,0,0,.3)':'rgba(0,0,0,.05)',border:`1px solid ${dark?'rgba(255,255,255,.1)':'rgba(0,0,0,.08)'}`,borderRadius:10,padding:12,fontSize:10,color:dark?'#FFB84D':'#FF9800',fontFamily:'monospace',margin:0,overflow:'auto',lineHeight:1.6 }}>
-{`// Test mode (no actual delivery)
-const test = await sauki.buyData({
-  phoneNumber: '09000000000',  // sandbox
+{`// Production request
+const purchase = await sauki.buyData({
+  phoneNumber: '08012345678',
   planCode: '1-123',
-  idempotencyKey: 'test-1'
-});
-// wallet deducted, but data not delivered`}
+  idempotencyKey: 'order-001'
+});`}
                 </pre>
               </div>
             </div>

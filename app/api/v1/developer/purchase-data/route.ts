@@ -79,9 +79,8 @@ export async function POST(req: NextRequest) {
     const discountPercent = Number(auth.user.developer_discount_percent || 0);
     const developerPrice = toAmount(appPrice * (1 - discountPercent / 100));
     const balance = Number(auth.user.wallet_balance || 0);
-    const isSandbox = phoneNumber === '09000000000';
 
-    // Check balance for every request, including sandbox numbers.
+    // Check balance for every request.
     if (balance < developerPrice) {
       return NextResponse.json({
         error: `Insufficient balance`,
@@ -127,7 +126,7 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.AMIGO_API_KEY;
     if (!apiKey) throw new Error('AMIGO_API_KEY not configured');
 
-    // Always call Amigo API. The provider itself handles sandbox behavior.
+    // Always call Amigo API for all numbers.
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), AMIGO_TIMEOUT);
 
@@ -177,7 +176,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Deduct balance for every request, including sandbox numbers.
+    // Deduct balance for every request.
     const [balanceUpdate] = await sql`
       UPDATE users
       SET wallet_balance = wallet_balance - ${developerPrice},
@@ -233,7 +232,7 @@ export async function POST(req: NextRequest) {
       )
     `;
 
-    // Send push notification for every successful request, including sandbox numbers.
+    // Send push notification for every successful request.
     await sendApiDataPurchaseAlert({
       userId: auth.user.id,
       planLabel: `${plan.data_size} ${plan.network}`,
@@ -250,7 +249,6 @@ export async function POST(req: NextRequest) {
       idempotencyKey,
       data: saukiResponse,
       newBalance,
-      isSandbox,
     });
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
