@@ -5,7 +5,7 @@ type CreditAlertInput = {
   userId: string;
   amount: number;
   newBalance: number;
-  kind: 'deposit' | 'transfer_in' | 'admin_credit' | 'admin_cashback_credit';
+  kind: 'deposit' | 'transfer_in' | 'admin_credit' | 'admin_cashback_credit' | 'admin_referral_credit' | 'referral_reward';
   reference?: string;
   senderLabel?: string;
   note?: string;
@@ -152,6 +152,22 @@ function buildCreditMessage(input: CreditAlertInput): { title: string; body: str
     return {
       title: 'Cashback Credited',
       body: `${amountText} cashback added. New cashback balance: ${balanceText}.`,
+    };
+  }
+
+  if (input.kind === 'admin_referral_credit') {
+    const suffix = input.note ? ` (${input.note})` : '';
+    return {
+      title: 'Referral Balance Credited',
+      body: `${amountText} added to your referral balance${suffix}. New balance: ${balanceText}.`,
+    };
+  }
+
+  if (input.kind === 'referral_reward') {
+    const suffix = input.note ? ` ${input.note}` : '';
+    return {
+      title: 'Referral Reward Earned',
+      body: `${amountText} referral reward unlocked.${suffix} New balance: ${balanceText}.`,
     };
   }
 

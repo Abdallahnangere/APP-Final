@@ -237,4 +237,7 @@ export async function initDB() {
       ('support_email', 'support@saukimart.online')
     ON CONFLICT (key) DO NOTHING;
   `;
+
+  const { ensureEarnSchema } = await import('@/lib/earn');
+  await ensureEarnSchema();
 }

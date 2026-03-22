@@ -2,19 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { hashPin, verifyPin } from '@/lib/utils';
+import { ensureEarnSchema, ensureUserReferralCode } from '@/lib/earn';
 
 async function getUser(req: NextRequest) {
+  await ensureEarnSchema();
+
   const auth = req.headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) return null;
   const payload = await verifyToken(auth.slice(7));
   if (!payload?.userId) return null;
   const [u] = await sql`
     SELECT id, first_name, last_name, phone, wallet_balance, cashback_balance,
-           referral_bonus, flw_account_number, flw_bank_name, is_banned,
+           referral_bonus, referral_balance, referral_id, total_gb_purchased,
+           flw_account_number, flw_bank_name, is_banned,
            theme, notifications_enabled, haptics_enabled,
            is_developer, developer_discount_percent, created_at
     FROM users WHERE id = ${payload.userId as string}
   `;
+  if (u) {
+    u.referral_id = await ensureUserReferralCode(String(u.id), String(u.referral_id || ''));
+  }
   return u;
 }
 
@@ -30,7 +37,10 @@ export async function GET(req: NextRequest) {
     phone: user.phone,
     walletBalance: parseFloat(user.wallet_balance),
     cashbackBalance: parseFloat(user.cashback_balance),
-    referralBonus: parseFloat(user.referral_bonus),
+    referralBonus: parseFloat(user.referral_balance ?? user.referral_bonus ?? 0),
+    referralBalance: parseFloat(user.referral_balance ?? user.referral_bonus ?? 0),
+    referralId: user.referral_id,
+    totalGbPurchased: parseFloat(user.total_gb_purchased || 0),
     accountNumber: user.flw_account_number,
     bankName: user.flw_bank_name,
     theme: user.theme,

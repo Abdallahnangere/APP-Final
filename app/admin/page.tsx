@@ -12,7 +12,7 @@ const BORDER = 'rgba(162, 194, 255, 0.14)';
 const MUTED = '#8ea3bf';
 const TEXT = '#eef4ff';
 
-type User = { id: string; first_name: string; last_name: string; phone: string; wallet_balance: number; cashback_balance: number; is_banned: boolean; created_at: string; flw_account_number: string; };
+type User = { id: string; first_name: string; last_name: string; phone: string; wallet_balance: number; cashback_balance: number; referral_balance?: number; referral_id?: string; total_gb_purchased?: number; is_banned: boolean; created_at: string; flw_account_number: string; };
 type Developer = {
   id: string;
   first_name: string;
@@ -93,6 +93,25 @@ type AdminChatMessage = {
   created_at: string;
   read?: boolean;
 };
+type Withdrawal = {
+  id: string;
+  userId: string;
+  transactionId?: string | null;
+  amount: number;
+  bankCode: string;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  status: string;
+  payoutReference?: string | null;
+  adminNote?: string | null;
+  paidAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+};
 
 const GlobalStyle = () => (
   <style>{`
@@ -162,7 +181,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [adminToken, setAdminToken] = useState('');
-  const [tab, setTab] = useState<'overview'|'users'|'developers'|'plans'|'products'|'transactions'|'orders'|'analytics'|'broadcasts'|'push'|'chat'|'sim'|'webhooks'|'console'>('overview');
+  const [tab, setTab] = useState<'overview'|'users'|'withdrawals'|'developers'|'plans'|'products'|'transactions'|'orders'|'analytics'|'broadcasts'|'push'|'chat'|'sim'|'webhooks'|'console'>('overview');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
   const [error, setError] = useState('');
@@ -178,6 +197,8 @@ export default function AdminPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [orderStats, setOrderStats] = useState<Record<string, unknown>>({});
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [withdrawalStats, setWithdrawalStats] = useState<Record<string, unknown>>({});
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [simActs, setSimActs] = useState<SimAct[]>([]);
@@ -195,7 +216,9 @@ export default function AdminPage() {
   const [planForm, setPlanForm] = useState({ network:'MTN', network_id:'1', plan_id:'', data_size:'', validity:'30 days', selling_price:'', cost_price:'', editId:'' });
   const [productForm, setProductForm] = useState({ name:'', description:'', price:'', cost_price:'', category:'', shipping_terms:'', pickup_terms:'', in_stock:true, image_url:'', image_base64:'', editId:'' });
   const [broadcastForm, setBroadcastForm] = useState({ message:'', editId:'' });
-  const [walletForm, setWalletForm] = useState({ amount:'', note:'', target:'wallet' as 'wallet'|'cashback' });
+  const [walletForm, setWalletForm] = useState({ amount:'', note:'', target:'wallet' as 'wallet'|'cashback'|'referral' });
+  const [withdrawalFilter, setWithdrawalFilter] = useState('all');
+  const [withdrawalActionBusy, setWithdrawalActionBusy] = useState('');
   const [pinForm, setPinForm] = useState('');
   const [developerForm, setDeveloperForm] = useState({ userId:'', discountPercent:'8.00', termsVersion:'v1.0' });
   const [consoleInput, setConsoleInput] = useState('');
@@ -318,6 +341,20 @@ export default function AdminPage() {
     }
   }, [authH, orderFilter, orderSearch]);
 
+  const loadWithdrawals = useCallback(async (filter = withdrawalFilter) => {
+    try {
+      const params = new URLSearchParams();
+      if (filter && filter !== 'all') params.set('filter', filter);
+      const res = await fetch(`/api/admin/withdrawals${params.toString() ? `?${params.toString()}` : ''}`, { headers: authH() });
+      if (!res.ok) throw new Error('Failed to load withdrawals');
+      const data = await res.json();
+      setWithdrawals(Array.isArray(data?.withdrawals) ? data.withdrawals : []);
+      setWithdrawalStats((data?.stats || {}) as Record<string, unknown>);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Failed to load withdrawals');
+    }
+  }, [authH, withdrawalFilter]);
+
   const loadAdminSessions = useCallback(async (filter = chatFilter, search = chatSearch) => {
     try {
       const params = new URLSearchParams();
@@ -422,6 +459,7 @@ export default function AdminPage() {
       load('transactions').then(d => setTransactions(Array.isArray(d)?d:[]));
     }
     if (tab === 'users') load('users').then(d => setUsers(Array.isArray(d)?d:[]));
+    if (tab === 'withdrawals') loadWithdrawals();
     if (tab === 'developers') {
       load('developers').then(d => setDevelopers(Array.isArray(d)?d:[]));
       load('users').then(d => setUsers(Array.isArray(d)?d:[]));
@@ -436,7 +474,7 @@ export default function AdminPage() {
     if (tab === 'webhooks') load('webhooks').then(d => setWebhooks(Array.isArray(d)?d:[]));
     if (tab === 'sim') load('sim-activations').then(d => setSimActs(Array.isArray(d)?d:[]));
     if (tab === 'analytics') loadAnalytics();
-  }, [tab, authed, load, loadAdminSessions, loadAnalytics, analyticsDate, loadOrders]);
+  }, [tab, authed, load, loadAdminSessions, loadAnalytics, analyticsDate, loadOrders, loadWithdrawals]);
 
   useEffect(() => {
     if (!authed || tab !== 'analytics') return;
@@ -447,6 +485,11 @@ export default function AdminPage() {
     if (!authed || tab !== 'orders') return;
     loadOrders();
   }, [authed, tab, orderFilter, orderSearch, loadOrders]);
+
+  useEffect(() => {
+    if (!authed || tab !== 'withdrawals') return;
+    loadWithdrawals();
+  }, [authed, tab, withdrawalFilter, loadWithdrawals]);
 
   useEffect(() => {
     if (!selectedOrder) return;
@@ -714,6 +757,7 @@ export default function AdminPage() {
   const TABS = [
     { id:'overview', label:'Overview', icon:'📊' },
     { id:'users', label:'Users', icon:'👥' },
+    { id:'withdrawals', label:'Withdrawals', icon:'💸' },
     { id:'developers', label:'Developers', icon:'🧩' },
     { id:'plans', label:'Data Plans', icon:'📶' },
     { id:'products', label:'Products', icon:'📦' },
@@ -836,7 +880,7 @@ export default function AdminPage() {
                   <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:16 }}>
                     <Card>
                       <h3 style={{ fontWeight:800,fontSize:16,marginBottom:16 }}>User Details</h3>
-                      {[['Name',`${selectedUser.first_name} ${selectedUser.last_name}`],['Phone',selectedUser.phone],['Balance',`₦${Number(selectedUser.wallet_balance).toLocaleString()}`],['Cashback',`₦${Number(selectedUser.cashback_balance).toLocaleString()}`],['Account',selectedUser.flw_account_number||'—'],['Status',selectedUser.is_banned?'🔴 Banned':'🟢 Active'],['Joined',new Date(selectedUser.created_at).toLocaleDateString('en-NG')]].map(([k,v])=>(
+                      {[['Name',`${selectedUser.first_name} ${selectedUser.last_name}`],['Phone',selectedUser.phone],['Balance',`₦${Number(selectedUser.wallet_balance).toLocaleString()}`],['Cashback',`₦${Number(selectedUser.cashback_balance).toLocaleString()}`],['Referral Bal.',`₦${Number(selectedUser.referral_balance || 0).toLocaleString()}`],['Referral ID',selectedUser.referral_id||'—'],['Total GB',`${Number(selectedUser.total_gb_purchased || 0).toLocaleString('en-NG',{maximumFractionDigits:2})}GB`],['Account',selectedUser.flw_account_number||'—'],['Status',selectedUser.is_banned?'🔴 Banned':'🟢 Active'],['Joined',new Date(selectedUser.created_at).toLocaleDateString('en-NG')]].map(([k,v])=>(
                         <div key={k} style={{ display:'flex',justifyContent:'space-between',padding:'9px 0',borderBottom:'1px solid #F2F2F7' }}>
                           <span style={{ color:'#8E8E93',fontSize:14 }}>{k}</span>
                           <span style={{ fontWeight:600,fontSize:14 }}>{v}</span>
@@ -856,6 +900,7 @@ export default function AdminPage() {
                               style={{ width:'100%',padding:'12px 14px',borderRadius:12,border:'1px solid rgba(0,0,0,0.15)',fontSize:14 }}>
                               <option value="wallet">Main Wallet</option>
                               <option value="cashback">Cashback Balance</option>
+                              <option value="referral">Referral Balance</option>
                             </select>
                           </div>
                         </div>
@@ -864,7 +909,7 @@ export default function AdminPage() {
                           <Btn variant="success" size="sm" onClick={async()=>{
                             try {
                               await api('wallet', 'POST', { userId: selectedUser.id, action:'credit', amount: Number(walletForm.amount), target: walletForm.target, note: walletForm.note });
-                              showToast(`✅ Credited ₦${walletForm.amount} to ${walletForm.target === 'cashback' ? 'cashback' : 'wallet'}`);
+                              showToast(`✅ Credited ₦${walletForm.amount} to ${walletForm.target === 'cashback' ? 'cashback' : walletForm.target === 'referral' ? 'referral' : 'wallet'}`);
                               setWalletForm({amount:'',note:'',target:'wallet'});
                               load('users').then(d=>setUsers(Array.isArray(d)?d:[]));
                               setSelectedUser(null);
@@ -873,7 +918,7 @@ export default function AdminPage() {
                           <Btn variant="danger" size="sm" onClick={async()=>{
                             try {
                               await api('wallet', 'POST', { userId: selectedUser.id, action:'debit', amount: Number(walletForm.amount), target: walletForm.target, note: walletForm.note });
-                              showToast(`✅ Debited ₦${walletForm.amount} from ${walletForm.target === 'cashback' ? 'cashback' : 'wallet'}`);
+                              showToast(`✅ Debited ₦${walletForm.amount} from ${walletForm.target === 'cashback' ? 'cashback' : walletForm.target === 'referral' ? 'referral' : 'wallet'}`);
                               setWalletForm({amount:'',note:'',target:'wallet'});
                               load('users').then(d=>setUsers(Array.isArray(d)?d:[]));
                               setSelectedUser(null);
@@ -1151,6 +1196,77 @@ export default function AdminPage() {
                   </div>
                 </Card>
               </div>
+            </div>
+          )}
+
+          {/* ─── WITHDRAWALS ─── */}
+          {tab === 'withdrawals' && (
+            <div className="fade-in">
+              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20 }}>
+                <h1 style={{ fontSize:22,fontWeight:900 }}>Referral Withdrawals</h1>
+                <select value={withdrawalFilter} onChange={e=>setWithdrawalFilter(e.target.value)}
+                  style={{ padding:'10px 14px',borderRadius:12,border:'1.5px solid #E5E5EA',fontSize:14 }}>
+                  {['all','pending','paid','rejected'].map(f=><option key={f} value={f}>{f.charAt(0).toUpperCase()+f.slice(1)}</option>)}
+                </select>
+              </div>
+              <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:24 }}>
+                {[
+                  { label:'Pending', value: Number(withdrawalStats.pendingCount||0), color:'#FF9F0A' },
+                  { label:'Paid', value: Number(withdrawalStats.paidCount||0), color:GREEN },
+                  { label:'Rejected', value: Number(withdrawalStats.rejectedCount||0), color:RED },
+                  { label:'Pending Amount', value:`₦${Number(withdrawalStats.pendingAmount||0).toLocaleString('en-NG')}`, color:BLUE },
+                ].map(s=>(
+                  <Card key={s.label}>
+                    <p style={{ fontSize:13,color:'#8E8E93',marginBottom:8 }}>{s.label}</p>
+                    <p style={{ fontSize:24,fontWeight:900,color:s.color }}>{s.value as string}</p>
+                  </Card>
+                ))}
+              </div>
+              <Card>
+                <table style={{ width:'100%',borderCollapse:'collapse' }}>
+                  <thead><tr style={{ background:'#F9F9F9' }}>
+                    {['User','Bank','Account','Amount','Status','Requested','Actions'].map(h=>(
+                      <th key={h} style={{ padding:'10px 14px',fontSize:12,fontWeight:700,color:'#8E8E93',textAlign:'left',borderBottom:'1px solid #F2F2F7' }}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {withdrawals.length === 0 && (
+                      <tr><td colSpan={7} style={{ padding:32,textAlign:'center',color:'#8E8E93',fontSize:14 }}>No withdrawals found</td></tr>
+                    )}
+                    {withdrawals.map(w=>(
+                      <tr key={w.id} style={{ borderBottom:'1px solid #F9F9F9' }}>
+                        <td style={{ padding:'12px 14px',fontSize:13 }}>{w.firstName} {w.lastName}<br/><span style={{ color:'#8E8E93',fontSize:11 }}>{w.phone}</span></td>
+                        <td style={{ padding:'12px 14px',fontSize:13 }}>{w.bankName}</td>
+                        <td style={{ padding:'12px 14px',fontSize:13 }}>{w.accountNumber}<br/><span style={{ color:'#8E8E93',fontSize:11 }}>{w.accountName}</span></td>
+                        <td style={{ padding:'12px 14px',fontSize:14,fontWeight:700,color:GREEN }}>₦{Number(w.amount).toLocaleString()}</td>
+                        <td style={{ padding:'12px 14px' }}>
+                          <span style={{ background:w.status==='paid'?'rgba(52,199,89,.1)':w.status==='rejected'?'rgba(255,59,48,.1)':'rgba(255,149,0,.1)',color:w.status==='paid'?GREEN:w.status==='rejected'?RED:'#FF9F0A',padding:'3px 10px',borderRadius:20,fontSize:12,fontWeight:700,textTransform:'uppercase' }}>{w.status}</span>
+                        </td>
+                        <td style={{ padding:'12px 14px',fontSize:12,color:'#8E8E93' }}>{new Date(w.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</td>
+                        <td style={{ padding:'12px 14px' }}>
+                          {w.status === 'pending' && (
+                            <div style={{ display:'flex',gap:6 }}>
+                              <button onClick={async()=>{
+                                if (withdrawalActionBusy) return;
+                                setWithdrawalActionBusy(w.id);
+                                try { await api('withdrawals','PATCH',{withdrawalId:w.id,action:'mark-paid'}); showToast('✅ Marked as paid'); loadWithdrawals(); } catch(e:unknown){ showError(e instanceof Error?e.message:'Failed'); } finally{ setWithdrawalActionBusy(''); }
+                              }} disabled={withdrawalActionBusy === w.id}
+                                style={{ padding:'6px 14px',borderRadius:8,background:'rgba(52,199,89,.15)',color:GREEN,border:'none',fontWeight:700,fontSize:12,cursor:'pointer' }}>Pay</button>
+                              <button onClick={async()=>{
+                                if (withdrawalActionBusy) return;
+                                setWithdrawalActionBusy(w.id);
+                                try { await api('withdrawals','PATCH',{withdrawalId:w.id,action:'reject'}); showToast('Rejected & refunded'); loadWithdrawals(); } catch(e:unknown){ showError(e instanceof Error?e.message:'Failed'); } finally{ setWithdrawalActionBusy(''); }
+                              }} disabled={withdrawalActionBusy === w.id}
+                                style={{ padding:'6px 14px',borderRadius:8,background:'rgba(255,59,48,.12)',color:RED,border:'none',fontWeight:700,fontSize:12,cursor:'pointer' }}>Reject</button>
+                            </div>
+                          )}
+                          {w.status !== 'pending' && <span style={{ color:'#C7C7CC',fontSize:12 }}>{w.status === 'paid' ? (w.payoutReference || '—') : w.adminNote || '—'}</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
             </div>
           )}
 

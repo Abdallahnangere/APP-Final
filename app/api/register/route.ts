@@ -4,10 +4,13 @@ import { hashPin } from '@/lib/utils';
 import { createVirtualAccount } from '@/lib/flutterwave';
 import { signToken } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { createUniqueReferralCode, ensureEarnSchema, normalizeReferralCode } from '@/lib/earn';
 
 export async function POST(req: NextRequest) {
   try {
-    const { firstName, lastName, phone, pin, confirmPin } = await req.json();
+    await ensureEarnSchema();
+
+    const { firstName, lastName, phone, pin, confirmPin, referralId } = await req.json();
 
     // Validation
     if (!firstName?.trim() || !lastName?.trim()) {
@@ -27,6 +30,18 @@ export async function POST(req: NextRequest) {
     const existing = await sql`SELECT id FROM users WHERE phone = ${phone}`;
     if (existing.length > 0) {
       return NextResponse.json({ error: 'Phone number already registered' }, { status: 409 });
+    }
+
+    const normalizedReferralId = normalizeReferralCode(referralId);
+    let referredBy: string | null = null;
+    if (normalizedReferralId) {
+      const [referrer] = await sql`
+        SELECT id FROM users WHERE referral_id = ${normalizedReferralId} LIMIT 1
+      `;
+      if (!referrer) {
+        return NextResponse.json({ error: 'Referral ID is invalid' }, { status: 400 });
+      }
+      referredBy = String(referrer.id);
     }
 
     // Create Flutterwave virtual account
@@ -56,12 +71,14 @@ export async function POST(req: NextRequest) {
 
     // Hash PIN and create user
     const pinHash = await hashPin(pin);
+    const nextReferralCode = await createUniqueReferralCode();
 
     const [user] = await sql`
-      INSERT INTO users (first_name, last_name, phone, pin_hash, flw_account_number, flw_bank_name, flw_order_ref)
-      VALUES (${firstName.trim()}, ${lastName.trim()}, ${phone}, ${pinHash}, ${accountNumber}, ${bankName}, ${orderRef})
+      INSERT INTO users (first_name, last_name, phone, pin_hash, flw_account_number, flw_bank_name, flw_order_ref, referral_id, referred_by)
+      VALUES (${firstName.trim()}, ${lastName.trim()}, ${phone}, ${pinHash}, ${accountNumber}, ${bankName}, ${orderRef}, ${nextReferralCode}, ${referredBy})
       RETURNING id, first_name, last_name, phone, flw_account_number, flw_bank_name,
-                wallet_balance, cashback_balance, referral_bonus,
+                wallet_balance, cashback_balance, referral_bonus, referral_balance,
+                referral_id, total_gb_purchased,
                 is_developer, developer_discount_percent, created_at
     `;
 
@@ -77,9 +94,12 @@ export async function POST(req: NextRequest) {
         phone: user.phone,
         accountNumber: user.flw_account_number,
         bankName: user.flw_bank_name,
-        walletBalance: user.wallet_balance,
-        cashbackBalance: user.cashback_balance,
-        referralBonus: user.referral_bonus,
+        walletBalance: parseFloat(user.wallet_balance),
+        cashbackBalance: parseFloat(user.cashback_balance),
+        referralBonus: parseFloat(user.referral_balance ?? user.referral_bonus ?? 0),
+        referralBalance: parseFloat(user.referral_balance ?? user.referral_bonus ?? 0),
+        referralId: user.referral_id,
+        totalGbPurchased: parseFloat(user.total_gb_purchased || 0),
         isDeveloper: Boolean(user.is_developer),
         developerDiscountPercent: Number(user.developer_discount_percent || 0),
         createdAt: user.created_at,

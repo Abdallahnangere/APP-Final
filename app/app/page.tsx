@@ -8,6 +8,7 @@ import SupportChat from '@/app/support/page';
 type User = {
   id: string; firstName: string; lastName: string; phone: string;
   walletBalance: number; cashbackBalance: number; referralBonus: number;
+  referralBalance?: number; referralId?: string; totalGbPurchased?: number;
   accountNumber: string; bankName: string; theme: string;
   notificationsEnabled: boolean; hapticsEnabled: boolean;
   isDeveloper?: boolean; developerDiscountPercent?: number;
@@ -45,6 +46,41 @@ type DeveloperApiTx = {
 };
 type Product = { id: string; name: string; description: string; price: number; imageUrl: string; imageBase64?: string; inStock: boolean; shippingTerms: string; pickupTerms: string; category: string; deliveryAddress?: string; };
 type SimActivation = { id: string; status: string; createdAt: string; serialNumber?: string; };
+type ReferralUser = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  totalGbPurchased: number;
+  hasReachedTarget: boolean;
+  rewardUnlocked: boolean;
+  createdAt: string;
+};
+type EarnSummary = {
+  referralId: string;
+  referralBalance: number;
+  totalGbPurchased: number;
+  totalReferrals: number;
+  qualifiedReferrals: number;
+  rewardAmount: number;
+  targetGb: number;
+  inviteMessage: string;
+};
+type WithdrawalItem = {
+  id: string;
+  amount: number;
+  bankCode: string;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  status: string;
+  payoutReference?: string | null;
+  adminNote?: string | null;
+  paidAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+type BankOption = { id: string; code: string; name: string; };
 
 /* ─────────────── CONSTANTS ─────────────── */
 const BLUE = '#0071E3';
@@ -237,7 +273,7 @@ const GlobalStyle = ({ dark }: { dark: boolean }) => (
 
 /* ─────────────── PIN KEYBOARD ─────────────── */
 function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', subtitle = '', pinAction }: {
-  onComplete: (pin: string) => void; onClose: () => void; title?: string; subtitle?: string; pinAction?: "buy-data" | "buy-product" | "sim-pay" | "transfer" | null;
+  onComplete: (pin: string) => void; onClose: () => void; title?: string; subtitle?: string; pinAction?: "buy-data" | "buy-product" | "sim-pay" | "transfer" | "withdraw" | null;
 }) {
   const [pin, setPin] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -740,14 +776,14 @@ function ShareSaukiMartModal({
 
 /* ─────────────── MAIN APP ─────────────── */
 export default function AppPage() {
-  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'|'chat'|'developer-terms'|'developer-dashboard'>('splash');
+  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'|'chat'|'earn'|'developer-terms'|'developer-dashboard'>('splash');
   const [dark, setDark] = useState(false);
   const [user, setUser] = useState<User|null>(null);
   const [token, setToken] = useState('');
 
   // Form states
   const [loginPhone, setLoginPhone] = useState('');
-  const [regForm, setRegForm] = useState({ firstName:'',lastName:'',phone:'',pin:'',confirmPin:'' });
+  const [regForm, setRegForm] = useState({ firstName:'',lastName:'',phone:'',pin:'',confirmPin:'',referralId:'' });
   const [agreed, setAgreed] = useState(false);
 
   // App data
@@ -791,10 +827,18 @@ export default function AppPage() {
   const [redeemError, setRedeemError] = useState('');
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [showPin, setShowPin] = useState(false);
-  const [pinAction, setPinAction] = useState<'buy-data'|'buy-product'|'sim-pay'|'transfer'|null>(null);
+  const [pinAction, setPinAction] = useState<'buy-data'|'buy-product'|'sim-pay'|'transfer'|'withdraw'|null>(null);
   const [receipt, setReceipt] = useState<Record<string,unknown>|null>(null);
   const [isBuyingData, setIsBuyingData] = useState(false);
   const [buyDataProgressStage, setBuyDataProgressStage] = useState(0);
+  const [earnSummary, setEarnSummary] = useState<EarnSummary|null>(null);
+  const [referralUsers, setReferralUsers] = useState<ReferralUser[]>([]);
+  const [withdrawals, setWithdrawals] = useState<WithdrawalItem[]>([]);
+  const [banks, setBanks] = useState<BankOption[]>([]);
+  const [withdrawForm, setWithdrawForm] = useState({ amount:'', bankCode:'', bankName:'', accountNumber:'', accountName:'' });
+  const [withdrawError, setWithdrawError] = useState('');
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
+  const [withdrawResolving, setWithdrawResolving] = useState(false);
 
   // Transfer states
   const [transferPhone, setTransferPhone] = useState('');
@@ -823,6 +867,7 @@ export default function AppPage() {
   const shareFabRef = useRef<HTMLDivElement | null>(null);
 
   const authHeader = useCallback(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
+  const referralBalance = user?.referralBalance ?? user?.referralBonus ?? 0;
 
   const showToast = (msg: string) => { playSound('success'); setToast(msg); setTimeout(() => setToast(''), 3000); };
   const showError = (msg: string) => { playSound('error'); setError(msg); setTimeout(() => setError(''), 4000); };
@@ -1015,6 +1060,67 @@ export default function AppPage() {
     }
   }, [token, authHeader]);
 
+  const loadEarnData = useCallback(async () => {
+    if (!token) return;
+    try {
+      const [summaryRes, withdrawalsRes] = await Promise.all([
+        fetch('/api/earn', { headers: authHeader(), cache: 'no-store' as RequestCache }),
+        fetch('/api/withdrawals', { headers: authHeader(), cache: 'no-store' as RequestCache }),
+      ]);
+
+      const summaryData = await summaryRes.json();
+      const withdrawalsData = await withdrawalsRes.json();
+
+      if (!summaryRes.ok) throw new Error(summaryData.error || 'Failed to load earn data');
+      if (!withdrawalsRes.ok) throw new Error(withdrawalsData.error || 'Failed to load withdrawals');
+
+      setEarnSummary((summaryData.summary || null) as EarnSummary | null);
+      setReferralUsers(Array.isArray(summaryData.referredUsers) ? summaryData.referredUsers as ReferralUser[] : []);
+      setWithdrawals(Array.isArray(withdrawalsData.withdrawals) ? withdrawalsData.withdrawals as WithdrawalItem[] : []);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Unable to load earn data');
+    }
+  }, [token, authHeader]);
+
+  const loadBanks = useCallback(async () => {
+    if (!token || banks.length > 0) return;
+    try {
+      const res = await fetch('/api/banks', { headers: authHeader(), cache: 'no-store' as RequestCache });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to load banks');
+      setBanks(Array.isArray(data.banks) ? data.banks : []);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Unable to load banks');
+    }
+  }, [token, authHeader, banks.length]);
+
+  const resolveWithdrawalAccount = useCallback(async () => {
+    if (!token) return;
+    if (!withdrawForm.bankCode || !/^\d{10}$/.test(withdrawForm.accountNumber)) {
+      setWithdrawError('Select a bank and enter a valid 10-digit account number');
+      return;
+    }
+
+    setWithdrawResolving(true);
+    setWithdrawError('');
+    try {
+      const res = await fetch('/api/banks/resolve', {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({ bankCode: withdrawForm.bankCode, accountNumber: withdrawForm.accountNumber }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to resolve account');
+      setWithdrawForm((prev) => ({ ...prev, accountName: String(data.accountName || '') }));
+      showToast('Bank account verified');
+    } catch (e: unknown) {
+      setWithdrawForm((prev) => ({ ...prev, accountName: '' }));
+      setWithdrawError(e instanceof Error ? e.message : 'Unable to resolve account');
+    } finally {
+      setWithdrawResolving(false);
+    }
+  }, [token, authHeader, withdrawForm.accountNumber, withdrawForm.bankCode]);
+
   const upgradeToDeveloper = useCallback(async () => {
     if (!token) return;
     setDeveloperBusy(true);
@@ -1161,6 +1267,14 @@ export default function AppPage() {
       loadDeveloperDashboard();
     }
   }, [screen, loadDeveloperDashboard]);
+
+  useEffect(() => {
+    if (screen === 'earn') {
+      loadEarnData();
+      loadBanks();
+      refreshUser();
+    }
+  }, [screen, loadEarnData, loadBanks, refreshUser]);
 
   useEffect(() => {
     if (!isBuyingData) {
@@ -1319,6 +1433,65 @@ export default function AppPage() {
     }
   };
 
+  const beginWithdrawalRequest = () => {
+    if (!user) return;
+    const amount = Number(withdrawForm.amount || 0);
+    if (!amount || amount <= 0) {
+      setWithdrawError('Enter a valid withdrawal amount');
+      return;
+    }
+    if (amount > referralBalance) {
+      setWithdrawError('Withdrawal amount exceeds your referral balance');
+      return;
+    }
+    if (!withdrawForm.bankCode || !withdrawForm.bankName) {
+      setWithdrawError('Select a bank');
+      return;
+    }
+    if (!/^\d{10}$/.test(withdrawForm.accountNumber)) {
+      setWithdrawError('Enter a valid 10-digit account number');
+      return;
+    }
+    if (!withdrawForm.accountName) {
+      setWithdrawError('Resolve the account before continuing');
+      return;
+    }
+
+    setWithdrawError('');
+    setPinAction('withdraw');
+    setShowPin(true);
+  };
+
+  const handleWithdrawalRequest = async (pin: string) => {
+    setWithdrawLoading(true);
+    setWithdrawError('');
+    try {
+      const res = await fetch('/api/withdrawals', {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({
+          amount: Number(withdrawForm.amount),
+          bankCode: withdrawForm.bankCode,
+          bankName: withdrawForm.bankName,
+          accountNumber: withdrawForm.accountNumber,
+          pin,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Withdrawal request failed');
+
+      setWithdrawForm({ amount:'', bankCode:'', bankName:'', accountNumber:'', accountName:'' });
+      await refreshUser();
+      await loadEarnData();
+      await loadHomeData();
+      showToast('Withdrawal request submitted');
+    } catch (e: unknown) {
+      setWithdrawError(e instanceof Error ? e.message : 'Withdrawal request failed');
+    } finally {
+      setWithdrawLoading(false);
+    }
+  };
+
   /* ── SIM ACTIVATION ── */
   const handleSimPay = async (pin: string) => {
     setLoading(true);
@@ -1346,6 +1519,7 @@ export default function AppPage() {
     else if (pinAction === 'buy-product') handleBuyProduct(pin);
     else if (pinAction === 'sim-pay') handleSimPay(pin);
     else if (pinAction === 'transfer') handleTransfer(pin);
+    else if (pinAction === 'withdraw') handleWithdrawalRequest(pin);
   };
 
   const sendChat = useCallback(async () => {
@@ -1638,15 +1812,20 @@ export default function AppPage() {
             { key:'phone', label:'Phone Number (11 digits)', placeholder:'08012345678', type:'tel' },
             { key:'pin', label:'4-Digit PIN', placeholder:'••••', type:'password' },
             { key:'confirmPin', label:'Confirm PIN', placeholder:'••••', type:'password' },
+            { key:'referralId', label:'Referral ID (Optional)', placeholder:'SMAB12CD34', type:'text' },
           ].map((f,i) => (
-            <div key={f.key} style={{ marginBottom: i<4 ? 18 : 0 }}>
+            <div key={f.key} style={{ marginBottom: i<5 ? 18 : 0 }}>
               <label style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',marginBottom:10,display:'block',textTransform:'uppercase',letterSpacing:.5 }}>{f.label}</label>
               <input
                 type={f.type} value={regForm[f.key as keyof typeof regForm]} placeholder={f.placeholder}
                 inputMode={f.key==='phone'||f.key==='pin'||f.key==='confirmPin'?'numeric':undefined}
-                maxLength={f.key==='phone'?11:f.key==='pin'||f.key==='confirmPin'?4:undefined}
+                maxLength={f.key==='phone'?11:f.key==='pin'||f.key==='confirmPin'?4:f.key==='referralId'?12:undefined}
                 onChange={e => {
-                  const v = (f.key==='phone'||f.key==='pin'||f.key==='confirmPin') ? e.target.value.replace(/\D/g,'') : e.target.value;
+                  const v = (f.key==='phone'||f.key==='pin'||f.key==='confirmPin')
+                    ? e.target.value.replace(/\D/g,'')
+                    : f.key === 'referralId'
+                      ? e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'')
+                      : e.target.value;
                   setRegForm(prev => ({ ...prev, [f.key]: v }));
                 }}
                 style={{ width:'100%',padding:'14px 14px',borderRadius:10,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:600,transition:'all .2s',outline:'none',boxSizing:'border-box' }}
@@ -1849,8 +2028,9 @@ export default function AppPage() {
                 <span style={{ fontSize:28,fontWeight:900,color:'#FFFFFF' }}>{user.walletBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
               </div>
             </div>
-            <div style={{ display:'flex',gap:8 }}>
+            <div style={{ display:'flex',gap:8,flexWrap:'wrap',justifyContent:'flex-end' }}>
               <button onClick={refreshUser} className="tactile-btn" style={{ background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',borderRadius:11,padding:'10px 14px',cursor:'pointer',fontSize:12,fontWeight:700,color:'#FFFFFF',transition:'all .2s' }}>↻ Sync</button>
+              <button onClick={() => setScreen('earn')} className="tactile-btn" style={{ background:'rgba(90,200,250,.18)',border:'1px solid rgba(90,200,250,.32)',borderRadius:11,padding:'10px 14px',cursor:'pointer',fontSize:12,fontWeight:700,color:'#DDF5FF',transition:'all .2s' }}>Earn</button>
               <button onClick={() => setRedeemOpen(true)} disabled={user.cashbackBalance <= 0} className="tactile-btn" style={{ background:user.cashbackBalance > 0 ? 'rgba(255,159,10,.22)' : 'rgba(255,255,255,.08)',border:user.cashbackBalance > 0 ? '1px solid rgba(255,159,10,.38)' : '1px solid rgba(255,255,255,.14)',borderRadius:11,padding:'10px 14px',cursor:user.cashbackBalance > 0 ? 'pointer' : 'not-allowed',fontSize:12,fontWeight:700,color:user.cashbackBalance > 0 ? '#FFD9A6' : 'rgba(255,255,255,.45)',transition:'all .2s' }}>+ Redeem</button>
             </div>
           </div>
@@ -1859,10 +2039,11 @@ export default function AppPage() {
               <p style={{ color:'rgba(255,255,255,.72)',fontSize:11,fontWeight:700,margin:0,letterSpacing:.3 }}>CASHBACK</p>
               <p style={{ color:'#FFD38D',fontWeight:800,fontSize:16,margin:'6px 0 0' }}>₦{user.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
             </div>
-            <div style={{ background:'rgba(255,255,255,.1)',borderRadius:14,padding:'12px',border:'1px solid rgba(255,255,255,.16)' }}>
+            <button onClick={()=>setScreen('earn')} style={{ background:'rgba(255,255,255,.1)',borderRadius:14,padding:'12px',border:'1px solid rgba(255,255,255,.16)',textAlign:'left',cursor:'pointer' }}>
               <p style={{ color:'rgba(255,255,255,.72)',fontSize:11,fontWeight:700,margin:0,letterSpacing:.3 }}>REFERRAL</p>
-              <p style={{ color:'#BFE2FF',fontWeight:800,fontSize:16,margin:'6px 0 0' }}>₦{user.referralBonus.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
-            </div>
+              <p style={{ color:'#BFE2FF',fontWeight:800,fontSize:16,margin:'6px 0 0' }}>₦{referralBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+              <p style={{ color:'rgba(255,255,255,.68)',fontSize:10,fontWeight:700,marginTop:6 }}>Open Earn Center</p>
+            </button>
           </div>
           <div style={{ background:'rgba(255,255,255,.1)',borderRadius:14,padding:'12px',border:'1px solid rgba(255,255,255,.18)' }}>
             <p style={{ color:'rgba(255,255,255,.72)',fontSize:11,fontWeight:700,margin:0,marginBottom:6,letterSpacing:.3 }}>ACCOUNT DETAILS</p>
@@ -2371,12 +2552,25 @@ export default function AppPage() {
                 const isCashbackTx = tx.type === 'cashback' || tx.type === 'cashback_redemption';
                 const isTransferIn = tx.type === 'transfer_in';
                 const isTransferOut = tx.type === 'transfer_out';
+                const isReferralCredit = tx.type === 'referral_reward' || tx.type === 'admin_referral_credit';
                 const isFailed = tx.status === 'failed';
-                const isCredit = isDeposit || isCashbackTx || isTransferIn;
+                const isCredit = isDeposit || isCashbackTx || isTransferIn || isReferralCredit;
                 const signedColor = isFailed ? RED : isCredit ? GREEN : '#D9263A';
                 const amountSign = isCredit ? '+' : '−';
                 const amountValue = Number(tx.amount).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
-                const txLabel = isTransferIn ? 'Transfer In' : isTransferOut ? 'Transfer Out' : isCashbackTx ? 'Cashback' : isDeposit ? 'Deposit' : 'Purchase';
+                const txLabel = isTransferIn
+                  ? 'Transfer In'
+                  : isTransferOut
+                    ? 'Transfer Out'
+                    : isReferralCredit
+                      ? 'Referral Reward'
+                      : tx.type === 'withdrawal_request'
+                        ? 'Withdrawal Request'
+                        : isCashbackTx
+                          ? 'Cashback'
+                          : isDeposit
+                            ? 'Deposit'
+                            : 'Purchase';
 
                 return (
                   <button className="ledger-card stagger-card haptic-pulse" key={tx.id} onClick={()=>{ if(tx.receipt) { setReceipt({ ...(tx.receipt as Record<string,unknown>), type: tx.type }); } }}
@@ -2412,6 +2606,171 @@ export default function AppPage() {
         </div>
       </div>
       {BottomNav({ active: 'transactions' })}
+    </>
+  );
+
+  /* EARN */
+  if (screen === 'earn') return (
+    <>
+      <GlobalStyle dark={dark} />
+      {showPin && <PinKeyboard title="Confirm withdrawal PIN" subtitle="We use your PIN to authorize this referral withdrawal" onComplete={handlePinComplete} onClose={()=>setShowPin(false)} pinAction={pinAction} />}
+      {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500,whiteSpace:'nowrap' }}>{toast}</div>}
+      {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#040810 0%,#0A1221 48%,#08101D 100%)' : 'linear-gradient(180deg,#F3F7FF 0%,#EEF3FB 52%,#F7F9FD 100%)',overflowY:'auto',paddingBottom:100 }}>
+        <div style={{ padding:'52px 16px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12 }}>
+          <button onClick={()=>setScreen('home')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+          <button onClick={()=>{ loadEarnData(); refreshUser(); }} style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:12,padding:'10px 14px',color:'var(--text)',fontSize:13,fontWeight:700 }}>Refresh</button>
+        </div>
+
+        <div style={{ margin:'0 16px',background:'linear-gradient(140deg,#051A46 0%,#0D3E8A 55%,#0F6FEA 100%)',borderRadius:24,padding:'22px 20px',border:'1px solid rgba(255,255,255,.12)',boxShadow:'0 18px 46px rgba(4,60,170,.28)',color:'#fff' }}>
+          <p style={{ fontSize:11,fontWeight:800,letterSpacing:'0.08em',opacity:.74,textTransform:'uppercase' }}>Earn Center</p>
+          <h2 style={{ fontSize:28,fontWeight:900,marginTop:10,letterSpacing:'-0.04em' }}>₦{(earnSummary?.referralBalance ?? referralBalance).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</h2>
+          <p style={{ fontSize:13,opacity:.8,marginTop:6 }}>Available referral balance</p>
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginTop:18 }}>
+            <div style={{ background:'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.16)',borderRadius:16,padding:'12px 14px' }}>
+              <p style={{ fontSize:11,fontWeight:700,opacity:.7,letterSpacing:'0.06em',textTransform:'uppercase' }}>Referral ID</p>
+              <p style={{ fontSize:18,fontWeight:800,marginTop:8,letterSpacing:'0.04em' }}>{earnSummary?.referralId || user?.referralId || 'Loading...'}</p>
+              <button onClick={()=>{ navigator.clipboard.writeText(earnSummary?.referralId || user?.referralId || ''); showToast('Referral ID copied'); }} style={{ marginTop:10,background:'rgba(255,255,255,.14)',border:'1px solid rgba(255,255,255,.2)',borderRadius:10,padding:'8px 12px',color:'#fff',fontSize:12,fontWeight:700 }}>Copy ID</button>
+            </div>
+            <div style={{ background:'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.16)',borderRadius:16,padding:'12px 14px' }}>
+              <p style={{ fontSize:11,fontWeight:700,opacity:.7,letterSpacing:'0.06em',textTransform:'uppercase' }}>Reward Rule</p>
+              <p style={{ fontSize:17,fontWeight:800,marginTop:8 }}>₦{Number(earnSummary?.rewardAmount || 0).toLocaleString('en-NG')}</p>
+              <p style={{ fontSize:12,opacity:.78,marginTop:6 }}>When any referred user reaches {Number(earnSummary?.targetGb || 50).toLocaleString('en-NG')}GB total purchases.</p>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ margin:'18px 16px 0',display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10 }}>
+          {[
+            { label:'Referrals', value: earnSummary?.totalReferrals || 0 },
+            { label:'Qualified', value: earnSummary?.qualifiedReferrals || 0 },
+            { label:'Your GB', value: `${Number(earnSummary?.totalGbPurchased || user?.totalGbPurchased || 0).toLocaleString('en-NG',{maximumFractionDigits:2})}GB` },
+          ].map((item) => (
+            <div key={item.label} style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:'14px 12px',boxShadow:dark ? '0 10px 24px rgba(0,0,0,.2)' : '0 10px 24px rgba(12,28,54,.06)' }}>
+              <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',letterSpacing:'0.08em',textTransform:'uppercase' }}>{item.label}</p>
+              <p style={{ fontSize:22,fontWeight:900,color:'var(--text)',marginTop:8 }}>{item.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ margin:'18px 16px 0',display:'grid',gap:16 }}>
+          <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:'18px 16px',boxShadow:dark ? '0 12px 28px rgba(0,0,0,.2)' : '0 12px 28px rgba(12,28,54,.06)' }}>
+            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:14 }}>
+              <div>
+                <h3 style={{ fontSize:18,fontWeight:800,color:'var(--text)' }}>Invite People</h3>
+                <p style={{ color:'var(--text-secondary)',fontSize:13,marginTop:4 }}>Share your referral ID and track who has crossed the reward milestone.</p>
+              </div>
+              <button onClick={async()=>{
+                const message = earnSummary?.inviteMessage || `Join SaukiMart with my referral ID ${earnSummary?.referralId || user?.referralId || ''}`;
+                if (navigator.share) {
+                  try {
+                    await navigator.share({ title:'SaukiMart Referral', text: message });
+                    return;
+                  } catch {
+                    // fall through to clipboard
+                  }
+                }
+                await navigator.clipboard.writeText(message);
+                showToast('Invite message copied');
+              }} style={{ background:'rgba(0,113,227,.1)',border:'1px solid rgba(0,113,227,.2)',borderRadius:12,padding:'10px 14px',color:BLUE,fontSize:13,fontWeight:700 }}>Share Invite</button>
+            </div>
+            <div style={{ display:'grid',gap:10 }}>
+              {referralUsers.length === 0 ? (
+                <div style={{ border:'1px dashed var(--border)',borderRadius:16,padding:'18px 16px',textAlign:'center' }}>
+                  <p style={{ color:'var(--text)',fontWeight:700,fontSize:14 }}>No referred users yet</p>
+                  <p style={{ color:'var(--text-secondary)',fontSize:13,marginTop:6,lineHeight:1.55 }}>Once someone signs up with your referral ID and buys data, their progress to {Number(earnSummary?.targetGb || 50)}GB will appear here.</p>
+                </div>
+              ) : referralUsers.map((item) => {
+                const progressPercent = Math.min((item.totalGbPurchased / Number(earnSummary?.targetGb || 50)) * 100, 100);
+                return (
+                  <div key={item.id} style={{ border:'1px solid var(--border)',borderRadius:16,padding:'14px 14px',background:'var(--bg-secondary)' }}>
+                    <div style={{ display:'flex',justifyContent:'space-between',gap:10,alignItems:'flex-start' }}>
+                      <div>
+                        <p style={{ fontSize:15,fontWeight:800,color:'var(--text)' }}>{item.firstName} {item.lastName}</p>
+                        <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>{item.phone}</p>
+                      </div>
+                      <span style={{ background:item.rewardUnlocked ? 'rgba(48,209,88,.12)' : 'rgba(255,159,10,.12)',color:item.rewardUnlocked ? GREEN : ORANGE,padding:'6px 10px',borderRadius:999,fontSize:11,fontWeight:800 }}>{item.rewardUnlocked ? 'Reward unlocked' : 'In progress'}</span>
+                    </div>
+                    <div style={{ marginTop:12 }}>
+                      <div style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text-secondary)',marginBottom:6 }}>
+                        <span>{item.totalGbPurchased.toLocaleString('en-NG',{maximumFractionDigits:2})}GB purchased</span>
+                        <span>{Math.round(progressPercent)}%</span>
+                      </div>
+                      <div style={{ height:10,borderRadius:999,background:dark?'rgba(255,255,255,.08)':'rgba(12,28,54,.08)',overflow:'hidden' }}>
+                        <div style={{ width:`${progressPercent}%`,height:'100%',background:item.rewardUnlocked ? 'linear-gradient(135deg,#30D158,#5AC8FA)' : 'linear-gradient(135deg,#FF9F0A,#FFD38D)' }} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:'18px 16px',boxShadow:dark ? '0 12px 28px rgba(0,0,0,.2)' : '0 12px 28px rgba(12,28,54,.06)' }}>
+            <h3 style={{ fontSize:18,fontWeight:800,color:'var(--text)' }}>Withdraw Referral Balance</h3>
+            <p style={{ color:'var(--text-secondary)',fontSize:13,marginTop:4,marginBottom:14 }}>Withdrawals are verified instantly and paid after admin approval.</p>
+            <div style={{ display:'grid',gap:12 }}>
+              <div>
+                <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:8,letterSpacing:'0.06em',textTransform:'uppercase' }}>Amount</label>
+                <input value={withdrawForm.amount} onChange={e=>setWithdrawForm(prev=>({ ...prev, amount:e.target.value.replace(/[^0-9.]/g,'') }))} placeholder="1000" inputMode="decimal" style={{ width:'100%',padding:'13px 14px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text)',fontSize:16,fontWeight:700 }} />
+              </div>
+              <div>
+                <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:8,letterSpacing:'0.06em',textTransform:'uppercase' }}>Bank</label>
+                <select value={withdrawForm.bankCode} onChange={e=>{
+                  const selected = banks.find((bank) => bank.code === e.target.value);
+                  setWithdrawForm(prev => ({ ...prev, bankCode: e.target.value, bankName: selected?.name || '', accountName: '' }));
+                }} style={{ width:'100%',padding:'13px 14px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text)',fontSize:15,fontWeight:700 }}>
+                  <option value="">Select bank</option>
+                  {banks.map((bank) => <option key={bank.code} value={bank.code}>{bank.name}</option>)}
+                </select>
+              </div>
+              <div style={{ display:'grid',gridTemplateColumns:'1fr auto',gap:10,alignItems:'end' }}>
+                <div>
+                  <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:8,letterSpacing:'0.06em',textTransform:'uppercase' }}>Account Number</label>
+                  <input value={withdrawForm.accountNumber} onChange={e=>setWithdrawForm(prev=>({ ...prev, accountNumber:e.target.value.replace(/\D/g,'').slice(0,10), accountName:'' }))} placeholder="0123456789" inputMode="numeric" style={{ width:'100%',padding:'13px 14px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text)',fontSize:16,fontWeight:700,letterSpacing:'0.08em' }} />
+                </div>
+                <button onClick={resolveWithdrawalAccount} disabled={withdrawResolving || !withdrawForm.bankCode || withdrawForm.accountNumber.length !== 10} style={{ height:48,padding:'0 16px',borderRadius:12,border:'1px solid rgba(0,113,227,.18)',background:withdrawResolving ? 'rgba(0,113,227,.08)' : 'rgba(0,113,227,.12)',color:BLUE,fontSize:13,fontWeight:800,cursor:withdrawResolving ? 'wait' : 'pointer' }}>{withdrawResolving ? 'Checking...' : 'Resolve'}</button>
+              </div>
+              <div>
+                <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:8,letterSpacing:'0.06em',textTransform:'uppercase' }}>Account Name</label>
+                <div style={{ width:'100%',padding:'13px 14px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',color:withdrawForm.accountName ? 'var(--text)' : 'var(--text-secondary)',fontSize:15,fontWeight:700 }}>{withdrawForm.accountName || 'Resolve account to continue'}</div>
+              </div>
+              {withdrawError && <p style={{ color:RED,fontSize:13,fontWeight:600 }}>{withdrawError}</p>}
+              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:12 }}>
+                <p style={{ color:'var(--text-secondary)',fontSize:12,lineHeight:1.55 }}>Available: ₦{referralBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                <button onClick={beginWithdrawalRequest} disabled={withdrawLoading} style={{ background:'linear-gradient(135deg,#0047CC,#0071E3)',border:'none',borderRadius:12,padding:'12px 16px',color:'#fff',fontSize:14,fontWeight:800,cursor:withdrawLoading ? 'wait' : 'pointer',opacity:withdrawLoading ? .7 : 1 }}>{withdrawLoading ? 'Working...' : 'Withdraw Now'}</button>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:'18px 16px',boxShadow:dark ? '0 12px 28px rgba(0,0,0,.2)' : '0 12px 28px rgba(12,28,54,.06)' }}>
+            <h3 style={{ fontSize:18,fontWeight:800,color:'var(--text)',marginBottom:12 }}>Withdrawal History</h3>
+            {withdrawals.length === 0 ? (
+              <div style={{ border:'1px dashed var(--border)',borderRadius:16,padding:'18px 16px',textAlign:'center' }}>
+                <p style={{ color:'var(--text)',fontWeight:700,fontSize:14 }}>No withdrawals yet</p>
+                <p style={{ color:'var(--text-secondary)',fontSize:13,marginTop:6 }}>Your submitted referral withdrawals will appear here.</p>
+              </div>
+            ) : (
+              <div style={{ display:'grid',gap:10 }}>
+                {withdrawals.map((item) => (
+                  <div key={item.id} style={{ border:'1px solid var(--border)',borderRadius:16,padding:'14px',background:'var(--bg-secondary)' }}>
+                    <div style={{ display:'flex',justifyContent:'space-between',gap:10,alignItems:'flex-start' }}>
+                      <div>
+                        <p style={{ fontSize:15,fontWeight:800,color:'var(--text)' }}>₦{item.amount.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                        <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>{item.bankName} • {item.accountNumber}</p>
+                        <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>{item.accountName}</p>
+                      </div>
+                      <span style={{ background:item.status === 'paid' ? 'rgba(48,209,88,.12)' : item.status === 'rejected' ? 'rgba(255,59,48,.12)' : 'rgba(255,159,10,.12)',color:item.status === 'paid' ? GREEN : item.status === 'rejected' ? RED : ORANGE,padding:'6px 10px',borderRadius:999,fontSize:11,fontWeight:800,textTransform:'uppercase' }}>{item.status}</span>
+                    </div>
+                    <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:10 }}>Requested {new Date(item.createdAt).toLocaleString('en-NG',{dateStyle:'medium',timeStyle:'short'})}</p>
+                    {item.adminNote && <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:6 }}>Admin note: {item.adminNote}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </>
   );
 
@@ -2605,6 +2964,15 @@ export default function AppPage() {
                   setScreen('developer-terms');
                 }
               }}
+            />
+          </SettingsGroup>
+
+          <SettingsGroup title="Rewards">
+            <SettingsRow
+              icon={Icons.arrowDown(TEAL, 20)}
+              label="Earn & Withdraw"
+              right={<span style={{ background:'rgba(90,200,250,.12)',borderRadius:999,padding:'4px 10px',color:TEAL,fontSize:11,fontWeight:700 }}>₦{referralBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>}
+              onPress={()=>setScreen('earn')}
             />
           </SettingsGroup>
 

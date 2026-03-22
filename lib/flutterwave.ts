@@ -45,3 +45,17 @@ export async function verifyTransaction(txId: string) {
   });
   return res.json();
 }
+
+export async function listBanks(country = 'NG') {
+  const res = await fetch(`${FLW_BASE}/banks/${country}`, {
+    headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
+  });
+  return res.json();
+}
+
+export async function resolveAccountNumber(accountNumber: string, accountBank: string) {
+  const res = await fetch(`${FLW_BASE}/accounts/resolve?account_number=${encodeURIComponent(accountNumber)}&account_bank=${encodeURIComponent(accountBank)}`, {
+    headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
+  });
+  return res.json();
+}

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { verifyPin, generateIdempotencyKey, generateReceiptRef } from '@/lib/utils';
+import { ensureEarnSchema, parseDataSizeToGb, REFERRAL_REWARD_AMOUNT, REFERRAL_TARGET_GB } from '@/lib/earn';
+import { sendCreditAlert } from '@/lib/push';
 
 const AMIGO_TIMEOUT = 30000; // 30 seconds
 
@@ -10,6 +12,8 @@ export async function POST(req: NextRequest) {
   if (!auth?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const payload = await verifyToken(auth.slice(7));
   if (!payload?.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  await ensureEarnSchema();
 
   try {
     const body = await req.json();
@@ -39,7 +43,8 @@ export async function POST(req: NextRequest) {
 
     // LOCK & FETCH USER: Use SELECT FOR UPDATE to prevent race conditions
     const [user] = await sql`
-      SELECT id, pin_hash, wallet_balance, first_name, last_name, phone
+      SELECT id, pin_hash, wallet_balance, first_name, last_name, phone,
+             referred_by, total_gb_purchased, referral_reward_earned
       FROM users WHERE id = ${userId} AND is_banned = FALSE
     `;
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -155,6 +160,66 @@ export async function POST(req: NextRequest) {
       WHERE id = ${txn.id}
     `;
 
+    const purchasedGb = parseDataSizeToGb(dataSize);
+    let referralRewardIssued = 0;
+
+    if (purchasedGb > 0) {
+      const [progress] = await sql`
+        UPDATE users
+        SET total_gb_purchased = COALESCE(total_gb_purchased, 0) + ${purchasedGb},
+            updated_at = NOW()
+        WHERE id = ${userId}
+        RETURNING referred_by, total_gb_purchased, referral_reward_earned
+      `;
+
+      if (progress?.referred_by && !progress.referral_reward_earned && Number(progress.total_gb_purchased || 0) >= REFERRAL_TARGET_GB) {
+        const [milestone] = await sql`
+          UPDATE users
+          SET referral_reward_earned = TRUE, updated_at = NOW()
+          WHERE id = ${userId}
+            AND COALESCE(referral_reward_earned, FALSE) = FALSE
+            AND COALESCE(total_gb_purchased, 0) >= ${REFERRAL_TARGET_GB}
+          RETURNING referred_by
+        `;
+
+        if (milestone?.referred_by) {
+          const [rewarded] = await sql`
+            UPDATE users
+            SET referral_balance = COALESCE(referral_balance, 0) + ${REFERRAL_REWARD_AMOUNT},
+                referral_bonus = COALESCE(referral_bonus, 0) + ${REFERRAL_REWARD_AMOUNT},
+                updated_at = NOW()
+            WHERE id = ${milestone.referred_by as string}
+            RETURNING referral_balance
+          `;
+
+          await sql`
+            INSERT INTO transactions (user_id, type, description, amount, status)
+            VALUES (
+              ${milestone.referred_by as string},
+              'referral_reward',
+              ${`${user.first_name} ${user.last_name} reached ${REFERRAL_TARGET_GB}GB`},
+              ${REFERRAL_REWARD_AMOUNT},
+              'success'
+            )
+          `;
+
+          referralRewardIssued = REFERRAL_REWARD_AMOUNT;
+
+          try {
+            await sendCreditAlert({
+              userId: String(milestone.referred_by),
+              amount: REFERRAL_REWARD_AMOUNT,
+              newBalance: parseFloat(rewarded?.referral_balance || 0),
+              kind: 'referral_reward',
+              note: `${user.first_name} ${user.last_name} crossed ${REFERRAL_TARGET_GB}GB.`,
+            });
+          } catch (pushErr) {
+            console.error('Referral reward push send failed:', pushErr);
+          }
+        }
+      }
+    }
+
     // Record cashback transaction (reward)
     if (cashback > 0) {
       await sql`
@@ -179,6 +244,7 @@ export async function POST(req: NextRequest) {
       newBalance: parseFloat(updatedUser.wallet_balance),
       newCashbackBalance: parseFloat(updatedUser.cashback_balance),
       cashbackEarned: cashback > 0 ? cashback : 0,
+      referralRewardIssued,
       receipt: {
         ref: receiptRef,
         network, dataSize, validity, phoneNumber, price,
