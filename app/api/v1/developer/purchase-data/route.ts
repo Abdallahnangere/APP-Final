@@ -13,6 +13,7 @@ function toAmount(n: number) {
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireDeveloperByApiKey(req);
+    console.log('[API] Auth result:', auth ? { userId: auth.user.id, keyId: auth.keyId } : null);
     if (!auth) return NextResponse.json({ error: 'Unauthorized: Invalid API key' }, { status: 401 });
 
     const body = await req.json();
@@ -22,13 +23,17 @@ export async function POST(req: NextRequest) {
     const idempotencyHeader = req.headers.get('Idempotency-Key')?.trim() || '';
     const idempotencyKey = idempotencyFromBody || idempotencyHeader || generateIdempotencyKey();
 
+    console.log('[API] Request parsed:', { phoneNumber, planCode, idempotencyKey });
+
     // Validate phone number (11 digits)
     if (!/^\d{11}$/.test(phoneNumber)) {
+      console.log('[API] Invalid phone number:', phoneNumber);
       return NextResponse.json({ error: 'phoneNumber must be 11 digits (e.g., 08012345678)' }, { status: 400 });
     }
 
     // Validate plan code format (networkId-planId)
     if (!planCode || !/^\d+-\d+$/.test(planCode)) {
+      console.log('[API] Invalid plan code:', planCode);
       return NextResponse.json({ error: 'planCode required in format: networkId-planId (e.g., 1-123)' }, { status: 400 });
     }
 
@@ -36,6 +41,7 @@ export async function POST(req: NextRequest) {
     const networkId = Number(networkIdText);
     const planId = Number(planIdText);
     if (!Number.isFinite(networkId) || !Number.isFinite(planId)) {
+      console.log('[API] Invalid plan ID numbers:', { networkId, planId });
       return NextResponse.json({ error: 'Invalid planCode: both networkId and planId must be numbers' }, { status: 400 });
     }
 
@@ -50,6 +56,7 @@ export async function POST(req: NextRequest) {
     `;
 
     if (existing) {
+      console.log('[API] Idempotency duplicate found:', existing.id);
       const isSuccess = existing.status === 'success';
       const isPending = existing.status === 'pending';
       if (isPending) {
@@ -83,7 +90,10 @@ export async function POST(req: NextRequest) {
       LIMIT 1
     `;
 
+    console.log('[API] Plan lookup result:', plan ? { network: plan.network, network_id: plan.network_id, plan_id: plan.plan_id, selling_price: plan.selling_price } : null);
+
     if (!plan) {
+      console.log('[API] Plan not found for code:', planCode);
       return NextResponse.json({ error: `Plan not found for code ${planCode}` }, { status: 400 });
     }
 
@@ -92,8 +102,11 @@ export async function POST(req: NextRequest) {
     const developerPrice = toAmount(appPrice * (1 - discountPercent / 100));
     const balance = Number(auth.user.wallet_balance || 0);
 
+    console.log('[API] Price calculation:', { appPrice, discountPercent, developerPrice, currentBalance: balance });
+
     // Check balance for every request.
     if (balance < developerPrice) {
+      console.log('[API] Insufficient balance:', { balance, required: developerPrice });
       await sql`
         INSERT INTO developer_api_transactions (
           user_id, api_key_id, transaction_id, endpoint, request_payload, response_data,
@@ -146,6 +159,8 @@ export async function POST(req: NextRequest) {
       RETURNING id
     `;
 
+    console.log('[API] Transaction created:', txn?.id);
+
     const proxyUrl = process.env.AMIGO_PROXY_URL || 'https://amigo.ng/api';
     const apiKey = process.env.AMIGO_API_KEY;
     if (!apiKey) throw new Error('AMIGO_API_KEY not configured');
@@ -156,6 +171,7 @@ export async function POST(req: NextRequest) {
 
     let amigoData: any;
     try {
+      console.log('[API] Calling Amigo with:', { network: plan.network_id, phone: phoneNumber, plan: plan.plan_id });
       const amigoRes = await fetch(`${proxyUrl}/data/`, {
         method: 'POST',
         signal: controller.signal,
@@ -172,13 +188,16 @@ export async function POST(req: NextRequest) {
         }),
       });
       amigoData = await amigoRes.json();
-    } catch {
+      console.log('[API] Amigo response:', { success: amigoData?.success, reference: amigoData?.reference, message: amigoData?.message });
+    } catch (err) {
+      console.error('[API] Amigo fetch error:', err);
       amigoData = { success: false, message: 'Network error contacting delivery service' };
     } finally {
       clearTimeout(timeout);
     }
 
     if (!amigoData?.success) {
+      console.log('[API] Amigo failed, rolling back transaction:', txn.id);
       await sql`UPDATE transactions SET status = 'failed' WHERE id = ${txn.id}`;
       await sql`
         INSERT INTO developer_api_transactions (
@@ -201,6 +220,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Deduct balance for every request.
+    console.log('[API] Deducting balance:', { userId: auth.user.id, amount: developerPrice });
     const [balanceUpdate] = await sql`
       UPDATE users
       SET wallet_balance = wallet_balance - ${developerPrice},
@@ -209,7 +229,10 @@ export async function POST(req: NextRequest) {
       RETURNING wallet_balance
     `;
 
+    console.log('[API] Balance update result:', balanceUpdate ? { newBalance: balanceUpdate.wallet_balance } : 'FAILED - rows not updated');
+
     if (!balanceUpdate) {
+      console.log('[API] Balance deduction failed, rolling back transaction:', txn.id);
       await sql`UPDATE transactions SET status = 'failed' WHERE id = ${txn.id}`;
       await sql`
         INSERT INTO developer_api_transactions (
@@ -246,6 +269,7 @@ export async function POST(req: NextRequest) {
     };
 
     // Update transaction to success
+    console.log('[API] Updating transaction to success:', txn.id);
     await sql`
       UPDATE transactions
       SET status = 'success',
@@ -255,6 +279,7 @@ export async function POST(req: NextRequest) {
     `;
 
     // Log to developer_api_transactions
+    console.log('[API] Logging to developer_api_transactions');
     await sql`
       INSERT INTO developer_api_transactions (
         user_id, api_key_id, transaction_id, endpoint, request_payload, response_data,
@@ -269,12 +294,15 @@ export async function POST(req: NextRequest) {
     `;
 
     // Send push notification for every successful request.
+    console.log('[API] Sending push notification');
     await sendApiDataPurchaseAlert({
       userId: auth.user.id,
       planLabel: `${plan.data_size} ${plan.network}`,
       phoneNumber,
       amount: developerPrice,
     });
+
+    console.log('[API] Request completed successfully:', { transactionId: txn.id, newBalance });
 
     // Return SaukiMart-formatted response
     return NextResponse.json({
@@ -288,9 +316,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
+      console.error('[API] Request timeout:', err.message);
       return NextResponse.json({ error: 'Request timeout contacting delivery service', status: 'timeout' }, { status: 408 });
     }
-    console.error('Developer purchase API error:', err);
+    console.error('[API] Unhandled error:', err);
     return NextResponse.json({ error: 'Internal server error processing purchase', status: 'server_error' }, { status: 500 });
   }
 }
