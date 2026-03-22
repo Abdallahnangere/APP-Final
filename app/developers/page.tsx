@@ -10,7 +10,7 @@ type DevUser = {
 };
 type DevKey = { id: string; prefix: string; last4: string; isActive: boolean; createdAt: string; lastUsedAt?: string; preview: string; };
 type DevPlan = { id: string; code: string; network: string; networkId: number; planId: number; dataSize: string; validity: string; appPrice: number; developerPrice: number; };
-type DevTx = { id: string; status: string; phoneNumber: string; network: string; planCode: string; developerPrice: number; appPrice: number; message: string; createdAt: string; };
+type DevTx = { id: string; status: string; phoneNumber: string; network: string; planCode: string; planName?: string; developerPrice: number; appPrice: number; message: string; createdAt: string; };
 type DepositRow = { id: string; amount: number; senderName: string; narration: string; status: string; createdAt: string; };
 
 /* ─── HELPERS ─── */
@@ -254,8 +254,8 @@ function PinInput({ value, onChange, label }: { value: string; onChange: (v: str
             onKeyDown={e => handleKey(i, e)}
             style={{
               width: 56, height: 60, textAlign: 'center', fontSize: 26, fontWeight: 700,
-              borderRadius: 14, border: `2px solid ${digits[i] ? 'rgba(139,92,246,.6)' : 'rgba(255,255,255,.1)'}`,
-              background: digits[i] ? 'rgba(139,92,246,.1)' : 'rgba(255,255,255,.04)',
+              borderRadius: 14, border: `2px solid ${digits[i] ? 'rgba(0,113,227,.5)' : 'rgba(17,24,39,.18)'}`,
+              background: digits[i] ? 'rgba(0,113,227,.08)' : '#FFFFFF',
               color: C.text, transition: 'all .15s', outline: 'none',
             }}
           />
@@ -272,7 +272,7 @@ function CopyBtn({ text, label }: { text: string; label?: string }) {
     navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
   };
   return (
-    <button onClick={copy} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: copied ? 'rgba(52,211,153,.12)' : 'rgba(255,255,255,.06)', border: `1px solid ${copied ? 'rgba(52,211,153,.3)' : 'rgba(255,255,255,.08)'}`, color: copied ? C.green : C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all .2s' }}>
+    <button onClick={copy} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: copied ? 'rgba(52,211,153,.12)' : 'rgba(15,23,42,.04)', border: `1px solid ${copied ? 'rgba(52,211,153,.3)' : 'rgba(15,23,42,.14)'}`, color: copied ? C.green : C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all .2s' }}>
       {copied ? Ic.check() : Ic.copy()}
       {label ? (copied ? 'Copied!' : label) : (copied ? 'Copied!' : 'Copy')}
     </button>
@@ -302,7 +302,7 @@ export default function DevelopersPage() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
   const [rotatingKey, setRotatingKey] = useState(false);
-  const [docLang, setDocLang] = useState<'curl' | 'node' | 'php' | 'python' | 'go' | 'java'>('curl');
+  const [docLang, setDocLang] = useState<'curl' | 'node' | 'nextjs' | 'php' | 'python' | 'go' | 'java'>('curl');
 
   /* register form */
   const [regForm, setRegForm] = useState({ firstName: '', lastName: '', phone: '', pin: '', confirmPin: '' });
@@ -453,6 +453,32 @@ const result = await fetch(\`\${BASE}/api/v1/developer/purchase-data\`, {
 }).then(r => r.json());
 
 console.log(result);`,
+    nextjs: `// app/api/purchase/route.ts (Next.js App Router)
+import { NextRequest, NextResponse } from 'next/server';
+
+const BASE = '${baseUrl}';
+const API_KEY = process.env.SAUKIMART_API_KEY!;
+
+export async function POST(req: NextRequest) {
+  const { phoneNumber, planCode } = await req.json();
+
+  const response = await fetch(\`\${BASE}/api/v1/developer/purchase-data\`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+    },
+    body: JSON.stringify({
+      phoneNumber,
+      planCode,
+      idempotencyKey: crypto.randomUUID(),
+    }),
+    cache: 'no-store',
+  });
+
+  const result = await response.json();
+  return NextResponse.json(result, { status: response.status });
+}`,
     php: `<?php
 $apiKey = '${demoKey}';
 $base   = '${baseUrl}';
@@ -768,18 +794,18 @@ public class SaukiMartAPI {
               <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 900, letterSpacing: '-.03em' }}>Start in under 5 minutes</h2>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, justifyContent: 'center' }}>
-              {(['curl', 'node', 'php', 'python', 'go', 'java'] as const).map(l => (
-                <button key={l} className={`tab${docLang === l ? ' active' : ''}`} onClick={() => setDocLang(l)} style={{ textTransform: 'uppercase', fontSize: 11, fontWeight: 700, letterSpacing: '.06em' }}>{l === 'node' ? 'Node.js' : l === 'curl' ? 'cURL' : l.charAt(0).toUpperCase() + l.slice(1)}</button>
+              {(['curl', 'node', 'nextjs', 'php', 'python', 'go', 'java'] as const).map(l => (
+                <button key={l} className={`tab${docLang === l ? ' active' : ''}`} onClick={() => setDocLang(l)} style={{ textTransform: 'uppercase', fontSize: 11, fontWeight: 700, letterSpacing: '.06em' }}>{l === 'node' ? 'Node.js' : l === 'nextjs' ? 'Next.js' : l === 'curl' ? 'cURL' : l.charAt(0).toUpperCase() + l.slice(1)}</button>
               ))}
             </div>
             <div className="code-block" style={{ fontSize: 13 }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
                 <CopyBtn text={codeSamples[docLang]} label="Copy code" />
               </div>
-              <pre style={{ color: '#E2E8F0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              <pre style={{ color: '#1F2937', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                 {codeSamples[docLang].split('\n').map((line, i) => {
                   const comment = line.trim().startsWith('#') || line.trim().startsWith('//');
-                  return <span key={i} style={{ color: comment ? C.muted : line.includes("'") || line.includes('"') ? '#86EFAC' : line.includes('curl') || line.includes('const') || line.includes('import') || line.includes('func') || line.includes('public') ? '#93C5FD' : '#E2E8F0' }}>{line}{'\n'}</span>;
+                  return <span key={i} style={{ color: comment ? '#6B7280' : line.includes("'") || line.includes('"') ? '#047857' : line.includes('curl') || line.includes('const') || line.includes('import') || line.includes('func') || line.includes('public') ? '#1D4ED8' : '#1F2937' }}>{line}{'\n'}</span>;
                 })}
               </pre>
             </div>
@@ -825,7 +851,7 @@ public class SaukiMartAPI {
           </section>
 
           {/* FOOTER */}
-          <footer style={{ borderTop: '1px solid rgba(255,255,255,.06)', padding: '32px 24px', textAlign: 'center' }}>
+          <footer style={{ borderTop: '1px solid rgba(15,23,42,.08)', padding: '32px 24px', textAlign: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
               <img src="/images/logo.png" alt="SaukiMart" width={20} height={20} style={{ borderRadius: 5 }} />
               <span style={{ fontWeight: 700, fontSize: 16 }}>SaukiMart API</span>
@@ -950,13 +976,13 @@ public class SaukiMartAPI {
                         <p style={{ fontWeight: 800, fontSize: 15 }}>Active API Key</p>
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => setShowKey(v => !v)} style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.08)', color: C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <button onClick={() => setShowKey(v => !v)} style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(15,23,42,.04)', border: '1px solid rgba(15,23,42,.14)', color: C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                           {showKey ? Ic.eyeOff() : Ic.eye()} {showKey ? 'Hide' : 'Show'}
                         </button>
                         <CopyBtn text={activeKey} label="Copy key" />
                       </div>
                     </div>
-                    <div style={{ fontFamily: 'monospace', fontSize: 13, background: '#0D0D15', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(139,92,246,.15)', color: showKey ? C.green : C.muted, letterSpacing: '.05em', wordBreak: 'break-all' }}>
+                    <div style={{ fontFamily: 'monospace', fontSize: 13, background: '#F7F8FA', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(17,24,39,.14)', color: showKey ? '#047857' : '#111827', letterSpacing: '.05em', wordBreak: 'break-all' }}>
                       {showKey ? activeKey : activeKey.substring(0, 12) + '•'.repeat(Math.max(0, activeKey.length - 20)) + activeKey.slice(-4)}
                     </div>
                   </div>
@@ -974,12 +1000,12 @@ public class SaukiMartAPI {
                       <p style={{ fontSize: 14 }}>No API calls yet. Start using your key!</p>
                     </div>
                   ) : devTxns.slice(0, 5).map((tx, i) => (
-                    <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: i < Math.min(devTxns.length, 5) - 1 ? `1px solid rgba(255,255,255,.04)` : undefined }}>
+                    <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: i < Math.min(devTxns.length, 5) - 1 ? `1px solid rgba(15,23,42,.08)` : undefined }}>
                       <div style={{ width: 36, height: 36, borderRadius: 10, background: tx.status === 'success' ? 'rgba(52,211,153,.1)' : 'rgba(248,113,113,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {tx.status === 'success' ? Ic.check(C.green, 16) : Ic.x(C.red, 15)}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 700, fontSize: 13, color: C.text }}>{tx.network} · {tx.planCode} → {tx.phoneNumber}</p>
+                        <p style={{ fontWeight: 700, fontSize: 13, color: C.text }}>{tx.planName || `${tx.network} plan`} → {tx.phoneNumber}</p>
                         <p style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{fmtDate(tx.createdAt)}</p>
                       </div>
                       <div style={{ textAlign: 'right' }}>
@@ -1017,7 +1043,7 @@ public class SaukiMartAPI {
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => setShowKey(v => !v)} style={{ padding: '7px 14px', borderRadius: 8, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.08)', color: C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <button onClick={() => setShowKey(v => !v)} style={{ padding: '7px 14px', borderRadius: 8, background: 'rgba(15,23,42,.04)', border: '1px solid rgba(15,23,42,.14)', color: C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                           {showKey ? Ic.eyeOff() : Ic.eye()} {showKey ? 'Hide' : 'Reveal'}
                         </button>
                         <CopyBtn text={activeKey} label="Copy" />
@@ -1037,7 +1063,7 @@ public class SaukiMartAPI {
                 <div className="card" style={{ padding: '20px 22px' }}>
                   <p style={{ fontWeight: 700, fontSize: 13, color: C.muted, letterSpacing: '.04em', textTransform: 'uppercase', marginBottom: 16 }}>Key History</p>
                   {keys.length === 0 ? <p style={{ color: C.muted, fontSize: 14 }}>No keys found.</p> : keys.map((k, i) => (
-                    <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: i < keys.length - 1 ? `1px solid rgba(255,255,255,.04)` : undefined }}>
+                    <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: i < keys.length - 1 ? `1px solid rgba(15,23,42,.08)` : undefined }}>
                       <div style={{ flex: 1 }}>
                         <p style={{ fontFamily: 'monospace', fontSize: 13, color: k.isActive ? C.green : C.muted }}>{k.preview}</p>
                         <p style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>Created {fmtDate(k.createdAt)} · {k.lastUsedAt ? `Last used ${fmtDate(k.lastUsedAt)}` : 'Never used'}</p>
@@ -1132,7 +1158,7 @@ public class SaukiMartAPI {
                         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
                           <CopyBtn text={ep.response} />
                         </div>
-                        <pre style={{ color: '#E2E8F0', whiteSpace: 'pre-wrap' }}>{ep.response}</pre>
+                        <pre style={{ color: '#1F2937', whiteSpace: 'pre-wrap' }}>{ep.response}</pre>
                       </div>
                     </div>
                   </div>
@@ -1142,15 +1168,15 @@ public class SaukiMartAPI {
                 <div className="card" style={{ padding: '24px', marginBottom: 20 }}>
                   <h3 style={{ fontWeight: 800, fontSize: 16, marginBottom: 18 }}>Code Examples</h3>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-                    {(['curl', 'node', 'php', 'python', 'go', 'java'] as const).map(l => (
-                      <button key={l} className={`tab${docLang === l ? ' active' : ''}`} onClick={() => setDocLang(l)} style={{ textTransform: 'uppercase', fontSize: 11, fontWeight: 700, letterSpacing: '.06em' }}>{l === 'node' ? 'Node.js' : l === 'curl' ? 'cURL' : l.charAt(0).toUpperCase() + l.slice(1)}</button>
+                    {(['curl', 'node', 'nextjs', 'php', 'python', 'go', 'java'] as const).map(l => (
+                      <button key={l} className={`tab${docLang === l ? ' active' : ''}`} onClick={() => setDocLang(l)} style={{ textTransform: 'uppercase', fontSize: 11, fontWeight: 700, letterSpacing: '.06em' }}>{l === 'node' ? 'Node.js' : l === 'nextjs' ? 'Next.js' : l === 'curl' ? 'cURL' : l.charAt(0).toUpperCase() + l.slice(1)}</button>
                     ))}
                   </div>
                   <div className="code-block">
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
                       <CopyBtn text={codeSamples[docLang]} label="Copy code" />
                     </div>
-                    <pre style={{ color: '#E2E8F0', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13 }}>{codeSamples[docLang]}</pre>
+                    <pre style={{ color: '#111827', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13 }}>{codeSamples[docLang]}</pre>
                   </div>
                 </div>
 
@@ -1166,7 +1192,7 @@ public class SaukiMartAPI {
                       { code: 202, msg: 'processing', desc: 'Identical idempotency key is still processing. Wait and poll.' },
                       { code: 408, msg: 'timeout', desc: 'Delivery service timed out. Check developer activity and retry with new idempotency key.' },
                     ].map(e => (
-                      <div key={e.code + e.msg} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 10, background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.04)' }}>
+                      <div key={e.code + e.msg} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 10, background: 'rgba(15,23,42,.03)', border: '1px solid rgba(15,23,42,.08)' }}>
                         <span style={{ padding: '3px 9px', borderRadius: 6, fontSize: 12, fontWeight: 800, background: e.code === 400 || e.code === 401 ? 'rgba(248,113,113,.12)' : e.code === 202 ? 'rgba(251,191,36,.12)' : 'rgba(96,165,250,.12)', color: e.code === 400 || e.code === 401 ? C.red : e.code === 202 ? C.yellow : C.blue, flexShrink: 0 }}>{e.code}</span>
                         <div>
                           <code style={{ fontFamily: 'monospace', fontSize: 13, color: C.purple }}>{e.msg}</code>
@@ -1226,7 +1252,7 @@ public class SaukiMartAPI {
                       <p>No deposits yet. Transfer to your account number above.</p>
                     </div>
                   ) : deposits.map((d, i) => (
-                    <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: i < deposits.length - 1 ? `1px solid rgba(255,255,255,.04)` : undefined }}>
+                    <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: i < deposits.length - 1 ? `1px solid rgba(15,23,42,.08)` : undefined }}>
                       <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(52,211,153,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {Ic.deposit()}
                       </div>
@@ -1270,7 +1296,7 @@ public class SaukiMartAPI {
                         {tx.status === 'success' ? Ic.check(C.green, 16) : Ic.x(C.red, 15)}
                       </div>
                       <div style={{ flex: '2', minWidth: 0 }}>
-                        <p style={{ fontWeight: 700, fontSize: 13, color: C.text }}>{tx.network} · {tx.planCode}</p>
+                        <p style={{ fontWeight: 700, fontSize: 13, color: C.text }}>{tx.planName || `${tx.network} plan`}</p>
                         <p style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>→ {tx.phoneNumber}</p>
                       </div>
                       <div style={{ flex: '1', display: 'none' }} className="hide-mobile" />

@@ -29,6 +29,9 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: 'https://www.saukimart.online',
+    types: {
+      'application/rss+xml': 'https://www.saukimart.online/sitemap.xml',
+    },
   },
   openGraph: {
     title: 'SaukiMart — Instant Data, Airtime & Devices in Nigeria',
@@ -139,6 +142,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="description" content="Buy MTN, Airtel & Glo data bundles instantly. Premium devices, best prices, secure mobile wallet. Nigeria's fastest mobile commerce platform." />
         <meta name="geo.region" content="NG" />
         <meta name="geo.placename" content="Nigeria" />
+        <meta name="application-name" content="SaukiMart" />
+        <meta name="apple-mobile-web-app-title" content="SaukiMart" />
+        <meta name="format-detection" content="telephone=no" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org",
           "@graph": [
@@ -184,6 +190,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }
           ]
         }) }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;if(standalone&&window.location.pathname==='/'){window.location.replace('/app');}}catch(_e){}})();`,
+          }}
+        />
       </head>
       <body style={{ margin: 0, padding: 0 }}>
         <AppUpdateModal />

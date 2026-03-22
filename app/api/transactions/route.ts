@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
         SELECT
           dat.id,
           'api_purchase' AS type,
-          (dat.network || ' - ' || dat.plan_code || ' to ' || dat.phone_number) AS description,
+          (dat.network || ' - ' || COALESCE(dp.data_size || ' (' || dp.validity || ')', dat.plan_code) || ' to ' || dat.phone_number) AS description,
           dat.developer_price AS amount,
           dat.status,
           dat.network,
@@ -82,9 +82,9 @@ export async function GET(req: NextRequest) {
             'amount', dat.developer_price,
             'date', dat.created_at,
             'type', 'api_purchase',
-            'productName', dat.network || ' - ' || dat.plan_code,
-            'itemName', dat.plan_code,
-            'description', dat.network || ' to ' || dat.phone_number,
+            'productName', dat.network || ' - ' || COALESCE(dp.data_size || ' (' || dp.validity || ')', dat.plan_code),
+            'itemName', COALESCE(dp.data_size || ' (' || dp.validity || ')', dat.plan_code),
+            'description', dat.network || ' ' || COALESCE(dp.data_size || ' (' || dp.validity || ')', dat.plan_code) || ' to ' || dat.phone_number,
             'userName', 'API Call',
             'userPhone', dat.phone_number,
             'deliveryAddress', dat.phone_number,
@@ -94,6 +94,9 @@ export async function GET(req: NextRequest) {
           ) AS receipt_data,
           dat.created_at
         FROM developer_api_transactions dat
+        LEFT JOIN data_plans dp
+          ON dp.network_id = split_part(dat.plan_code, '-', 1)::INT
+         AND dp.plan_id = split_part(dat.plan_code, '-', 2)::INT
         WHERE dat.user_id = ${payload.userId as string}
       ) AS activity
       ORDER BY created_at DESC LIMIT ${limit}

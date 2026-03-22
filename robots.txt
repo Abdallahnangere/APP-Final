@@ -2,4 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /admin/
+Disallow: /zmytcd
+Disallow: /zmytcd/
 Sitemap: https://www.saukimart.online/sitemap.xml

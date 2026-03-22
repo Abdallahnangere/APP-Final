@@ -37,6 +37,7 @@ type DeveloperApiTx = {
   phoneNumber: string;
   network: string;
   planCode: string;
+  planName?: string;
   developerPrice: number;
   appPrice: number;
   message?: string;
@@ -3020,7 +3021,7 @@ const purchase = await sauki.buyData({
                           {t.status==='success'?'✓':'✕'}
                         </div>
                         <div>
-                          <p style={{ fontSize:13,fontWeight:800,color:'var(--text)',margin:0 }}>{t.network} · {t.planCode}</p>
+                          <p style={{ fontSize:13,fontWeight:800,color:'var(--text)',margin:0 }}>{t.planName || `${t.network} ${t.planCode}`}</p>
                           <p style={{ fontSize:11,color:'var(--text-secondary)',margin:'2px 0 0',fontWeight:600 }}>{t.phoneNumber}</p>
                         </div>
                       </div>

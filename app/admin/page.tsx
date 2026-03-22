@@ -683,26 +683,29 @@ export default function AdminPage() {
   if (!authed) return (
     <>
       <GlobalStyle />
-      <div className="admin-shell" style={{ height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'transparent',padding:24 }}>
-        <Card style={{ width:460,padding:'44px 40px',textAlign:'center',position:'relative',overflow:'hidden' }}>
-          <div style={{ position:'absolute', inset:'auto -80px -90px auto', width:220, height:220, borderRadius:'50%', background:'radial-gradient(circle, rgba(91,179,255,.18), transparent 68%)' }} />
-          <div style={{ width:68,height:68,borderRadius:22,background:'linear-gradient(135deg,#1f4384,#5bb3ff)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,margin:'0 auto 18px',boxShadow:'0 18px 42px rgba(13,45,95,.48)' }}>◆</div>
-          <p style={{ fontSize:11,fontWeight:800,color:MUTED,marginBottom:8,letterSpacing:'0.18em',textTransform:'uppercase' }}>SaukiMart executive console</p>
-          <h1 style={{ fontSize:32,fontWeight:900,color:TEXT,marginBottom:8,letterSpacing:'-0.04em' }}>Admin Control Room</h1>
-          <p style={{ color:MUTED,fontSize:14,marginBottom:28,lineHeight:1.7 }}>Authenticated access to revenue, operations, customer support, notifications, and platform governance.</p>
-          {error && <div style={{ padding:'11px 14px',borderRadius:12,background:'rgba(172,48,72,.16)',color:'#ffc2cd',fontSize:14,marginBottom:14,border:'1px solid rgba(255,127,138,.18)' }}>{error}</div>}
+      <div className="admin-shell" style={{ height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(180deg,#F4F7FB 0%,#ECF2FA 100%)',padding:24 }}>
+        <div style={{ width:'min(460px, 96vw)',padding:'44px 40px',textAlign:'left',position:'relative',overflow:'hidden',borderRadius:24,background:'#FFFFFF',border:'1px solid rgba(15,23,42,.08)',boxShadow:'0 28px 70px rgba(15,23,42,.14)' }}>
+          <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:18 }}>
+            <img src="/images/logo-sm.png" alt="SaukiMart" style={{ width:42,height:42,borderRadius:12,objectFit:'cover' }} />
+            <div>
+              <p style={{ fontSize:11,fontWeight:800,color:'#5E6A83',letterSpacing:'0.14em',textTransform:'uppercase' }}>SaukiMart Executive Console</p>
+              <h1 style={{ fontSize:28,fontWeight:900,color:'#111827',margin:'4px 0 0',letterSpacing:'-0.03em' }}>Admin Sign In</h1>
+            </div>
+          </div>
+          <p style={{ color:'#667085',fontSize:14,marginBottom:24,lineHeight:1.7 }}>Secure access to operations, transactions, developer activity, support and platform controls.</p>
+          {error && <div style={{ padding:'11px 14px',borderRadius:12,background:'rgba(220,38,38,.08)',color:'#B91C1C',fontSize:14,marginBottom:14,border:'1px solid rgba(220,38,38,.2)' }}>{error}</div>}
           <input type="password" value={adminPass} onChange={e=>setAdminPass(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
-            placeholder="Admin password" style={{ width:'100%',padding:'15px 16px',borderRadius:14,border:`1px solid ${BORDER}`,fontSize:15,marginBottom:14,background:'rgba(255,255,255,.03)',color:TEXT }} />
-          <Btn onClick={login} style={{ width:'100%',justifyContent:'center',padding:'14px' }}>{loading?'Signing in…':'Sign In →'}</Btn>
+            placeholder="Admin password" style={{ width:'100%',padding:'15px 16px',borderRadius:14,border:'1px solid rgba(15,23,42,.16)',fontSize:15,marginBottom:14,background:'#FFFFFF',color:'#0F172A' }} />
+          <button onClick={login} style={{ width:'100%',justifyContent:'center',padding:'14px',borderRadius:14,background:'linear-gradient(135deg,#0B72E7,#075FBE)',color:'#FFFFFF',fontSize:15,fontWeight:800,border:'none',cursor:'pointer',boxShadow:'0 12px 28px rgba(7,95,190,.28)' }}>{loading?'Signing in...':'Sign In'}</button>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginTop:20 }}>
-            {['Finance','Support','Growth'].map((item) => (
-              <div key={item} style={{ border:`1px solid ${BORDER}`,borderRadius:14,padding:'10px 8px',background:'rgba(255,255,255,.025)' }}>
-                <p style={{ fontSize:11,color:MUTED,textTransform:'uppercase',letterSpacing:'0.08em' }}>{item}</p>
-                <p className="admin-code" style={{ fontSize:12,color:TEXT,marginTop:4 }}>secured</p>
+            {['Finance','Support','Security'].map((item) => (
+              <div key={item} style={{ border:'1px solid rgba(15,23,42,.1)',borderRadius:14,padding:'10px 8px',background:'#F8FAFC' }}>
+                <p style={{ fontSize:11,color:'#64748B',textTransform:'uppercase',letterSpacing:'0.08em' }}>{item}</p>
+                <p className="admin-code" style={{ fontSize:12,color:'#111827',marginTop:4 }}>verified</p>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       </div>
     </>
   );
