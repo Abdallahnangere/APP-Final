@@ -839,6 +839,7 @@ export default function AppPage() {
   const [withdrawError, setWithdrawError] = useState('');
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [withdrawResolving, setWithdrawResolving] = useState(false);
+  const [bankSearch, setBankSearch] = useState('');
 
   // Transfer states
   const [transferPhone, setTransferPhone] = useState('');
@@ -1481,6 +1482,7 @@ export default function AppPage() {
       if (!res.ok) throw new Error(data.error || 'Withdrawal request failed');
 
       setWithdrawForm({ amount:'', bankCode:'', bankName:'', accountNumber:'', accountName:'' });
+      setBankSearch('');
       await refreshUser();
       await loadEarnData();
       await loadHomeData();
@@ -2716,20 +2718,49 @@ export default function AppPage() {
               </div>
               <div>
                 <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:8,letterSpacing:'0.06em',textTransform:'uppercase' }}>Bank</label>
-                <select value={withdrawForm.bankCode} onChange={e=>{
-                  const selected = banks.find((bank) => bank.code === e.target.value);
-                  setWithdrawForm(prev => ({ ...prev, bankCode: e.target.value, bankName: selected?.name || '', accountName: '' }));
-                }} style={{ width:'100%',padding:'13px 14px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text)',fontSize:15,fontWeight:700 }}>
-                  <option value="">Select bank</option>
-                  {banks.map((bank) => <option key={bank.code} value={bank.code}>{bank.name}</option>)}
-                </select>
+                <div style={{ position:'relative' }}>
+                  <input
+                    value={bankSearch}
+                    onChange={e => setBankSearch(e.target.value)}
+                    placeholder={withdrawForm.bankName || '🔍 Search bank...'}
+                    style={{ width:'100%',padding:'13px 14px',borderRadius:withdrawForm.bankCode && !bankSearch ? 12 : '12px 12px 0 0',border:'1px solid var(--border)',borderBottom: bankSearch ? '1px solid rgba(0,113,227,.25)' : '1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text)',fontSize:15,fontWeight:700,boxSizing:'border-box' }}
+                  />
+                  {bankSearch && (
+                    <div style={{ position:'absolute',top:'100%',left:0,right:0,background:'var(--card)',border:'1px solid var(--border)',borderTop:'none',borderRadius:'0 0 12px 12px',maxHeight:220,overflowY:'auto',zIndex:50,boxShadow:'0 8px 24px rgba(0,0,0,.12)' }}>
+                      {banks.filter(b => b.name.toLowerCase().includes(bankSearch.toLowerCase())).slice(0,20).map(b => (
+                        <div key={b.code} onClick={() => {
+                          setWithdrawForm(prev => ({ ...prev, bankCode: b.code, bankName: b.name, accountName: '' }));
+                          setBankSearch('');
+                        }} style={{ padding:'11px 14px',fontSize:14,fontWeight:600,color:'var(--text)',cursor:'pointer',borderBottom:'1px solid var(--border)' }}
+                          onMouseEnter={e => (e.currentTarget.style.background='rgba(0,113,227,.08)')}
+                          onMouseLeave={e => (e.currentTarget.style.background='')}
+                        >{b.name}</div>
+                      ))}
+                      {banks.filter(b => b.name.toLowerCase().includes(bankSearch.toLowerCase())).length === 0 && (
+                        <div style={{ padding:'14px',fontSize:13,color:'var(--text-secondary)',textAlign:'center' }}>No bank found</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {withdrawForm.bankName && !bankSearch && (
+                  <p style={{ fontSize:12,color:'#30D158',fontWeight:700,marginTop:5 }}>✓ {withdrawForm.bankName}</p>
+                )}
               </div>
               <div style={{ display:'grid',gridTemplateColumns:'1fr auto',gap:10,alignItems:'end' }}>
                 <div>
                   <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:8,letterSpacing:'0.06em',textTransform:'uppercase' }}>Account Number</label>
-                  <input value={withdrawForm.accountNumber} onChange={e=>setWithdrawForm(prev=>({ ...prev, accountNumber:e.target.value.replace(/\D/g,'').slice(0,10), accountName:'' }))} placeholder="0123456789" inputMode="numeric" style={{ width:'100%',padding:'13px 14px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text)',fontSize:16,fontWeight:700,letterSpacing:'0.08em' }} />
+                  <input value={withdrawForm.accountNumber} onChange={e=>{
+                    const v = e.target.value.replace(/\D/g,'').slice(0,10);
+                    setWithdrawForm(prev=>({ ...prev, accountNumber:v, accountName:'' }));
+                    if (v.length === 10 && withdrawForm.bankCode) {
+                      setTimeout(() => {
+                        const btn = document.getElementById('resolve-btn') as HTMLButtonElement | null;
+                        btn?.click();
+                      }, 80);
+                    }
+                  }} placeholder="0123456789" inputMode="numeric" style={{ width:'100%',padding:'13px 14px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text)',fontSize:16,fontWeight:700,letterSpacing:'0.08em' }} />
                 </div>
-                <button onClick={resolveWithdrawalAccount} disabled={withdrawResolving || !withdrawForm.bankCode || withdrawForm.accountNumber.length !== 10} style={{ height:48,padding:'0 16px',borderRadius:12,border:'1px solid rgba(0,113,227,.18)',background:withdrawResolving ? 'rgba(0,113,227,.08)' : 'rgba(0,113,227,.12)',color:BLUE,fontSize:13,fontWeight:800,cursor:withdrawResolving ? 'wait' : 'pointer' }}>{withdrawResolving ? 'Checking...' : 'Resolve'}</button>
+                <button id="resolve-btn" onClick={resolveWithdrawalAccount} disabled={withdrawResolving || !withdrawForm.bankCode || withdrawForm.accountNumber.length !== 10} style={{ height:48,padding:'0 16px',borderRadius:12,border:'1px solid rgba(0,113,227,.18)',background:withdrawResolving ? 'rgba(0,113,227,.08)' : 'rgba(0,113,227,.12)',color:BLUE,fontSize:13,fontWeight:800,cursor:withdrawResolving ? 'wait' : 'pointer' }}>{withdrawResolving ? 'Checking...' : 'Resolve'}</button>
               </div>
               <div>
                 <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:8,letterSpacing:'0.06em',textTransform:'uppercase' }}>Account Name</label>

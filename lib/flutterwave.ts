@@ -54,8 +54,13 @@ export async function listBanks(country = 'NG') {
 }
 
 export async function resolveAccountNumber(accountNumber: string, accountBank: string) {
-  const res = await fetch(`${FLW_BASE}/accounts/resolve?account_number=${encodeURIComponent(accountNumber)}&account_bank=${encodeURIComponent(accountBank)}`, {
-    headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
+  const res = await fetch(`${FLW_BASE}/accounts/resolve`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ account_number: accountNumber, account_bank: accountBank }),
   });
   return res.json();
 }
