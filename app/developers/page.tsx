@@ -360,6 +360,13 @@ export default function DevelopersPage() {
       localStorage.setItem('dev_portal_user', JSON.stringify(d.user));
       setToken(d.token); setUser(d.user);
       setSuccess('Welcome back!');
+      fetch('/api/developer/portal-access', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${d.token}`,
+          'Content-Type': 'application/json',
+        },
+      }).catch(() => {});
       if (d.user.isDeveloper) loadDevData(d.token);
     } catch { setError('Network error. Please try again.'); }
     finally { setLoading(false); }
@@ -417,7 +424,7 @@ export default function DevelopersPage() {
   };
 
   /* ─── DOC CODE SAMPLES ─── */
-  const baseUrl = 'https://www.saukimart.online';
+  const baseUrl = 'https://saukimart.online';
   const demoKey = activeKey || 'sm_live_XXXX_...your_key_here';
   const codeSamples: Record<typeof docLang, string> = {
     curl: `# 1. Fetch available data plans
@@ -1117,7 +1124,7 @@ public class SaukiMartAPI {
             {dashTab === 'docs' && (
               <div className="fu">
                 <h2 style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-.02em', marginBottom: 8 }}>API Documentation</h2>
-                <p style={{ fontSize: 14, color: C.muted, marginBottom: 32, lineHeight: 1.6 }}>Base URL: <code style={{ fontFamily: 'monospace', color: C.purple }}>https://www.saukimart.online</code></p>
+                <p style={{ fontSize: 14, color: C.muted, marginBottom: 32, lineHeight: 1.6 }}>Base URL: <code style={{ fontFamily: 'monospace', color: C.purple }}>https://saukimart.online</code></p>
 
                 {/* endpoint cards */}
                 {[

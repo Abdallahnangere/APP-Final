@@ -1,8 +1,8 @@
 export default function Head() {
   const title = 'SaukiMart Developers | Data API for MTN, Airtel, Glo and 9Mobile';
   const description = 'Get SaukiMart developer API keys, plan pricing, integration docs for Node.js, PHP, Next.js and cURL.';
-  const url = 'https://www.saukimart.online/developers';
-  const image = 'https://www.saukimart.online/developers/opengraph-image';
+  const url = 'https://saukimart.online/developers';
+  const image = 'https://saukimart.online/developers/opengraph-image';
 
   return (
     <>

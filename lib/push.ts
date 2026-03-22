@@ -299,6 +299,64 @@ type ApiDataPurchaseAlertInput = {
   amount: number;
 };
 
+type DeveloperPortalAccessAlertInput = {
+  userId: string;
+  accessedAt?: Date;
+};
+
+export async function sendDeveloperPortalAccessAlert(input: DeveloperPortalAccessAlertInput): Promise<void> {
+  const [user] = await sql`
+    SELECT notifications_enabled
+    FROM users
+    WHERE id = ${input.userId}
+    LIMIT 1
+  `;
+
+  if (!user || user.notifications_enabled === false) return;
+
+  const tokens = await sql`
+    SELECT token
+    FROM user_push_tokens
+    WHERE user_id = ${input.userId}
+      AND is_active = TRUE
+    ORDER BY updated_at DESC
+  `;
+
+  if (!tokens.length) return;
+
+  const accessedAt = input.accessedAt || new Date();
+  const readableTime = accessedAt.toLocaleString('en-NG', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Africa/Lagos',
+  });
+
+  const title = 'Developer Portal Login';
+  const body = `Your developer portal was accessed on ${readableTime}.`;
+
+  const payload = {
+    type: 'developer_portal_access',
+    accessedAt: accessedAt.toISOString(),
+  };
+
+  for (const row of tokens) {
+    const token = String(row.token || '').trim();
+    if (!token) continue;
+
+    try {
+      const result = await sendFcmToToken(token, title, body, payload);
+      if (!result.ok) {
+        const errorCode = result?.json?.error?.details?.[0]?.errorCode || result?.json?.error?.status || '';
+        if (errorCode === 'UNREGISTERED' || errorCode === 'INVALID_ARGUMENT' || result.status === 404) {
+          await deactivateToken(token);
+        }
+      }
+    } catch (err) {
+      console.error('Developer portal access push send failed:', err);
+    }
+  }
+}
+
 export async function sendApiDataPurchaseAlert(input: ApiDataPurchaseAlertInput): Promise<void> {
   const [user] = await sql`
     SELECT notifications_enabled
