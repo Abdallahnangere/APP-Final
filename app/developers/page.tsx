@@ -19,24 +19,30 @@ const fmtDate = (d: string) => new Date(d).toLocaleString('en-NG', { dateStyle: 
 
 /* ─── PALETTE ─── */
 const C = {
-  bg: '#0A0A0F',
-  card: '#12121A',
-  card2: '#1A1A25',
-  border: 'rgba(139,92,246,.18)',
-  text: '#F0F0FF',
-  muted: '#7C7C96',
-  blue: '#60A5FA',
-  green: '#34D399',
-  purple: '#A78BFA',
-  teal: '#22D3EE',
-  orange: '#FB923C',
-  red: '#F87171',
-  yellow: '#FBBF24',
+  bg: '#F5F5F7',
+  card: '#FFFFFF',
+  card2: '#FBFBFD',
+  border: 'rgba(17,24,39,.08)',
+  text: '#1D1D1F',
+  muted: '#6E6E73',
+  blue: '#0A84FF',
+  green: '#34C759',
+  purple: '#0071E3',
+  teal: '#64D2FF',
+  orange: '#FF9F0A',
+  red: '#FF3B30',
+  yellow: '#FFD60A',
 };
 
 /* ─── NETWORK COLORS ─── */
 const NET_COLOR: Record<string, string> = { MTN: '#FBBF24', GLO: '#34D399', AIRTEL: '#F87171', '9MOBILE': '#34D399' };
 const NET_BG: Record<string, string> = { MTN: 'rgba(251,191,36,.12)', GLO: 'rgba(52,211,153,.12)', AIRTEL: 'rgba(248,113,113,.12)', '9MOBILE': 'rgba(52,211,153,.12)' };
+const NETWORK_LOGOS: Record<string, string> = {
+  MTN: '/images/mtn.png',
+  GLO: '/images/glo.png',
+  AIRTEL: '/images/airtel.png',
+  '9MOBILE': '/images/oip.jpg',
+};
 
 /* ─── ICONS ─── */
 const Ic = {
@@ -66,13 +72,13 @@ const Ic = {
 const GS = () => (
   <style>{`
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{color-scheme:dark}
+    :root{color-scheme:light}
     html{scroll-behavior:smooth}
     body{background:${C.bg};color:${C.text};font-family:-apple-system,'SF Pro Display','SF Pro Text',BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-    ::selection{background:rgba(167,139,250,.3);color:#fff}
+    ::selection{background:rgba(10,132,255,.16);color:${C.text}}
     ::-webkit-scrollbar{width:4px;height:4px}
     ::-webkit-scrollbar-track{background:transparent}
-    ::-webkit-scrollbar-thumb{background:rgba(139,92,246,.3);border-radius:4px}
+    ::-webkit-scrollbar-thumb{background:rgba(0,113,227,.32);border-radius:4px}
     button,input{font-family:inherit;outline:none}
     input{background:transparent}
     a{color:inherit;text-decoration:none}
@@ -82,7 +88,7 @@ const GS = () => (
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
     @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
     @keyframes spin{to{transform:rotate(360deg)}}
-    @keyframes glow{0%,100%{box-shadow:0 0 20px rgba(139,92,246,.3)}50%{box-shadow:0 0 40px rgba(139,92,246,.6)}}
+    @keyframes glow{0%,100%{box-shadow:0 8px 28px rgba(0,0,0,.06)}50%{box-shadow:0 10px 34px rgba(0,0,0,.1)}}
     @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
     @keyframes gradientShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
@@ -94,38 +100,39 @@ const GS = () => (
     .btn-primary{
       display:inline-flex;align-items:center;justify-content:center;gap:8px;
       padding:14px 28px;border-radius:12px;font-size:15px;font-weight:700;
-      background:linear-gradient(135deg,#7C3AED,#4F46E5);
+      background:linear-gradient(135deg,#0077ED,#0062CC);
       color:#fff;border:none;cursor:pointer;
       transition:transform .15s,box-shadow .15s,opacity .15s;
-      box-shadow:0 4px 20px rgba(124,58,237,.4);
+      box-shadow:0 8px 24px rgba(0,113,227,.25);
     }
-    .btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 30px rgba(124,58,237,.5)}
-    .btn-primary:active{transform:translateY(0);box-shadow:0 2px 12px rgba(124,58,237,.3)}
+    .btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(0,113,227,.28)}
+    .btn-primary:active{transform:translateY(0);box-shadow:0 6px 16px rgba(0,113,227,.2)}
     .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
     .btn-ghost{
       display:inline-flex;align-items:center;justify-content:center;gap:8px;
       padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;
-      background:rgba(139,92,246,.1);color:${C.purple};
-      border:1px solid rgba(139,92,246,.3);cursor:pointer;
+      background:rgba(0,113,227,.06);color:${C.purple};
+      border:1px solid rgba(0,113,227,.22);cursor:pointer;
       transition:all .15s;
     }
-    .btn-ghost:hover{background:rgba(139,92,246,.18);border-color:rgba(139,92,246,.5)}
+    .btn-ghost:hover{background:rgba(0,113,227,.1);border-color:rgba(0,113,227,.32)}
 
     .card{
       background:${C.card};border-radius:20px;
-      border:1px solid rgba(139,92,246,.12);
+      border:1px solid rgba(17,24,39,.08);
+      box-shadow:0 6px 24px rgba(15,23,42,.04);
       transition:border-color .2s,transform .2s,box-shadow .2s;
     }
-    .card:hover{border-color:rgba(139,92,246,.25)}
+    .card:hover{border-color:rgba(17,24,39,.14);box-shadow:0 10px 28px rgba(15,23,42,.08)}
 
     .tab{
       padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;
       color:${C.muted};cursor:pointer;background:transparent;border:none;
       transition:all .15s;white-space:nowrap;
     }
-    .tab.active{background:rgba(139,92,246,.15);color:${C.purple}}
-    .tab:hover:not(.active){color:${C.text};background:rgba(255,255,255,.04)}
+    .tab.active{background:rgba(0,113,227,.12);color:${C.purple}}
+    .tab:hover:not(.active){color:${C.text};background:rgba(15,23,42,.05)}
 
     .pill{
       display:inline-flex;align-items:center;gap:5px;
@@ -138,14 +145,14 @@ const GS = () => (
 
     .input-field{
       width:100%;padding:14px 16px;border-radius:12px;font-size:15px;
-      background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);
+      background:#FFFFFF;border:1.5px solid rgba(17,24,39,.12);
       color:${C.text};transition:border-color .15s,box-shadow .15s;
     }
-    .input-field:focus{border-color:rgba(139,92,246,.6);box-shadow:0 0 0 3px rgba(139,92,246,.12)}
+    .input-field:focus{border-color:rgba(0,113,227,.6);box-shadow:0 0 0 3px rgba(0,113,227,.12)}
     .input-field::placeholder{color:${C.muted}}
 
     .code-block{
-      background:#0D0D15;border-radius:12px;border:1px solid rgba(139,92,246,.15);
+      background:#FAFAFC;border-radius:12px;border:1px solid rgba(17,24,39,.1);
       padding:16px;font-family:'SF Mono','Fira Code','Cascadia Code',monospace;
       font-size:13px;line-height:1.7;overflow-x:auto;position:relative;
     }
@@ -153,12 +160,12 @@ const GS = () => (
     .gradient-border{
       position:relative;border-radius:20px;
       background:linear-gradient(${C.card},${C.card}) padding-box,
-        linear-gradient(135deg,rgba(139,92,246,.4),rgba(79,70,229,.4)) border-box;
+        linear-gradient(135deg,rgba(0,113,227,.22),rgba(16,185,129,.2)) border-box;
       border:1px solid transparent;
     }
 
     .hero-gradient{
-      background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(139,92,246,.2) 0%,transparent 70%);
+      background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(0,113,227,.09) 0%,transparent 70%);
     }
 
     .shimmer{
@@ -168,20 +175,24 @@ const GS = () => (
 
     .nav-blur{
       backdrop-filter:blur(20px) saturate(1.4);
-      background:rgba(10,10,15,.8);
-      border-bottom:1px solid rgba(139,92,246,.1);
-    }
-
-    .modal-backdrop{
-      position:fixed;inset:0;background:rgba(0,0,0,.8);
-      backdrop-filter:blur(8px);z-index:1000;
-      display:flex;align-items:center;justify-content:center;padding:20px;
+      background:rgba(245,245,247,.84);
+      border-bottom:1px solid rgba(17,24,39,.06);
     }
 
     .hero-text-gradient{
-      background:linear-gradient(135deg,#fff 30%,${C.purple} 70%,${C.blue} 100%);
+      background:linear-gradient(135deg,#1D1D1F 24%,#1D1D1F 55%,${C.purple} 100%);
       -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
       background-size:200% 200%;animation:gradientShift 4s ease infinite;
+    }
+
+    .static-auth-card{
+      position:sticky;
+      top:96px;
+      background:#FFFFFF;
+      border:1px solid rgba(17,24,39,.09);
+      border-radius:22px;
+      box-shadow:0 18px 44px rgba(15,23,42,.09);
+      padding:24px;
     }
 
     .network-badge{
@@ -189,9 +200,18 @@ const GS = () => (
       padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;
     }
 
+    .landing-grid{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(320px,420px);
+      gap:28px;
+      align-items:start;
+    }
+
     @media(max-width:768px){
       .hide-mobile{display:none!important}
       .mobile-full{width:100%!important}
+      .landing-grid{grid-template-columns:1fr!important}
+      .static-auth-card{position:static;top:auto;padding:18px}
     }
     @media(min-width:769px){
       .hide-desktop{display:none!important}
@@ -266,14 +286,11 @@ export default function DevelopersPage() {
   /* ─── STATE ─── */
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<DevUser | null>(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [dashTab, setDashTab] = useState<'overview' | 'keys' | 'plans' | 'docs' | 'wallet' | 'transactions'>('overview');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [mobileNav, setMobileNav] = useState(false);
-
   /* credentials */
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [keys, setKeys] = useState<DevKey[]>([]);
@@ -342,7 +359,7 @@ export default function DevelopersPage() {
       localStorage.setItem('dev_portal_token', d.token);
       localStorage.setItem('dev_portal_user', JSON.stringify(d.user));
       setToken(d.token); setUser(d.user);
-      setShowAuthModal(false); setSuccess('Welcome back!');
+      setSuccess('Welcome back!');
       if (d.user.isDeveloper) loadDevData(d.token);
     } catch { setError('Network error. Please try again.'); }
     finally { setLoading(false); }
@@ -357,7 +374,7 @@ export default function DevelopersPage() {
       localStorage.setItem('dev_portal_token', d.token);
       localStorage.setItem('dev_portal_user', JSON.stringify(d.user));
       setToken(d.token); setUser(d.user);
-      setShowAuthModal(false); setSuccess('Account created! Now enable Developer Mode below.');
+      setSuccess('Account created! Now enable Developer Mode below.');
     } catch { setError('Network error. Please try again.'); }
     finally { setLoading(false); }
   };
@@ -561,8 +578,8 @@ public class SaukiMartAPI {
         {/* NAV */}
         <nav className="nav-blur" style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {Ic.code(C.purple, 22)}
-            <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: '-.02em' }}>SaukiMart <span style={{ color: C.purple }}>API</span></span>
+            <img src="/images/logo.png" alt="SaukiMart" width={28} height={28} style={{ borderRadius: 7 }} />
+            <span style={{ fontWeight: 700, fontSize: 18, letterSpacing: '-.02em' }}>SaukiMart <span style={{ color: C.purple }}>Developers</span></span>
           </div>
           <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {['Features', 'Pricing', 'Docs', 'Networks'].map(l => (
@@ -571,52 +588,103 @@ public class SaukiMartAPI {
             ))}
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn-ghost hide-mobile" onClick={() => { setAuthMode('login'); setShowAuthModal(true); }}>Sign In</button>
-            <button className="btn-primary" onClick={() => { setAuthMode('register'); setShowAuthModal(true); }}>Get API Key</button>
+            <button className="btn-ghost" onClick={() => setAuthMode('login')}>Sign In</button>
+            <button className="btn-primary" onClick={() => setAuthMode('register')}>Get API Key</button>
           </div>
         </nav>
 
         <div style={{ paddingTop: 64 }}>
 
           {/* HERO */}
-          <section className="hero-gradient" style={{ padding: '80px 24px 100px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-            {/* bg orbs */}
-            <div style={{ position: 'absolute', top: -100, left: '20%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle,rgba(124,58,237,.15) 0%,transparent 70%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', top: 0, right: '15%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle,rgba(79,70,229,.12) 0%,transparent 70%)', pointerEvents: 'none' }} />
-
-            <div className="fu" style={{ animationDelay: '0ms' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', borderRadius: 100, background: 'rgba(139,92,246,.12)', border: '1px solid rgba(139,92,246,.3)', fontSize: 13, fontWeight: 600, color: C.purple, marginBottom: 28 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.green, animation: 'pulse 2s infinite' }} />
-                Live API · Production Ready
-              </div>
-            </div>
-
-            <h1 className="fu" style={{ fontSize: 'clamp(40px,7vw,76px)', fontWeight: 900, letterSpacing: '-.04em', lineHeight: 1.05, marginBottom: 24, animationDelay: '60ms' }}>
-              <span className="hero-text-gradient">Build Nigeria's Fastest</span>
-              <br />Data Vending Platform
-            </h1>
-
-            <p className="fu" style={{ fontSize: 'clamp(16px,2.5vw,20px)', color: C.muted, maxWidth: 600, margin: '0 auto 40px', lineHeight: 1.65, animationDelay: '120ms' }}>
-              Access cheap, reliable data plans across MTN, Glo, Airtel & 9Mobile via a single REST API. Up to {discountPercent > 0 ? discountPercent : 8}% discount. Instant activation. Zero setup fee.
-            </p>
-
-            <div className="fu" style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 12, animationDelay: '180ms' }}>
-              <button className="btn-primary" onClick={() => { setAuthMode('register'); setShowAuthModal(true); }} style={{ fontSize: 16, padding: '16px 36px' }}>
-                {Ic.code()} Start Building Free
-              </button>
-              <a href="#docs" className="btn-ghost" style={{ fontSize: 15, padding: '15px 24px', textDecoration: 'none' }}>
-                {Ic.book()} View Docs {Ic.arrowRight()}
-              </a>
-            </div>
-
-            {/* stats row */}
-            <div className="fu" style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 40, marginTop: 60, animationDelay: '240ms' }}>
-              {[['4', 'Networks'], ['99.9%', 'Uptime SLA'], ['< 3s', 'Avg Delivery'], ['REST', 'API Standard']].map(([v, l]) => (
-                <div key={l} style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: 28, fontWeight: 900, color: C.text, letterSpacing: '-.03em' }}>{v}</p>
-                  <p style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{l}</p>
+          <section className="hero-gradient" style={{ padding: '74px 24px 80px', position: 'relative', overflow: 'hidden' }}>
+            <div className="landing-grid" style={{ maxWidth: 1180, margin: '0 auto' }}>
+              <div>
+                <div className="fu" style={{ animationDelay: '0ms' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', borderRadius: 100, background: 'rgba(0,113,227,.08)', border: '1px solid rgba(0,113,227,.2)', fontSize: 13, fontWeight: 600, color: C.purple, marginBottom: 22 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.green, animation: 'pulse 2s infinite' }} />
+                    Live API · Production Ready
+                  </div>
                 </div>
-              ))}
+
+                <h1 className="fu" style={{ fontSize: 'clamp(38px,6vw,68px)', fontWeight: 800, letterSpacing: '-.04em', lineHeight: 1.06, marginBottom: 20, animationDelay: '60ms' }}>
+                  <span className="hero-text-gradient">Build Fast, Elegant</span>
+                  <br />Data Products for Nigeria
+                </h1>
+
+                <p className="fu" style={{ fontSize: 'clamp(16px,2.3vw,20px)', color: C.muted, maxWidth: 680, margin: '0 0 28px', lineHeight: 1.65, animationDelay: '120ms' }}>
+                  Access cheap and reliable data plans across MTN, Glo, Airtel and 9Mobile through one clean REST API. Up to {discountPercent > 0 ? discountPercent : 8}% developer discount, instant delivery, and clear transaction logs.
+                </p>
+
+                <div className="fu" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 28, animationDelay: '180ms' }}>
+                  <button className="btn-primary" onClick={() => setAuthMode('register')} style={{ fontSize: 16, padding: '16px 34px' }}>
+                    {Ic.code()} Start Building
+                  </button>
+                  <a href="#docs" className="btn-ghost" style={{ fontSize: 15, padding: '15px 24px', textDecoration: 'none' }}>
+                    {Ic.book()} View Docs {Ic.arrowRight(C.purple)}
+                  </a>
+                </div>
+
+                <div className="fu" style={{ display: 'flex', flexWrap: 'wrap', gap: 28, animationDelay: '220ms' }}>
+                  {[['4', 'Networks'], ['99.9%', 'Uptime'], ['< 3s', 'Avg Delivery'], ['REST', 'API Standard']].map(([v, l]) => (
+                    <div key={l}>
+                      <p style={{ fontSize: 28, fontWeight: 800, color: C.text, letterSpacing: '-.03em' }}>{v}</p>
+                      <p style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{l}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <aside className="static-auth-card fu" style={{ animationDelay: '140ms' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <img src="/images/logo.png" alt="SaukiMart" width={24} height={24} style={{ borderRadius: 6 }} />
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 700 }}>{authMode === 'login' ? 'Developer Sign In' : 'Create Developer Account'}</p>
+                      <p style={{ fontSize: 12, color: C.muted }}>Same phone + PIN as your app account</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16, background: 'rgba(15,23,42,.04)', borderRadius: 12, padding: 4 }}>
+                  {(['login', 'register'] as const).map(m => (
+                    <button key={m} onClick={() => { setAuthMode(m); setError(''); }} style={{ flex: 1, padding: '10px', borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all .15s', background: authMode === m ? 'rgba(0,113,227,.12)' : 'transparent', color: authMode === m ? C.purple : C.muted }}>
+                      {m === 'login' ? 'Sign In' : 'Register'}
+                    </button>
+                  ))}
+                </div>
+
+                {error && <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(255,59,48,.08)', border: '1px solid rgba(255,59,48,.2)', color: C.red, fontSize: 12, marginBottom: 12 }}>{error}</div>}
+
+                {authMode === 'login' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <input className="input-field" type="tel" inputMode="numeric" placeholder="08012345678" value={loginPhone} onChange={e => setLoginPhone(e.target.value.replace(/\D/g, '').slice(0, 11))} />
+                    <PinInput label="4-digit PIN" value={loginPin} onChange={setLoginPin} />
+                    <button className="btn-primary" style={{ width: '100%' }} disabled={loading || loginPhone.length !== 11 || loginPin.length !== 4} onClick={doLogin}>
+                      {loading ? 'Signing in...' : 'Sign In'}
+                    </button>
+                  </div>
+                )}
+
+                {authMode === 'register' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      <input className="input-field" placeholder="First name" value={regForm.firstName} onChange={e => setRegForm(f => ({ ...f, firstName: e.target.value }))} />
+                      <input className="input-field" placeholder="Last name" value={regForm.lastName} onChange={e => setRegForm(f => ({ ...f, lastName: e.target.value }))} />
+                    </div>
+                    <input className="input-field" type="tel" inputMode="numeric" placeholder="08012345678" value={regForm.phone} onChange={e => setRegForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '').slice(0, 11) }))} />
+                    <PinInput label="Create PIN" value={regForm.pin} onChange={v => setRegForm(f => ({ ...f, pin: v }))} />
+                    <PinInput label="Confirm PIN" value={regForm.confirmPin} onChange={v => setRegForm(f => ({ ...f, confirmPin: v }))} />
+                    <button className="btn-primary" style={{ width: '100%' }} disabled={loading || !regForm.firstName || !regForm.lastName || regForm.phone.length !== 11 || regForm.pin.length !== 4 || regForm.pin !== regForm.confirmPin} onClick={doRegister}>
+                      {loading ? 'Creating account...' : 'Create Account'}
+                    </button>
+                  </div>
+                )}
+
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(17,24,39,.08)', display: 'flex', justifyContent: 'space-between', fontSize: 12, color: C.muted }}>
+                  <span>Trusted by resellers</span>
+                  <span>Instant delivery</span>
+                </div>
+              </aside>
             </div>
           </section>
 
@@ -671,7 +739,7 @@ public class SaukiMartAPI {
                       </li>
                     ))}
                   </ul>
-                  <button className={t.popular ? 'btn-primary mobile-full' : 'btn-ghost mobile-full'} style={{ width: '100%' }} onClick={() => { setAuthMode('register'); setShowAuthModal(true); }}>
+                  <button className={t.popular ? 'btn-primary mobile-full' : 'btn-ghost mobile-full'} style={{ width: '100%' }} onClick={() => setAuthMode('register')}>
                     Get Started Free
                   </button>
                 </div>
@@ -683,9 +751,9 @@ public class SaukiMartAPI {
           <section id="networks" style={{ padding: '60px 24px', maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
             <h2 style={{ fontSize: 'clamp(24px,3vw,36px)', fontWeight: 900, letterSpacing: '-.03em', marginBottom: 40 }}>All Major Nigerian Networks</h2>
             <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 16 }}>
-              {[{ name: 'MTN', color: '#FBBF24', emoji: '🟡' }, { name: 'Glo', color: '#34D399', emoji: '🟢' }, { name: 'Airtel', color: '#F87171', emoji: '🔴' }, { name: '9Mobile', color: '#34D399', emoji: '🟩' }].map(n => (
-                <div key={n.name} style={{ padding: '20px 36px', borderRadius: 16, background: C.card, border: `1px solid ${n.color}30`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 130 }}>
-                  <span style={{ fontSize: 32 }}>{n.emoji}</span>
+              {[{ name: 'MTN', color: '#FBBF24', key: 'MTN' }, { name: 'Glo', color: '#34D399', key: 'GLO' }, { name: 'Airtel', color: '#F87171', key: 'AIRTEL' }, { name: '9Mobile', color: '#34D399', key: '9MOBILE' }].map(n => (
+                <div key={n.name} style={{ padding: '20px 32px', borderRadius: 16, background: C.card, border: `1px solid ${n.color}30`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 130 }}>
+                  <img src={NETWORK_LOGOS[n.key]} alt={n.name} width={48} height={48} style={{ objectFit: 'contain', borderRadius: 10, background: '#fff' }} />
                   <span style={{ fontWeight: 800, fontSize: 16, color: n.color }}>{n.name}</span>
                   <span style={{ fontSize: 12, color: C.muted }}>Live</span>
                 </div>
@@ -737,6 +805,7 @@ public class SaukiMartAPI {
                 <div key={ep.path} className="card" style={{ padding: '18px 20px', display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
                   <span style={{ padding: '4px 10px', borderRadius: 7, fontSize: 11, fontWeight: 800, letterSpacing: '.05em', background: ep.method === 'GET' ? 'rgba(52,211,153,.12)' : 'rgba(96,165,250,.12)', color: ep.method === 'GET' ? C.green : C.blue }}>{ep.method}</span>
                   <code style={{ fontFamily: 'monospace', fontSize: 14, color: C.purple, flex: 1, minWidth: 200 }}>{ep.path}</code>
+                  <CopyBtn text={ep.path} label="Copy" />
                   <p style={{ fontSize: 13, color: C.muted, flex: 2 }}>{ep.desc}</p>
                   {ep.auth && <span style={{ fontSize: 11, color: C.yellow, background: 'rgba(251,191,36,.1)', border: '1px solid rgba(251,191,36,.2)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>Auth required</span>}
                 </div>
@@ -749,7 +818,7 @@ public class SaukiMartAPI {
             <div style={{ maxWidth: 800, margin: '0 auto', background: 'linear-gradient(135deg,rgba(124,58,237,.2),rgba(79,70,229,.15))', borderRadius: 24, border: '1px solid rgba(139,92,246,.25)', padding: '52px 40px', textAlign: 'center' }}>
               <h2 style={{ fontSize: 'clamp(24px,4vw,40px)', fontWeight: 900, letterSpacing: '-.03em', marginBottom: 16 }}>Ready to start building?</h2>
               <p style={{ fontSize: 16, color: C.muted, marginBottom: 36, lineHeight: 1.6 }}>Create your free developer account in 60 seconds. No subscription, no credit card required.</p>
-              <button className="btn-primary" style={{ fontSize: 16, padding: '16px 40px' }} onClick={() => { setAuthMode('register'); setShowAuthModal(true); }}>
+              <button className="btn-primary" style={{ fontSize: 16, padding: '16px 40px' }} onClick={() => setAuthMode('register')}>
                 {Ic.code()} Create Free Account
               </button>
             </div>
@@ -758,88 +827,12 @@ public class SaukiMartAPI {
           {/* FOOTER */}
           <footer style={{ borderTop: '1px solid rgba(255,255,255,.06)', padding: '32px 24px', textAlign: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
-              {Ic.code(C.purple, 18)}
+              <img src="/images/logo.png" alt="SaukiMart" width={20} height={20} style={{ borderRadius: 5 }} />
               <span style={{ fontWeight: 700, fontSize: 16 }}>SaukiMart API</span>
             </div>
             <p style={{ fontSize: 13, color: C.muted }}>© 2026 SaukiMart. Powering Nigeria's data ecosystem.</p>
           </footer>
         </div>
-
-        {/* AUTH MODAL */}
-        {showAuthModal && (
-          <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setShowAuthModal(false); }}>
-            <div className="fi" style={{ background: C.card, borderRadius: 24, border: '1px solid rgba(139,92,246,.2)', padding: '36px 32px', width: '100%', maxWidth: 440, maxHeight: '90vh', overflowY: 'auto' }}>
-              {/* header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
-                <div>
-                  <h2 style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-.02em' }}>{authMode === 'login' ? 'Welcome back' : 'Create account'}</h2>
-                  <p style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>{authMode === 'login' ? 'Sign in with your phone number & PIN' : 'One account for app and API portal'}</p>
-                </div>
-                <button onClick={() => setShowAuthModal(false)} style={{ padding: 8, borderRadius: 10, background: 'rgba(255,255,255,.06)', border: 'none', cursor: 'pointer' }}>{Ic.x()}</button>
-              </div>
-
-              {/* tabs */}
-              <div style={{ display: 'flex', gap: 8, marginBottom: 28, background: 'rgba(255,255,255,.04)', borderRadius: 12, padding: 4 }}>
-                {(['login', 'register'] as const).map(m => (
-                  <button key={m} onClick={() => { setAuthMode(m); setError(''); }} style={{ flex: 1, padding: '10px', borderRadius: 10, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all .15s', background: authMode === m ? 'rgba(139,92,246,.2)' : 'transparent', color: authMode === m ? C.purple : C.muted }}>
-                    {m === 'login' ? 'Sign In' : 'Register'}
-                  </button>
-                ))}
-              </div>
-
-              {error && <div style={{ padding: '12px 16px', borderRadius: 10, background: 'rgba(248,113,113,.1)', border: '1px solid rgba(248,113,113,.25)', color: C.red, fontSize: 13, marginBottom: 20 }}>{error}</div>}
-
-              {/* LOGIN FORM */}
-              {authMode === 'login' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                  <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: C.muted, letterSpacing: '.04em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Phone Number</label>
-                    <input className="input-field" type="tel" inputMode="numeric" placeholder="08012345678" value={loginPhone} onChange={e => setLoginPhone(e.target.value.replace(/\D/g, '').slice(0, 11))} />
-                  </div>
-                  <PinInput label="4-digit PIN" value={loginPin} onChange={setLoginPin} />
-                  <button className="btn-primary" style={{ width: '100%', marginTop: 4 }} disabled={loading || loginPhone.length !== 11 || loginPin.length !== 4} onClick={doLogin}>
-                    {loading ? 'Signing in…' : 'Sign In'}
-                  </button>
-                  <p style={{ textAlign: 'center', fontSize: 13, color: C.muted }}>
-                    Don't have an account?{' '}
-                    <button onClick={() => setAuthMode('register')} style={{ color: C.purple, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>Register</button>
-                  </p>
-                </div>
-              )}
-
-              {/* REGISTER FORM */}
-              {authMode === 'register' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: C.muted, letterSpacing: '.04em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>First Name</label>
-                      <input className="input-field" placeholder="John" value={regForm.firstName} onChange={e => setRegForm(f => ({ ...f, firstName: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: C.muted, letterSpacing: '.04em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Last Name</label>
-                      <input className="input-field" placeholder="Doe" value={regForm.lastName} onChange={e => setRegForm(f => ({ ...f, lastName: e.target.value }))} />
-                    </div>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: C.muted, letterSpacing: '.04em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Phone Number</label>
-                    <input className="input-field" type="tel" inputMode="numeric" placeholder="08012345678" value={regForm.phone} onChange={e => setRegForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '').slice(0, 11) }))} />
-                  </div>
-                  <PinInput label="Create PIN (4 digits)" value={regForm.pin} onChange={v => setRegForm(f => ({ ...f, pin: v }))} />
-                  <PinInput label="Confirm PIN" value={regForm.confirmPin} onChange={v => setRegForm(f => ({ ...f, confirmPin: v }))} />
-                  <p style={{ fontSize: 11, color: C.muted, lineHeight: 1.6, padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)' }}>
-                    By creating an account, you agree to SaukiMart's Terms of Service. A virtual bank account will be created for wallet deposits.
-                  </p>
-                  <button className="btn-primary" style={{ width: '100%' }} disabled={loading || !regForm.firstName || !regForm.lastName || regForm.phone.length !== 11 || regForm.pin.length !== 4 || regForm.pin !== regForm.confirmPin} onClick={doRegister}>
-                    {loading ? 'Creating account…' : 'Create Account'}
-                  </button>
-                  {regForm.pin.length === 4 && regForm.confirmPin.length === 4 && regForm.pin !== regForm.confirmPin && (
-                    <p style={{ color: C.red, fontSize: 12, textAlign: 'center' }}>PINs don't match</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </>
     );
   }
@@ -858,7 +851,7 @@ public class SaukiMartAPI {
       {/* DASHBOARD NAV */}
       <nav className="nav-blur" style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {Ic.code(C.purple, 20)}
+          <img src="/images/logo.png" alt="SaukiMart" width={22} height={22} style={{ borderRadius: 6 }} />
           <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-.02em' }}>SaukiMart <span style={{ color: C.purple }}>Dev</span></span>
         </div>
         <div className="hide-mobile" style={{ display: 'flex', gap: 4 }}>
@@ -1118,6 +1111,7 @@ public class SaukiMartAPI {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', marginBottom: 14 }}>
                       <span style={{ padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 800, letterSpacing: '.05em', background: ep.method === 'GET' ? 'rgba(52,211,153,.12)' : 'rgba(96,165,250,.12)', color: ep.method === 'GET' ? C.green : C.blue }}>{ep.method}</span>
                       <code style={{ fontFamily: 'monospace', fontSize: 14, color: C.purple }}>{ep.path}</code>
+                      <CopyBtn text={ep.path} label="Copy endpoint" />
                       <span style={{ fontSize: 11, color: C.yellow, background: 'rgba(251,191,36,.1)', border: '1px solid rgba(251,191,36,.2)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>x-api-key required</span>
                     </div>
                     <p style={{ fontSize: 14, color: C.muted, marginBottom: 16, lineHeight: 1.6 }}>{ep.desc}</p>
@@ -1125,6 +1119,9 @@ public class SaukiMartAPI {
                       <div style={{ marginBottom: 14 }}>
                         <p style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 8 }}>Request Body</p>
                         <div className="code-block">
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+                            <CopyBtn text={ep.body} label="Copy body" />
+                          </div>
                           <pre style={{ color: '#86EFAC', whiteSpace: 'pre-wrap' }}>{ep.body}</pre>
                         </div>
                       </div>
