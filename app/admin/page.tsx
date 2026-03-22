@@ -13,6 +13,19 @@ const MUTED = '#8ea3bf';
 const TEXT = '#eef4ff';
 
 type User = { id: string; first_name: string; last_name: string; phone: string; wallet_balance: number; cashback_balance: number; is_banned: boolean; created_at: string; flw_account_number: string; };
+type Developer = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  is_developer: boolean;
+  developer_discount_percent: number;
+  developer_terms_version?: string;
+  developer_terms_accepted_at?: string;
+  active_keys: number;
+  last_used_at?: string;
+  created_at: string;
+};
 type Plan = { id: string; network: string; network_id: number; plan_id: number; data_size: string; validity: string; selling_price: number; cost_price: number; is_active: boolean; };
 type Product = { id: string; name: string; description: string; price: number; cost_price: number; image_url: string; image_base64?: string; in_stock: boolean; shipping_terms: string; pickup_terms: string; category: string; };
 type Transaction = { id: string; user_id: string; type: string; description: string; amount: number; status: string; created_at: string; network: string; phone_number: string; product_name: string; receipt_data: Record<string,unknown>; first_name?: string; last_name?: string; phone?: string; };
@@ -128,13 +141,14 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [adminToken, setAdminToken] = useState('');
-  const [tab, setTab] = useState<'overview'|'users'|'plans'|'products'|'transactions'|'orders'|'analytics'|'broadcasts'|'push'|'chat'|'sim'|'webhooks'|'console'>('overview');
+  const [tab, setTab] = useState<'overview'|'users'|'developers'|'plans'|'products'|'transactions'|'orders'|'analytics'|'broadcasts'|'push'|'chat'|'sim'|'webhooks'|'console'>('overview');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
   const [error, setError] = useState('');
 
   // Data
   const [users, setUsers] = useState<User[]>([]);
+  const [developers, setDevelopers] = useState<Developer[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -149,6 +163,7 @@ export default function AdminPage() {
   const [activeChatSession, setActiveChatSession] = useState<AdminChatSession|null>(null);
   const [chatMessages, setChatMessages] = useState<AdminChatMessage[]>([]);
   const [selectedUser, setSelectedUser] = useState<User|null>(null);
+  const [selectedDeveloper, setSelectedDeveloper] = useState<Developer|null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order|null>(null);
 
   // Forms
@@ -157,6 +172,7 @@ export default function AdminPage() {
   const [broadcastForm, setBroadcastForm] = useState({ message:'', editId:'' });
   const [walletForm, setWalletForm] = useState({ amount:'', note:'', target:'wallet' as 'wallet'|'cashback' });
   const [pinForm, setPinForm] = useState('');
+  const [developerForm, setDeveloperForm] = useState({ userId:'', discountPercent:'8.00', termsVersion:'v1.0' });
   const [consoleInput, setConsoleInput] = useState('');
   const [consoleEndpoint, setConsoleEndpoint] = useState('amigo');
   const [consoleLogs, setConsoleLogs] = useState<{dir:'sent'|'received';payload:string;ts:string}[]>([]);
@@ -381,6 +397,10 @@ export default function AdminPage() {
       load('transactions').then(d => setTransactions(Array.isArray(d)?d:[]));
     }
     if (tab === 'users') load('users').then(d => setUsers(Array.isArray(d)?d:[]));
+    if (tab === 'developers') {
+      load('developers').then(d => setDevelopers(Array.isArray(d)?d:[]));
+      load('users').then(d => setUsers(Array.isArray(d)?d:[]));
+    }
     if (tab === 'plans') load('plans').then(d => setPlans(Array.isArray(d)?d:[]));
     if (tab === 'products') load('products').then(d => setProducts(Array.isArray(d)?d:[]));
     if (tab === 'transactions') load('transactions').then(d => setTransactions(Array.isArray(d)?d:[]));
@@ -652,6 +672,7 @@ export default function AdminPage() {
   const TABS = [
     { id:'overview', label:'Overview', icon:'📊' },
     { id:'users', label:'Users', icon:'👥' },
+    { id:'developers', label:'Developers', icon:'🧩' },
     { id:'plans', label:'Data Plans', icon:'📶' },
     { id:'products', label:'Products', icon:'📦' },
     { id:'transactions', label:'Transactions', icon:'💳' },
@@ -857,6 +878,113 @@ export default function AdminPage() {
                   </table>
                 </Card>
               )}
+            </div>
+          )}
+
+          {/* ─── DATA PLANS ─── */}
+          {tab === 'developers' && (
+            <div className="fade-in">
+              <h1 style={{ fontSize:22,fontWeight:900,marginBottom:20 }}>Developer Management</h1>
+              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:20 }}>
+                <Card>
+                  <h3 style={{ fontWeight:800,fontSize:16,marginBottom:16 }}>{selectedDeveloper ? 'Update Developer' : 'Add Developer'}</h3>
+                  <div style={{ marginBottom:14 }}>
+                    <label style={{ fontSize:13,fontWeight:600,color:'#6E6E73',marginBottom:8,display:'block' }}>User</label>
+                    <select
+                      value={developerForm.userId}
+                      onChange={e=>setDeveloperForm(p=>({ ...p, userId:e.target.value }))}
+                      style={{ width:'100%',padding:'12px 14px',borderRadius:12,border:'1px solid rgba(0,0,0,0.15)',fontSize:14 }}
+                    >
+                      <option value="">Select user</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>{u.first_name} {u.last_name} ({u.phone})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <Input label="Developer Discount (%)" value={developerForm.discountPercent} onChange={v=>setDeveloperForm(p=>({...p,discountPercent:v.replace(/[^0-9.]/g,'')}))} placeholder="8.00" />
+                  <Input label="Terms Version" value={developerForm.termsVersion} onChange={v=>setDeveloperForm(p=>({...p,termsVersion:v}))} placeholder="v1.0" />
+                  <div style={{ display:'flex',gap:8 }}>
+                    <Btn onClick={async()=>{
+                      if (!developerForm.userId) {
+                        showError('Select a user first');
+                        return;
+                      }
+                      try {
+                        if (selectedDeveloper) {
+                          await api('developers', 'PATCH', {
+                            userId: developerForm.userId,
+                            discountPercent: Number(developerForm.discountPercent || 0),
+                            termsVersion: developerForm.termsVersion,
+                          });
+                          showToast('Developer updated');
+                        } else {
+                          await api('developers', 'POST', {
+                            userId: developerForm.userId,
+                            discountPercent: Number(developerForm.discountPercent || 0),
+                            termsVersion: developerForm.termsVersion,
+                          });
+                          showToast('User upgraded to developer');
+                        }
+                        load('developers').then(d => setDevelopers(Array.isArray(d)?d:[]));
+                        setSelectedDeveloper(null);
+                        setDeveloperForm({ userId:'', discountPercent:'8.00', termsVersion:'v1.0' });
+                      } catch (e: unknown) {
+                        showError(e instanceof Error ? e.message : 'Failed to save developer');
+                      }
+                    }}>{selectedDeveloper ? 'Update Developer' : 'Upgrade to Developer'}</Btn>
+                    {selectedDeveloper && (
+                      <Btn variant="ghost" onClick={()=>{ setSelectedDeveloper(null); setDeveloperForm({ userId:'', discountPercent:'8.00', termsVersion:'v1.0' }); }}>Cancel</Btn>
+                    )}
+                  </div>
+                </Card>
+
+                <Card>
+                  <h3 style={{ fontWeight:800,fontSize:16,marginBottom:16 }}>Developers ({developers.length})</h3>
+                  <div style={{ overflowX:'auto' }}>
+                    <table style={{ width:'100%',borderCollapse:'collapse' }}>
+                      <thead>
+                        <tr style={{ background:'#F9F9F9' }}>
+                          {['Name','Phone','Discount','Keys','Last Used','Actions'].map(h=><th key={h} style={{ padding:'10px 12px',fontSize:12,fontWeight:700,color:'#8E8E93',textAlign:'left',borderBottom:'1px solid #F2F2F7' }}>{h}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {developers.map((d) => (
+                          <tr key={d.id} style={{ borderBottom:'1px solid #F9F9F9' }}>
+                            <td style={{ padding:'10px 12px',fontSize:13,fontWeight:700 }}>{d.first_name} {d.last_name}</td>
+                            <td style={{ padding:'10px 12px',fontSize:13,color:'#6E6E73' }}>{d.phone}</td>
+                            <td style={{ padding:'10px 12px',fontSize:13,fontWeight:800,color:BLUE }}>{Number(d.developer_discount_percent || 0).toFixed(2)}%</td>
+                            <td style={{ padding:'10px 12px',fontSize:13,fontWeight:700 }}>{d.active_keys || 0}</td>
+                            <td style={{ padding:'10px 12px',fontSize:12,color:'#8E8E93' }}>{d.last_used_at ? new Date(d.last_used_at).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'}) : 'Never'}</td>
+                            <td style={{ padding:'10px 12px' }}>
+                              <div style={{ display:'flex',gap:6 }}>
+                                <Btn size="sm" variant="ghost" onClick={()=>{
+                                  setSelectedDeveloper(d);
+                                  setDeveloperForm({
+                                    userId: d.id,
+                                    discountPercent: String(Number(d.developer_discount_percent || 0).toFixed(2)),
+                                    termsVersion: d.developer_terms_version || 'v1.0',
+                                  });
+                                }}>Edit</Btn>
+                                <Btn size="sm" variant="danger" onClick={async()=>{
+                                  const confirmed = window.confirm(`Revoke developer access for ${d.first_name} ${d.last_name}?`);
+                                  if (!confirmed) return;
+                                  try {
+                                    await api('developers', 'DELETE', { userId: d.id });
+                                    showToast('Developer access revoked');
+                                    load('developers').then(rows => setDevelopers(Array.isArray(rows) ? rows : []));
+                                  } catch (e: unknown) {
+                                    showError(e instanceof Error ? e.message : 'Failed to revoke developer');
+                                  }
+                                }}>Revoke</Btn>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              </div>
             </div>
           )}
 

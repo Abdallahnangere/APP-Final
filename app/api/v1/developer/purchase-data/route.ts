@@ -81,8 +81,8 @@ export async function POST(req: NextRequest) {
     const balance = Number(auth.user.wallet_balance || 0);
     const isSandbox = phoneNumber === '09000000000';
 
-    // Check balance (skip for sandbox)
-    if (!isSandbox && balance < developerPrice) {
+    // Check balance for every request, including sandbox numbers.
+    if (balance < developerPrice) {
       return NextResponse.json({
         error: `Insufficient balance`,
         details: { available: balance, required: developerPrice },
@@ -127,81 +127,73 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.AMIGO_API_KEY;
     if (!apiKey) throw new Error('AMIGO_API_KEY not configured');
 
-    // Call Amigo API (even for sandbox - it treats 09000000000 as test)
+    // Always call Amigo API. The provider itself handles sandbox behavior.
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), AMIGO_TIMEOUT);
 
-    let amigoData: any = { success: true, reference: `sandbox_${receiptRef}`, message: 'Sandbox test - no actual delivery' };
-    let amigoError = false;
-
-    if (!isSandbox) {
-      try {
-        const amigoRes = await fetch(`${proxyUrl}/data/`, {
-          method: 'POST',
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': apiKey,
-            'Idempotency-Key': idempotencyKey,
-          },
-          body: JSON.stringify({
-            network: plan.network_id,
-            mobile_number: phoneNumber,
-            plan: plan.plan_id,
-            Ported_number: true,
-          }),
-        });
-        amigoData = await amigoRes.json();
-      } catch (err) {
-        amigoError = true;
-        amigoData = { success: false, message: 'Network error contacting delivery service' };
-      } finally {
-        clearTimeout(timeout);
-      }
-
-      if (!amigoData?.success) {
-        await sql`UPDATE transactions SET status = 'failed' WHERE id = ${txn.id}`;
-        await sql`
-          INSERT INTO developer_api_transactions (
-            user_id, api_key_id, transaction_id, endpoint, request_payload, response_data,
-            status, network, plan_code, phone_number, app_price, developer_price,
-            idempotency_key, amigo_reference, created_at
-          ) VALUES (
-            ${auth.user.id}, ${auth.keyId}, ${txn.id}, '/api/v1/developer/purchase-data',
-            ${JSON.stringify(body || {})}, ${JSON.stringify(amigoData || {})},
-            'failed', ${plan.network}, ${planCode}, ${phoneNumber}, ${appPrice}, ${developerPrice},
-            ${idempotencyKey}, ${amigoData?.reference || null}, NOW()
-          )
-        `;
-        return NextResponse.json({
-          success: false,
-          error: amigoData?.message || 'Data delivery failed',
-          status: 'delivery_failed',
-          transactionId: txn.id,
-        }, { status: 400 });
-      }
+    let amigoData: any;
+    try {
+      const amigoRes = await fetch(`${proxyUrl}/data/`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify({
+          network: plan.network_id,
+          mobile_number: phoneNumber,
+          plan: plan.plan_id,
+          Ported_number: true,
+        }),
+      });
+      amigoData = await amigoRes.json();
+    } catch {
+      amigoData = { success: false, message: 'Network error contacting delivery service' };
+    } finally {
+      clearTimeout(timeout);
     }
 
-    // Deduct balance (skip for sandbox)
-    let newBalance = balance;
-    if (!isSandbox) {
-      const [balanceUpdate] = await sql`
-        UPDATE users
-        SET wallet_balance = wallet_balance - ${developerPrice},
-            updated_at = NOW()
-        WHERE id = ${auth.user.id} AND wallet_balance >= ${developerPrice}
-        RETURNING wallet_balance
+    if (!amigoData?.success) {
+      await sql`UPDATE transactions SET status = 'failed' WHERE id = ${txn.id}`;
+      await sql`
+        INSERT INTO developer_api_transactions (
+          user_id, api_key_id, transaction_id, endpoint, request_payload, response_data,
+          status, network, plan_code, phone_number, app_price, developer_price,
+          idempotency_key, amigo_reference, created_at
+        ) VALUES (
+          ${auth.user.id}, ${auth.keyId}, ${txn.id}, '/api/v1/developer/purchase-data',
+          ${JSON.stringify(body || {})}, ${JSON.stringify(amigoData || {})},
+          'failed', ${plan.network}, ${planCode}, ${phoneNumber}, ${appPrice}, ${developerPrice},
+          ${idempotencyKey}, ${amigoData?.reference || null}, NOW()
+        )
       `;
-
-      if (!balanceUpdate) {
-        await sql`UPDATE transactions SET status = 'failed' WHERE id = ${txn.id}`;
-        return NextResponse.json({
-          error: 'Balance check failed during transaction - insufficient funds',
-          status: 'balance_error',
-        }, { status: 400 });
-      }
-      newBalance = Number(balanceUpdate.wallet_balance || 0);
+      return NextResponse.json({
+        success: false,
+        error: amigoData?.message || 'Data delivery failed',
+        status: 'delivery_failed',
+        transactionId: txn.id,
+      }, { status: 400 });
     }
+
+    // Deduct balance for every request, including sandbox numbers.
+    const [balanceUpdate] = await sql`
+      UPDATE users
+      SET wallet_balance = wallet_balance - ${developerPrice},
+          updated_at = NOW()
+      WHERE id = ${auth.user.id} AND wallet_balance >= ${developerPrice}
+      RETURNING wallet_balance
+    `;
+
+    if (!balanceUpdate) {
+      await sql`UPDATE transactions SET status = 'failed' WHERE id = ${txn.id}`;
+      return NextResponse.json({
+        error: 'Balance check failed during transaction - insufficient funds',
+        status: 'balance_error',
+      }, { status: 400 });
+    }
+    const newBalance = Number(balanceUpdate.wallet_balance || 0);
 
     // Build SaukiMart response
     const saukiResponse = {
@@ -241,21 +233,19 @@ export async function POST(req: NextRequest) {
       )
     `;
 
-    // Send push notification (skip for sandbox)
-    if (!isSandbox) {
-      await sendApiDataPurchaseAlert({
-        userId: auth.user.id,
-        planLabel: `${plan.data_size} ${plan.network}`,
-        phoneNumber,
-        amount: developerPrice,
-      });
-    }
+    // Send push notification for every successful request, including sandbox numbers.
+    await sendApiDataPurchaseAlert({
+      userId: auth.user.id,
+      planLabel: `${plan.data_size} ${plan.network}`,
+      phoneNumber,
+      amount: developerPrice,
+    });
 
     // Return SaukiMart-formatted response
     return NextResponse.json({
       success: true,
       status: 'completed',
-      message: isSandbox ? 'Sandbox test successful - no balance deducted' : 'Data purchase completed successfully',
+      message: 'Data purchase completed successfully',
       transactionId: txn.id,
       idempotencyKey,
       data: saukiResponse,

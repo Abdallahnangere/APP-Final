@@ -1706,20 +1706,13 @@ export default function AppPage() {
     <div style={{ padding:'8px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(255,255,255,.78)',borderBottom:'1px solid var(--border)',position:'fixed',top:0,left:0,right:0,zIndex:100,backdropFilter:'blur(16px)',backgroundImage: dark ? 'linear-gradient(180deg,rgba(4,8,16,.92),rgba(4,8,16,.78))' : 'linear-gradient(180deg,rgba(255,255,255,.84),rgba(255,255,255,.76))' }}>
       <div style={{ display:'flex',alignItems:'center',gap:10,minWidth:0,flex:1 }}>
         <img src="/images/logo-sm.png" alt="SaukiMart" style={{ height:36,width:'auto',borderRadius:8,flexShrink:0 }} />
-        <div style={{ display:'flex',flexDirection:'column',minWidth:0,justifyContent:'center',gap:4 }}>
-          <div style={{ display:'flex',alignItems:'center',gap:8,minWidth:0 }}>
-            <span style={{ fontSize:17,fontWeight:800,fontFamily:'-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,sans-serif',color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'30vw',letterSpacing:'-0.02em' }}>
-              {displayName}
-            </span>
-            {user?.isDeveloper && (
-              <span style={{ fontSize:10,fontWeight:900,color:'#FF6D00',background:'rgba(255,109,0,.15)',border:'1px solid rgba(255,109,0,.28)',borderRadius:6,padding:'3px 8px',whiteSpace:'nowrap',letterSpacing:'0.02em',textTransform:'uppercase' }}>
-                🔌 Developer
-              </span>
-            )}
-            <span style={{ fontSize:10,fontWeight:900,color:BLUE,background:'rgba(0,113,227,.15)',border:`1px solid rgba(0,113,227,.28)`,borderRadius:6,padding:'3px 8px',whiteSpace:'nowrap',letterSpacing:'0.02em',textTransform:'uppercase' }}>
-              👤 User
-            </span>
-          </div>
+        <div style={{ display:'flex',flexDirection:'column',minWidth:0,justifyContent:'center',gap:3 }}>
+          <span style={{ fontSize:17,fontWeight:800,fontFamily:'-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,sans-serif',color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'34vw',letterSpacing:'-0.02em' }}>
+            {displayName}
+          </span>
+          <span style={{ fontSize:10,fontWeight:900,color:user?.isDeveloper ? '#FF6D00' : BLUE,background:user?.isDeveloper ? 'rgba(255,109,0,.15)' : 'rgba(0,113,227,.15)',border:user?.isDeveloper ? '1px solid rgba(255,109,0,.28)' : '1px solid rgba(0,113,227,.28)',borderRadius:6,padding:'2px 8px',whiteSpace:'nowrap',letterSpacing:'0.06em',textTransform:'uppercase',width:'fit-content' }}>
+            {user?.isDeveloper ? 'Developer' : 'User'}
+          </span>
         </div>
       </div>
       <div style={{ display:'flex',alignItems:'center',gap:8,flexShrink:0 }}>
@@ -1888,37 +1881,37 @@ export default function AppPage() {
           </div>
         )}
 
-        {/* Quick Actions — Horizontal Compact */}
+        {/* Quick Actions — Compact Single Row */}
         <div style={{ margin:'24px 16px 0' }}>
           <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.5,marginBottom:12,marginLeft:4,textTransform:'uppercase' }}>Actions</p>
-          <div style={{ display:'flex',gap:9,overflowX:'auto',paddingBottom:8,scrollBehavior:'smooth' }}>
+          <div style={{ display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:8,paddingBottom:4 }}>
             <button onClick={()=>setScreen('data-networks')} className="tactile-btn"
-              style={{ minWidth:110,height:110,borderRadius:16,padding:'12px',background:'linear-gradient(145deg,rgba(0,113,227,.14),rgba(0,113,227,.05))',border:'1px solid rgba(0,113,227,.22)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer',transition:'all .2s',flexShrink:0,whiteSpace:'nowrap' }}
+              style={{ width:'100%',height:88,borderRadius:14,padding:'8px',background:'linear-gradient(145deg,rgba(0,113,227,.16),rgba(0,113,227,.06))',border:'1px solid rgba(0,113,227,.24)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,cursor:'pointer',transition:'all .2s' }}
               onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 8px 20px rgba(0,113,227,.24)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='none'}}>
-              {Icons.bolt(BLUE, 22)}
-              <span style={{ fontSize:11,fontWeight:700,color:'var(--text)',textAlign:'center' }}>Data</span>
+              {Icons.bolt(BLUE, 20)}
+              <span style={{ fontSize:10,fontWeight:800,color:'var(--text)',textAlign:'center',lineHeight:1.2 }}>Data</span>
             </button>
             <button onClick={()=>{ loadProducts(); setScreen('store'); }} className="tactile-btn"
-              style={{ minWidth:110,height:110,borderRadius:16,padding:'12px',background:'linear-gradient(145deg,rgba(48,209,88,.14),rgba(48,209,88,.05))',border:'1px solid rgba(48,209,88,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer',transition:'all .2s',flexShrink:0 }}
+              style={{ width:'100%',height:88,borderRadius:14,padding:'8px',background:'linear-gradient(145deg,rgba(48,209,88,.16),rgba(48,209,88,.06))',border:'1px solid rgba(48,209,88,.30)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,cursor:'pointer',transition:'all .2s' }}
               onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 8px 20px rgba(48,209,88,.24)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='none'}}>
-              {Icons.chartBar(GREEN, 22)}
-              <span style={{ fontSize:11,fontWeight:700,color:'var(--text)',textAlign:'center' }}>Store</span>
+              {Icons.chartBar(GREEN, 20)}
+              <span style={{ fontSize:10,fontWeight:800,color:'var(--text)',textAlign:'center',lineHeight:1.2 }}>Store</span>
             </button>
             <button onClick={()=>setScreen('transfer')} className="tactile-btn"
-              style={{ minWidth:110,height:110,borderRadius:16,padding:'12px',background:'linear-gradient(145deg,rgba(90,200,250,.14),rgba(90,200,250,.05))',border:'1px solid rgba(90,200,250,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer',transition:'all .2s',flexShrink:0 }}
+              style={{ width:'100%',height:88,borderRadius:14,padding:'8px',background:'linear-gradient(145deg,rgba(90,200,250,.16),rgba(90,200,250,.06))',border:'1px solid rgba(90,200,250,.30)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,cursor:'pointer',transition:'all .2s' }}
               onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 8px 20px rgba(90,200,250,.24)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='none'}}>
-              {Icons.sendIcon(TEAL, 22)}
-              <span style={{ fontSize:11,fontWeight:700,color:'var(--text)',textAlign:'center' }}>Send</span>
+              {Icons.sendIcon(TEAL, 20)}
+              <span style={{ fontSize:10,fontWeight:800,color:'var(--text)',textAlign:'center',lineHeight:1.2 }}>Send</span>
             </button>
             <button onClick={()=>{ setScreen(user?.isDeveloper ? 'developer-dashboard' : 'developer-terms'); }} className="tactile-btn"
-              style={{ minWidth:110,height:110,borderRadius:16,padding:'12px',background:'linear-gradient(145deg,rgba(191,90,242,.14),rgba(191,90,242,.05))',border:'1px solid rgba(191,90,242,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer',transition:'all .2s',flexShrink:0 }}
+              style={{ width:'100%',height:88,borderRadius:14,padding:'8px',background:'linear-gradient(145deg,rgba(191,90,242,.16),rgba(191,90,242,.06))',border:'1px solid rgba(191,90,242,.30)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,cursor:'pointer',transition:'all .2s' }}
               onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 8px 20px rgba(191,90,242,.24)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='none'}}>
-              {Icons.code(PURPLE, 22)}
-              <span style={{ fontSize:11,fontWeight:700,color:'var(--text)',textAlign:'center' }}>{user?.isDeveloper ? 'Dev API' : 'API'}</span>
+              {Icons.code(PURPLE, 20)}
+              <span style={{ fontSize:10,fontWeight:800,color:'var(--text)',textAlign:'center',lineHeight:1.2 }}>{user?.isDeveloper ? 'Dev API' : 'API'}</span>
             </button>
           </div>
         </div>
