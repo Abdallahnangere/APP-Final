@@ -151,6 +151,7 @@ const Icons = {
   download: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
   messageSquare: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
   sendIcon: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
+  code: (color: string, size = 24) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>,
 };
 
 /* ─────────────── HELPER FUNCTIONS ─────────────── */
@@ -766,6 +767,7 @@ export default function AppPage() {
   const [developerApiPreview, setDeveloperApiPreview] = useState('');
   const [freshDeveloperKey, setFreshDeveloperKey] = useState('');
   const [developerBusy, setDeveloperBusy] = useState(false);
+  const [devDashTab, setDevDashTab] = useState<'keys'|'plans'|'transactions'|'install'>('keys');
 
   // Selection
   const [selectedNetwork, setSelectedNetwork] = useState<typeof NETWORKS[0]|null>(null);
@@ -1701,37 +1703,35 @@ export default function AppPage() {
   const displayName = (user.firstName || '').trim() || 'Customer';
 
   const Header = () => (
-    <div style={{ padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(255,255,255,.78)',borderBottom:'1px solid var(--border)',position:'fixed',top:0,left:0,right:0,zIndex:100,backdropFilter:'blur(16px)',backgroundImage: dark ? 'linear-gradient(180deg,rgba(4,8,16,.92),rgba(4,8,16,.78))' : 'linear-gradient(180deg,rgba(255,255,255,.84),rgba(255,255,255,.76))' }}>
-      <div style={{ display:'flex',alignItems:'center',gap:12,minWidth:0 }}>
+    <div style={{ padding:'8px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(255,255,255,.78)',borderBottom:'1px solid var(--border)',position:'fixed',top:0,left:0,right:0,zIndex:100,backdropFilter:'blur(16px)',backgroundImage: dark ? 'linear-gradient(180deg,rgba(4,8,16,.92),rgba(4,8,16,.78))' : 'linear-gradient(180deg,rgba(255,255,255,.84),rgba(255,255,255,.76))' }}>
+      <div style={{ display:'flex',alignItems:'center',gap:10,minWidth:0,flex:1 }}>
         <img src="/images/logo-sm.png" alt="SaukiMart" style={{ height:36,width:'auto',borderRadius:8,flexShrink:0 }} />
-        <div style={{ display:'flex',flexDirection:'column',minWidth:0,justifyContent:'center' }}>
-          <span
-            style={{
-              fontSize:18,
-              fontWeight:800,
-              fontFamily:'-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,sans-serif',
-              color:'var(--text)',
-              whiteSpace:'nowrap',
-              overflow:'hidden',
-              textOverflow:'ellipsis',
-              maxWidth:'42vw',
-              letterSpacing:'-0.02em'
-            }}
-          >
-            {displayName}
-          </span>
+        <div style={{ display:'flex',flexDirection:'column',minWidth:0,justifyContent:'center',gap:4 }}>
+          <div style={{ display:'flex',alignItems:'center',gap:8,minWidth:0 }}>
+            <span style={{ fontSize:17,fontWeight:800,fontFamily:'-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,sans-serif',color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'30vw',letterSpacing:'-0.02em' }}>
+              {displayName}
+            </span>
+            {user?.isDeveloper && (
+              <span style={{ fontSize:10,fontWeight:900,color:'#FF6D00',background:'rgba(255,109,0,.15)',border:'1px solid rgba(255,109,0,.28)',borderRadius:6,padding:'3px 8px',whiteSpace:'nowrap',letterSpacing:'0.02em',textTransform:'uppercase' }}>
+                🔌 Developer
+              </span>
+            )}
+            <span style={{ fontSize:10,fontWeight:900,color:BLUE,background:'rgba(0,113,227,.15)',border:`1px solid rgba(0,113,227,.28)`,borderRadius:6,padding:'3px 8px',whiteSpace:'nowrap',letterSpacing:'0.02em',textTransform:'uppercase' }}>
+              👤 User
+            </span>
+          </div>
         </div>
       </div>
-      <div style={{ display:'flex',alignItems:'center',gap:10 }}>
-        <button onClick={()=>updatePref('theme', dark?'light':'dark')} style={{ width:40,height:40,borderRadius:12,background:'var(--card2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,border:'1px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
+      <div style={{ display:'flex',alignItems:'center',gap:8,flexShrink:0 }}>
+        <button onClick={()=>updatePref('theme', dark?'light':'dark')} style={{ width:36,height:36,borderRadius:10,background:'var(--card2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,border:'1px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
           onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'}}
           onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.04)'}}>
-          {dark ? Icons.bell(ORANGE, 18) : Icons.sun(ORANGE, 18)}
+          {dark ? Icons.bell(ORANGE, 16) : Icons.sun(ORANGE, 16)}
         </button>
-        <button onClick={()=>setScreen('profile')} style={{ display:'flex',alignItems:'center',boxShadow:'0 2px 8px rgba(0,0,0,.08)',borderRadius:12,transition:'all .2s',cursor:'pointer' }}
+        <button onClick={()=>setScreen('profile')} style={{ display:'flex',alignItems:'center',boxShadow:'0 2px 8px rgba(0,0,0,.08)',borderRadius:10,transition:'all .2s',cursor:'pointer' }}
           onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.12)';e.currentTarget.style.transform='scale(1.05)'}}
           onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.08)';e.currentTarget.style.transform='scale(1)'}}>
-          <div style={{ width:40,height:40,borderRadius:12,background:BLUE,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:13 }}>
+          <div style={{ width:36,height:36,borderRadius:10,background:BLUE,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:12 }}>
             {getInitials(user)}
           </div>
         </button>
@@ -1888,49 +1888,37 @@ export default function AppPage() {
           </div>
         )}
 
-        {/* Quick Actions */}
+        {/* Quick Actions — Horizontal Compact */}
         <div style={{ margin:'24px 16px 0' }}>
-          <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.5,marginBottom:14,marginLeft:4,textTransform:'uppercase' }}>Quick Actions</p>
-          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12 }}>
-            <button onClick={()=>setScreen('data-networks')}
-              style={{ background:'linear-gradient(145deg,rgba(0,113,227,.11),rgba(0,113,227,.03))',borderRadius:18,padding:'20px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:12,border:'1px solid rgba(0,113,227,.2)',boxShadow:'0 10px 24px rgba(0,113,227,.14)',transition:'all .3s',cursor:'pointer' }}
-              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
-              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
-              <IconBox icon={Icons.bolt(BLUE, 24)} bg={'rgba(0,113,227,.10)'} />
-              <div style={{ textAlign:'left' }}>
-                <p style={{ fontWeight:700,fontSize:15,color:'var(--text)' }}>Buy Data</p>
-                <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:2 }}>MTN, Airtel, Glo</p>
-              </div>
+          <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.5,marginBottom:12,marginLeft:4,textTransform:'uppercase' }}>Actions</p>
+          <div style={{ display:'flex',gap:9,overflowX:'auto',paddingBottom:8,scrollBehavior:'smooth' }}>
+            <button onClick={()=>setScreen('data-networks')} className="tactile-btn"
+              style={{ minWidth:110,height:110,borderRadius:16,padding:'12px',background:'linear-gradient(145deg,rgba(0,113,227,.14),rgba(0,113,227,.05))',border:'1px solid rgba(0,113,227,.22)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer',transition:'all .2s',flexShrink:0,whiteSpace:'nowrap' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 8px 20px rgba(0,113,227,.24)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='none'}}>
+              {Icons.bolt(BLUE, 22)}
+              <span style={{ fontSize:11,fontWeight:700,color:'var(--text)',textAlign:'center' }}>Data</span>
             </button>
-            <button onClick={()=>{ loadProducts(); setScreen('store'); }}
-              style={{ background:'linear-gradient(145deg,rgba(48,209,88,.12),rgba(48,209,88,.03))',borderRadius:18,padding:'20px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:12,border:'1px solid rgba(48,209,88,.25)',boxShadow:'0 10px 24px rgba(48,209,88,.14)',transition:'all .3s',cursor:'pointer' }}
-              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
-              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
-              <IconBox icon={Icons.chartBar(GREEN, 24)} bg={'rgba(48,209,88,.10)'} />
-              <div style={{ textAlign:'left' }}>
-                <p style={{ fontWeight:700,fontSize:15,color:'var(--text)' }}>Store</p>
-                <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:2 }}>Devices & Accessories</p>
-              </div>
+            <button onClick={()=>{ loadProducts(); setScreen('store'); }} className="tactile-btn"
+              style={{ minWidth:110,height:110,borderRadius:16,padding:'12px',background:'linear-gradient(145deg,rgba(48,209,88,.14),rgba(48,209,88,.05))',border:'1px solid rgba(48,209,88,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer',transition:'all .2s',flexShrink:0 }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 8px 20px rgba(48,209,88,.24)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='none'}}>
+              {Icons.chartBar(GREEN, 22)}
+              <span style={{ fontSize:11,fontWeight:700,color:'var(--text)',textAlign:'center' }}>Store</span>
             </button>
-            <button onClick={()=>setScreen('transfer')}
-              style={{ background:'linear-gradient(145deg,rgba(90,200,250,.12),rgba(90,200,250,.03))',borderRadius:18,padding:'20px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:12,border:'1px solid rgba(90,200,250,.27)',boxShadow:'0 10px 24px rgba(90,200,250,.16)',transition:'all .3s',cursor:'pointer' }}
-              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
-              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
-              <IconBox icon={Icons.sendIcon(TEAL, 24)} bg={'rgba(90,200,250,.10)'} />
-              <div style={{ textAlign:'left' }}>
-                <p style={{ fontWeight:700,fontSize:15,color:'var(--text)' }}>Send Money</p>
-                <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:2 }}>To Friends</p>
-              </div>
+            <button onClick={()=>setScreen('transfer')} className="tactile-btn"
+              style={{ minWidth:110,height:110,borderRadius:16,padding:'12px',background:'linear-gradient(145deg,rgba(90,200,250,.14),rgba(90,200,250,.05))',border:'1px solid rgba(90,200,250,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer',transition:'all .2s',flexShrink:0 }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 8px 20px rgba(90,200,250,.24)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='none'}}>
+              {Icons.sendIcon(TEAL, 22)}
+              <span style={{ fontSize:11,fontWeight:700,color:'var(--text)',textAlign:'center' }}>Send</span>
             </button>
-            <button onClick={()=>setScreen(user?.isDeveloper ? 'developer-dashboard' : 'developer-terms')}
-              style={{ background:'linear-gradient(145deg,rgba(191,90,242,.12),rgba(191,90,242,.03))',borderRadius:18,padding:'20px 16px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:12,border:'1px solid rgba(191,90,242,.25)',boxShadow:'0 10px 24px rgba(191,90,242,.14)',transition:'all .3s',cursor:'pointer' }}
-              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'}}
-              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'}}>
-              <IconBox icon={Icons.chartBar(PURPLE, 24)} bg={'rgba(191,90,242,.10)'} />
-              <div style={{ textAlign:'left' }}>
-                <p style={{ fontWeight:700,fontSize:15,color:'var(--text)' }}>{user?.isDeveloper ? 'Developer API' : 'Upgrade API'}</p>
-                <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:2 }}>{user?.isDeveloper ? 'Dashboard & Keys' : `${Number(user?.developerDiscountPercent || 8)}% off plans`}</p>
-              </div>
+            <button onClick={()=>{ window.lastDeveloperClick = Date.now(); setScreen(user?.isDeveloper ? 'developer-dashboard' : 'developer-terms'); }} className="tactile-btn"
+              style={{ minWidth:110,height:110,borderRadius:16,padding:'12px',background:'linear-gradient(145deg,rgba(191,90,242,.14),rgba(191,90,242,.05))',border:'1px solid rgba(191,90,242,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer',transition:'all .2s',flexShrink:0 }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 8px 20px rgba(191,90,242,.24)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='none'}}>
+              {Icons.code(PURPLE, 22)}
+              <span style={{ fontSize:11,fontWeight:700,color:'var(--text)',textAlign:'center' }}>{user?.isDeveloper ? 'Dev API' : 'API'}</span>
             </button>
           </div>
         </div>
@@ -2824,75 +2812,208 @@ export default function AppPage() {
     </>
   );
 
-  /* DEVELOPER DASHBOARD */
+  /* DEVELOPER DASHBOARD — TABBED INTERFACE */
   if (screen === 'developer-dashboard') return (
     <>
       <GlobalStyle dark={dark} />
       {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500 }}>{toast}</div>}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
-      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#040810 0%,#071322 100%)' : 'linear-gradient(180deg,#F3F8FF 0%,#EFF4FB 100%)',display:'flex',flexDirection:'column' }}>
-        <div style={{ padding:'58px 20px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:`1px solid ${dark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)'}` }}>
-          <button onClick={()=>setScreen('profile')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
-          <div>
-            <h2 style={{ fontSize:21,fontWeight:900,color:'var(--text)',letterSpacing:-0.4 }}>Developer Dashboard</h2>
-            <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:4 }}>{developerDocs.discountPercent}% API discount active</p>
+      
+      <div style={{ height:'100dvh',background:dark ? 'linear-gradient(180deg,#040810 0%,#0A1424 100%)' : 'linear-gradient(180deg,#F3F8FF 0%,#EEF4FB 100%)',display:'flex',flexDirection:'column',animation:'fadeIn .3s ease-in' }}>
+        
+        {/* Header with Return Button */}
+        <div style={{ padding:'16px 16px 12px',background:dark ? 'rgba(10,20,36,.95)' : 'rgba(255,255,255,.96)',borderBottom:`1px solid ${dark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)'}`,display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+          <div style={{ display:'flex',alignItems:'center',gap:12 }}>
+            <button onClick={()=>setScreen('home')} style={{ width:40,height:40,borderRadius:12,border:`1px solid ${dark?'rgba(255,255,255,.1)':'rgba(0,0,0,.08)'}`,background:dark?'rgba(255,255,255,.05)':'rgba(0,0,0,.03)',color:BLUE,fontSize:20,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',transition:'all .2s' }}
+              onMouseEnter={e=>{e.currentTarget.style.background=dark?'rgba(255,255,255,.1)':'rgba(0,0,0,.08)';e.currentTarget.style.transform='scale(1.1)'}}
+              onMouseLeave={e=>{e.currentTarget.style.background=dark?'rgba(255,255,255,.05)':'rgba(0,0,0,.03)';e.currentTarget.style.transform='scale(1)'}}>
+              ← 
+            </button>
+            <div>
+              <h2 style={{ fontSize:18,fontWeight:900,color:'var(--text)',margin:0,letterSpacing:-0.3 }}>Dev Console</h2>
+              <p style={{ fontSize:11,color:'var(--text-secondary)',margin:'2px 0 0',fontWeight:600 }}>{developerDocs.discountPercent}% discount · {user?.isDeveloper?'Active':'Inactive'}</p>
+            </div>
+          </div>
+          <div style={{ fontSize:32,fontWeight:900,color:PURPLE }}>⚙️</div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div style={{ padding:'8px 12px',background:dark?'rgba(10,20,36,.6)':'rgba(248,251,255,.8)',borderBottom:`1px solid ${dark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)'}`,display:'flex',gap:4,overflowX:'auto',scrollBehavior:'smooth' }}>
+          {[
+            { id:'keys', label:'🔑 Keys', icon:'keys' },
+            { id:'plans', label:'📋 Plans', icon:'plans' },
+            { id:'install', label:'⚡ Setup', icon:'install' },
+            { id:'transactions', label:'📊 Activity', icon:'tx' },
+          ].map(tab=>(
+            <button key={tab.id} onClick={()=>setDevDashTab(tab.id as any)} style={{ padding:'10px 16px',borderRadius:10,background:devDashTab===tab.id?`linear-gradient(135deg,${PURPLE},#7C3AED)`:dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.04)',color:devDashTab===tab.id?'#fff':'var(--text-secondary)',fontSize:13,fontWeight:devDashTab===tab.id?800:700,border:`1px solid ${devDashTab===tab.id?`${PURPLE}40`:dark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)'}`,cursor:'pointer',transition:'all .2s',whiteSpace:'nowrap',flexShrink:0 }}
+              onMouseEnter={e=>{if(devDashTab!==tab.id){e.currentTarget.style.background=dark?'rgba(255,255,255,.12)':'rgba(0,0,0,.08)'}}}
+              onMouseLeave={e=>{if(devDashTab!==tab.id){e.currentTarget.style.background=dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.04)'}}}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Balance Card — Always visible */}
+        <div style={{ margin:'12px 16px 0',padding:'12px 16px',background:dark?'rgba(0,113,227,.15)':'rgba(0,113,227,.1)',border:`1px solid ${BLUE}40`,borderRadius:14 }}>
+          <p style={{ fontSize:11,fontWeight:800,color:BLUE,textTransform:'uppercase',letterSpacing:'0.05em',margin:0 }}>Wallet Balance</p>
+          <div style={{ display:'flex',alignItems:'baseline',gap:6,marginTop:6 }}>
+            <span style={{ fontSize:24,fontWeight:900,color:BLUE }}>₦{(user?.walletBalance||0).toLocaleString('en-NG',{minimumFractionDigits:2})}</span>
+            <span style={{ fontSize:11,fontWeight:700,color:BLUE,opacity:0.8 }}>API discount: {developerDocs.discountPercent||0}% off</span>
           </div>
         </div>
 
-        <div style={{ padding:'16px',overflowY:'auto',flex:1 }}>
-          <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:14,marginBottom:12 }}>
-            <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8 }}>API Credentials</p>
-            <p style={{ fontSize:13,color:'var(--text)',marginBottom:8 }}>Key preview: <span style={{ fontWeight:800 }}>{developerApiPreview || 'No key yet'}</span></p>
-            {freshDeveloperKey && (
-              <div style={{ background:'rgba(0,113,227,.08)',border:'1px solid rgba(0,113,227,.2)',borderRadius:12,padding:'10px 12px',marginBottom:8 }}>
-                <p style={{ fontSize:11,color:'var(--text-secondary)',marginBottom:6 }}>Copy now (shown once):</p>
-                <p style={{ fontSize:12,fontWeight:700,color:BLUE,wordBreak:'break-all' }}>{freshDeveloperKey}</p>
+        {/* Tab Content */}
+        <div style={{ flex:1,overflowY:'auto',padding:'16px',paddingBottom:20 }}>
+          
+          {/* KEYS TAB */}
+          {devDashTab==='keys' && (
+            <div style={{ display:'grid',gap:12,animation:'fadeIn .2s ease' }}>
+              <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:16 }}>
+                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12 }}>
+                  <h3 style={{ fontSize:14,fontWeight:900,color:'var(--text)',margin:0 }}>🔑 Active API Key</h3>
+                  <button onClick={rotateDeveloperKey} disabled={developerBusy} style={{ fontSize:12,fontWeight:800,color:BLUE,background:PURPLE,color:'#fff',padding:'6px 12px',borderRadius:8,border:'none',cursor:'pointer' }}>{developerBusy?'Rotating...':'Rotate'}</button>
+                </div>
+                <p style={{ fontSize:12,color:'var(--text-secondary)',marginBottom:10 }}>Keep this safe. Never paste it in public code or websites.</p>
+                <div style={{ background:dark?'rgba(0,113,227,.08)':'rgba(0,113,227,.12)',border:`1px solid ${BLUE}30`,borderRadius:12,padding:12,marginBottom:12,fontFamily:'monospace',fontSize:11,color:BLUE,fontWeight:700,wordBreak:'break-all' }}>
+                  {developerApiPreview || 'Loading...'}
+                </div>
+                {freshDeveloperKey && (
+                  <div style={{ background:'rgba(76,175,80,.12)',border:'1px solid rgba(76,175,80,.3)',borderRadius:12,padding:12,marginBottom:12 }}>
+                    <p style={{ fontSize:11,fontWeight:700,color:GREEN,margin:'0 0 6px',textTransform:'uppercase',letterSpacing:'0.05em' }}>⬆️ NEW KEY (COPY NOW)</p>
+                    <p style={{ fontFamily:'mono',fontSize:11,color:GREEN,fontWeight:900,margin:0,wordBreak:'break-all',fontFamily:'monospace' }}>{freshDeveloperKey}</p>
+                  </div>
+                )}
+                <button onClick={()=>{ if (freshDeveloperKey) navigator.clipboard.writeText(freshDeveloperKey); else if (developerApiPreview) navigator.clipboard.writeText(developerApiPreview); showToast('Key copied'); }} style={{ width:'100%',padding:'10px',borderRadius:10,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:12,fontWeight:700,cursor:'pointer',transition:'all .2s' }}
+                  onMouseEnter={e=>{e.currentTarget.style.background=dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.06)'}}
+                  onMouseLeave={e=>{e.currentTarget.style.background='var(--bg-secondary)'}}>
+                  📋 Copy to Clipboard
+                </button>
               </div>
-            )}
-            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
-              <button onClick={rotateDeveloperKey} disabled={developerBusy} style={{ height:40,borderRadius:11,border:'none',background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:13,fontWeight:800,cursor:'pointer' }}>{developerBusy ? 'Please wait...' : 'Rotate API Key'}</button>
-              <button onClick={()=>{ if (freshDeveloperKey) navigator.clipboard.writeText(freshDeveloperKey); else if (developerApiPreview) navigator.clipboard.writeText(developerApiPreview); showToast('Copied'); }} style={{ height:40,borderRadius:11,border:'1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text)',fontSize:13,fontWeight:700,cursor:'pointer' }}>Copy Key</button>
             </div>
-          </div>
+          )}
 
-          <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:14,marginBottom:12 }}>
-            <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8 }}>Integration Guide</p>
-            <p style={{ fontSize:12,color:'var(--text-secondary)',marginBottom:6 }}>Plans endpoint</p>
-            <p style={{ fontSize:12,fontWeight:700,color:BLUE,wordBreak:'break-all',marginBottom:8 }}>{developerDocs.baseUrl}{developerDocs.plansEndpoint}</p>
-            <p style={{ fontSize:12,color:'var(--text-secondary)',marginBottom:6 }}>Purchase endpoint</p>
-            <p style={{ fontSize:12,fontWeight:700,color:BLUE,wordBreak:'break-all',marginBottom:8 }}>{developerDocs.baseUrl}{developerDocs.purchaseEndpoint}</p>
-            <p style={{ fontSize:12,color:'var(--text-secondary)',marginBottom:6 }}>Sample payload</p>
-            <pre style={{ background:'var(--bg-secondary)',border:'1px solid var(--border)',borderRadius:12,padding:10,fontSize:11,color:'var(--text)',whiteSpace:'pre-wrap',lineHeight:1.5 }}>{`{\n  "phoneNumber": "08012345678",\n  "network": "MTN",\n  "planCode": "1-123",\n  "idempotencyKey": "my-unique-reference-001"\n}`}</pre>
-          </div>
-
-          <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:14,marginBottom:12 }}>
-            <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10 }}>Plans Code List</p>
-            <div style={{ display:'grid',gap:8 }}>
-              {developerPlans.slice(0, 120).map((p) => (
-                <div key={p.id} style={{ display:'grid',gridTemplateColumns:'0.9fr 1fr 1fr 1fr',gap:8,alignItems:'center',padding:'8px 10px',borderRadius:10,background:'var(--bg-secondary)',border:'1px solid var(--border)' }}>
-                  <span style={{ fontSize:11,fontWeight:800,color:BLUE }}>{p.code}</span>
-                  <span style={{ fontSize:12,color:'var(--text)' }}>{p.network}</span>
-                  <span style={{ fontSize:12,color:'var(--text)' }}>{p.dataSize}</span>
-                  <span style={{ fontSize:12,fontWeight:700,color:'var(--text)' }}>₦{Number(p.developerPrice).toLocaleString('en-NG',{minimumFractionDigits:2})}</span>
+          {/* PLANS TAB */}
+          {devDashTab==='plans' && (
+            <div style={{ display:'grid',gap:8,animation:'fadeIn .2s ease' }}>
+              <p style={{ fontSize:12,color:'var(--text-secondary)',fontWeight:600,margin:0 }}>Available data plans for API. Prices include {developerDocs.discountPercent}% developer discount.</p>
+              {developerPlans.slice(0, 150).map((p) => (
+                <div key={p.id} style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:12,padding:12,display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,alignItems:'center' }}>
+                  <div>
+                    <p style={{ fontSize:10,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.04em',margin:0 }}>Code</p>
+                    <p style={{ fontSize:13,fontWeight:900,color:BLUE,margin:'4px 0 0' }}>{p.code}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize:10,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.04em',margin:0 }}>Plan</p>
+                    <p style={{ fontSize:13,fontWeight:700,color:'var(--text)',margin:'4px 0 0' }}>{p.network} {p.dataSize}</p>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <p style={{ fontSize:10,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.04em',margin:0 }}>Price</p>
+                    <p style={{ fontSize:14,fontWeight:900,color:GREEN,margin:'4px 0 0' }}>₦{Number(p.developerPrice).toLocaleString('en-NG',{minimumFractionDigits:1})}</p>
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
+          )}
 
-          <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:14 }}>
-            <p style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10 }}>API Transaction Records</p>
-            <div style={{ display:'grid',gap:8 }}>
+          {/* INSTALL TAB */}
+          {devDashTab==='install' && (
+            <div style={{ display:'grid',gap:14,animation:'fadeIn .2s ease' }}>
+              <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:16 }}>
+                <h3 style={{ fontSize:14,fontWeight:900,color:'var(--text)',margin:'0 0 12px' }}>📱 Installation Guide</h3>
+                <p style={{ fontSize:12,color:'var(--text-secondary)',lineHeight:1.6,margin:0 }}>Add SaukiMart API to your Next.js app. Use our SDK to make API calls with just a few lines.</p>
+              </div>
+
+              <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:16 }}>
+                <h4 style={{ fontSize:13,fontWeight:900,color:'var(--text)',margin:'0 0 10px' }}>Step 1: Install SDK</h4>
+                <pre style={{ background:dark?'rgba(0,0,0,.3)':'rgba(0,0,0,.05)',border:`1px solid ${dark?'rgba(255,255,255,.1)':'rgba(0,0,0,.08)'}`,borderRadius:10,padding:12,fontSize:11,color:dark?'#A0F469':'#17C950',fontFamily:'monospace',margin:0,overflow:'auto',lineHeight:1.6 }}>npm install saukimart-sdk</pre>
+              </div>
+
+              <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:16 }}>
+                <h4 style={{ fontSize:13,fontWeight:900,color:'var(--text)',margin:'0 0 10px' }}>Step 2: Initialize in your code</h4>
+                <pre style={{ background:dark?'rgba(0,0,0,.3)':'rgba(0,0,0,.05)',border:`1px solid ${dark?'rgba(255,255,255,.1)':'rgba(0,0,0,.08)'}`,borderRadius:10,padding:12,fontSize:10,color:dark?'#A0F469':'#17C950',fontFamily:'monospace',margin:0,overflow:'auto',lineHeight:1.6 }}>
+{`import { SaukiMart } from 'saukimart-sdk';
+
+const sauki = new SaukiMart({
+  apiKey: '${developerApiPreview || 'sm_live_xxxxx'}',
+  environment: 'production'
+});`}
+                </pre>
+              </div>
+
+              <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:16 }}>
+                <h4 style={{ fontSize:13,fontWeight:900,color:'var(--text)',margin:'0 0 10px' }}>Step 3: Make a purchase</h4>
+                <pre style={{ background:dark?'rgba(0,0,0,.3)':'rgba(0,0,0,.05)',border:`1px solid ${dark?'rgba(255,255,255,.1)':'rgba(0,0,0,.08)'}`,borderRadius:10,padding:12,fontSize:10,color:dark?'#A0F469':'#17C950',fontFamily:'monospace',margin:0,overflow:'auto',lineHeight:1.6 }}>
+{`// Buy 1.5GB MTN data for ₦1,200
+const response = await sauki.buyData({
+  phoneNumber: '08012345678',
+  planCode: '1-123',  // networkId-planId
+  idempotencyKey: 'order-123'
+});
+
+// Response
+console.log(response);
+// {
+//   success: true,
+//   data: {
+//     network: 'MTN',
+//     dataSize: '1.5GB',
+//     phoneNumber: '08012345678',
+//     amount: 1200,
+//     discountApplied: 150
+//   }
+// }`}
+                </pre>
+              </div>
+
+              <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:16 }}>
+                <h4 style={{ fontSize:13,fontWeight:900,color:'var(--text)',margin:'0 0 10px' }}>⚠️ Debug Mode</h4>
+                <p style={{ fontSize:12,color:'var(--text-secondary)',margin:'0 0 10px',lineHeight:1.6 }}>Test with sandbox number <span style={{ fontFamily:'monospace',fontWeight:700,background:dark?'rgba(255,255,255,.1)':'rgba(0,0,0,.06)',padding:'2px 6px',borderRadius:4 }}>09000000000</span> — deducts wallet but doesn't deliver.</p>
+                <pre style={{ background:dark?'rgba(0,0,0,.3)':'rgba(0,0,0,.05)',border:`1px solid ${dark?'rgba(255,255,255,.1)':'rgba(0,0,0,.08)'}`,borderRadius:10,padding:12,fontSize:10,color:dark?'#FFB84D':'#FF9800',fontFamily:'monospace',margin:0,overflow:'auto',lineHeight:1.6 }}>
+{`// Test mode (no actual delivery)
+const test = await sauki.buyData({
+  phoneNumber: '09000000000',  // sandbox
+  planCode: '1-123',
+  idempotencyKey: 'test-1'
+});
+// wallet deducted, but data not delivered`}
+                </pre>
+              </div>
+            </div>
+          )}
+
+          {/* TRANSACTIONS TAB */}
+          {devDashTab==='transactions' && (
+            <div style={{ display:'grid',gap:12,animation:'fadeIn .2s ease' }}>
               {developerTx.length === 0 ? (
-                <p style={{ fontSize:13,color:'var(--text-secondary)' }}>No API transactions yet.</p>
-              ) : developerTx.map((t) => (
-                <div key={t.id} style={{ padding:'10px 12px',borderRadius:10,background:'var(--bg-secondary)',border:'1px solid var(--border)' }}>
-                  <p style={{ fontSize:13,fontWeight:800,color:t.status === 'success' ? GREEN : RED }}>{t.status.toUpperCase()} · {t.network} · {t.planCode}</p>
-                  <p style={{ fontSize:12,color:'var(--text)',marginTop:4 }}>{t.phoneNumber} · ₦{Number(t.developerPrice).toLocaleString('en-NG',{minimumFractionDigits:2})}</p>
-                  <p style={{ fontSize:11,color:'var(--text-secondary)',marginTop:3 }}>{new Date(t.createdAt).toLocaleString('en-NG')}</p>
+                <div style={{ background:'var(--card)',border:'1px dashed var(--border)',borderRadius:16,padding:40,textAlign:'center' }}>
+                  <p style={{ fontSize:40,margin:'0 0 10px' }}>📊</p>
+                  <p style={{ fontSize:14,fontWeight:700,color:'var(--text)',margin:0 }}>No transactions yet</p>
+                  <p style={{ fontSize:12,color:'var(--text-secondary)',margin:'6px 0 0' }}>API purchases will appear here</p>
                 </div>
-              ))}
+              ) : (
+                developerTx.map((t) => (
+                  <div key={t.id} style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:12,padding:14 }}>
+                    <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
+                      <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+                        <div style={{ width:36,height:36,borderRadius:10,background:t.status==='success'?'rgba(76,175,80,.15)':'rgba(244,67,54,.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16 }}>
+                          {t.status==='success'?'✓':'✕'}
+                        </div>
+                        <div>
+                          <p style={{ fontSize:13,fontWeight:800,color:'var(--text)',margin:0 }}>{t.network} · {t.planCode}</p>
+                          <p style={{ fontSize:11,color:'var(--text-secondary)',margin:'2px 0 0',fontWeight:600 }}>{t.phoneNumber}</p>
+                        </div>
+                      </div>
+                      <div style={{ textAlign:'right' }}>
+                        <p style={{ fontSize:13,fontWeight:900,color:t.status==='success'?GREEN:RED,margin:0 }}>₦{Number(t.developerPrice).toLocaleString('en-NG',{minimumFractionDigits:2})}</p>
+                        <p style={{ fontSize:10,color:'var(--text-secondary)',margin:'2px 0 0',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.02em' }}>{t.status}</p>
+                      </div>
+                    </div>
+                    <p style={{ fontSize:10,color:'var(--text-secondary)',margin:0 }}>{new Date(t.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</p>
+                  </div>
+                ))
+              )}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </>
