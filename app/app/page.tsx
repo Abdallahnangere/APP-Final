@@ -1886,38 +1886,59 @@ export default function AppPage() {
           </div>
         )}
 
-        {/* Quick Actions — Compact Single Row */}
+        {/* Quick Actions */}
         <div style={{ margin:'24px 16px 0' }}>
-          <p style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.5,marginBottom:12,marginLeft:4,textTransform:'uppercase' }}>Actions</p>
-          <div style={{ display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:8,paddingBottom:4 }}>
+          <p style={{ fontSize:11,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.8,marginBottom:10,marginLeft:2,textTransform:'uppercase' }}>Quick Actions</p>
+          <div style={{ display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:8 }}>
+
+            {/* Data */}
             <button onClick={()=>setScreen('data-networks')} className="tactile-btn"
-              style={{ width:'100%',height:88,borderRadius:14,padding:'8px',background:'linear-gradient(145deg,rgba(0,113,227,.16),rgba(0,113,227,.06))',border:'1px solid rgba(0,113,227,.24)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,cursor:'pointer',transition:'all .2s' }}
-              onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 8px 20px rgba(0,113,227,.24)'}}
-              onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='none'}}>
-              {Icons.bolt(BLUE, 20)}
-              <span style={{ fontSize:10,fontWeight:800,color:'var(--text)',textAlign:'center',lineHeight:1.2 }}>Data</span>
+              style={{ width:'100%',height:96,borderRadius:16,padding:'12px 8px 10px',background:dark ? 'linear-gradient(160deg,rgba(0,113,227,.22) 0%,rgba(0,113,227,.09) 100%)' : 'linear-gradient(160deg,rgba(0,113,227,.13) 0%,rgba(0,113,227,.05) 100%)',border:'1px solid rgba(0,113,227,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between',cursor:'pointer',transition:'transform .18s,box-shadow .18s',boxShadow:'0 2px 8px rgba(0,113,227,.10)' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px) scale(1.03)';e.currentTarget.style.boxShadow='0 8px 22px rgba(0,113,227,.26)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0) scale(1)';e.currentTarget.style.boxShadow='0 2px 8px rgba(0,113,227,.10)'}}>
+              <div style={{ width:38,height:38,borderRadius:10,background:'rgba(0,113,227,.18)',display:'flex',alignItems:'center',justifyContent:'center' }}>{Icons.bolt(BLUE, 19)}</div>
+              <div style={{ textAlign:'center' }}>
+                <p style={{ fontSize:11,fontWeight:800,color:'var(--text)',margin:0,lineHeight:1.2 }}>Data</p>
+                <p style={{ fontSize:9,fontWeight:600,color:'rgba(0,113,227,.85)',margin:'2px 0 0',lineHeight:1.2,letterSpacing:.1 }}>All Networks</p>
+              </div>
             </button>
+
+            {/* Store */}
             <button onClick={()=>{ loadProducts(); setScreen('store'); }} className="tactile-btn"
-              style={{ width:'100%',height:88,borderRadius:14,padding:'8px',background:'linear-gradient(145deg,rgba(48,209,88,.16),rgba(48,209,88,.06))',border:'1px solid rgba(48,209,88,.30)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,cursor:'pointer',transition:'all .2s' }}
-              onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 8px 20px rgba(48,209,88,.24)'}}
-              onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='none'}}>
-              {Icons.chartBar(GREEN, 20)}
-              <span style={{ fontSize:10,fontWeight:800,color:'var(--text)',textAlign:'center',lineHeight:1.2 }}>Store</span>
+              style={{ width:'100%',height:96,borderRadius:16,padding:'12px 8px 10px',background:dark ? 'linear-gradient(160deg,rgba(48,209,88,.22) 0%,rgba(48,209,88,.09) 100%)' : 'linear-gradient(160deg,rgba(48,209,88,.13) 0%,rgba(48,209,88,.05) 100%)',border:'1px solid rgba(48,209,88,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between',cursor:'pointer',transition:'transform .18s,box-shadow .18s',boxShadow:'0 2px 8px rgba(48,209,88,.10)' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px) scale(1.03)';e.currentTarget.style.boxShadow='0 8px 22px rgba(48,209,88,.26)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0) scale(1)';e.currentTarget.style.boxShadow='0 2px 8px rgba(48,209,88,.10)'}}>
+              <div style={{ width:38,height:38,borderRadius:10,background:'rgba(48,209,88,.18)',display:'flex',alignItems:'center',justifyContent:'center' }}>{Icons.chartBar(GREEN, 19)}</div>
+              <div style={{ textAlign:'center' }}>
+                <p style={{ fontSize:11,fontWeight:800,color:'var(--text)',margin:0,lineHeight:1.2 }}>Store</p>
+                <p style={{ fontSize:9,fontWeight:600,color:'rgba(48,209,88,.85)',margin:'2px 0 0',lineHeight:1.2,letterSpacing:.1 }}>Premium Gadgets</p>
+              </div>
             </button>
+
+            {/* Send */}
             <button onClick={()=>setScreen('transfer')} className="tactile-btn"
-              style={{ width:'100%',height:88,borderRadius:14,padding:'8px',background:'linear-gradient(145deg,rgba(90,200,250,.16),rgba(90,200,250,.06))',border:'1px solid rgba(90,200,250,.30)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,cursor:'pointer',transition:'all .2s' }}
-              onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 8px 20px rgba(90,200,250,.24)'}}
-              onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='none'}}>
-              {Icons.sendIcon(TEAL, 20)}
-              <span style={{ fontSize:10,fontWeight:800,color:'var(--text)',textAlign:'center',lineHeight:1.2 }}>Send</span>
+              style={{ width:'100%',height:96,borderRadius:16,padding:'12px 8px 10px',background:dark ? 'linear-gradient(160deg,rgba(90,200,250,.22) 0%,rgba(90,200,250,.09) 100%)' : 'linear-gradient(160deg,rgba(90,200,250,.13) 0%,rgba(90,200,250,.05) 100%)',border:'1px solid rgba(90,200,250,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between',cursor:'pointer',transition:'transform .18s,box-shadow .18s',boxShadow:'0 2px 8px rgba(90,200,250,.10)' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px) scale(1.03)';e.currentTarget.style.boxShadow='0 8px 22px rgba(90,200,250,.26)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0) scale(1)';e.currentTarget.style.boxShadow='0 2px 8px rgba(90,200,250,.10)'}}>
+              <div style={{ width:38,height:38,borderRadius:10,background:'rgba(90,200,250,.18)',display:'flex',alignItems:'center',justifyContent:'center' }}>{Icons.sendIcon(TEAL, 19)}</div>
+              <div style={{ textAlign:'center' }}>
+                <p style={{ fontSize:11,fontWeight:800,color:'var(--text)',margin:0,lineHeight:1.2 }}>Send</p>
+                <p style={{ fontSize:9,fontWeight:600,color:'rgba(90,200,250,.85)',margin:'2px 0 0',lineHeight:1.2,letterSpacing:.1 }}>User Transfer</p>
+              </div>
             </button>
+
+            {/* Dev API */}
             <button onClick={()=>{ setScreen(user?.isDeveloper ? 'developer-dashboard' : 'developer-terms'); }} className="tactile-btn"
-              style={{ width:'100%',height:88,borderRadius:14,padding:'8px',background:'linear-gradient(145deg,rgba(191,90,242,.16),rgba(191,90,242,.06))',border:'1px solid rgba(191,90,242,.30)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,cursor:'pointer',transition:'all .2s' }}
-              onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.04)';e.currentTarget.style.boxShadow='0 8px 20px rgba(191,90,242,.24)'}}
-              onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='none'}}>
-              {Icons.code(PURPLE, 20)}
-              <span style={{ fontSize:10,fontWeight:800,color:'var(--text)',textAlign:'center',lineHeight:1.2 }}>{user?.isDeveloper ? 'Dev API' : 'API'}</span>
+              style={{ width:'100%',height:96,borderRadius:16,padding:'12px 8px 10px',background:dark ? 'linear-gradient(160deg,rgba(191,90,242,.22) 0%,rgba(191,90,242,.09) 100%)' : 'linear-gradient(160deg,rgba(191,90,242,.13) 0%,rgba(191,90,242,.05) 100%)',border:'1px solid rgba(191,90,242,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between',cursor:'pointer',transition:'transform .18s,box-shadow .18s',boxShadow:'0 2px 8px rgba(191,90,242,.10)' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px) scale(1.03)';e.currentTarget.style.boxShadow='0 8px 22px rgba(191,90,242,.26)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0) scale(1)';e.currentTarget.style.boxShadow='0 2px 8px rgba(191,90,242,.10)'}}>
+              <div style={{ width:38,height:38,borderRadius:10,background:'rgba(191,90,242,.18)',display:'flex',alignItems:'center',justifyContent:'center' }}>{Icons.code(PURPLE, 19)}</div>
+              <div style={{ textAlign:'center' }}>
+                <p style={{ fontSize:11,fontWeight:800,color:'var(--text)',margin:0,lineHeight:1.2 }}>{user?.isDeveloper ? 'Dev API' : 'Dev API'}</p>
+                <p style={{ fontSize:9,fontWeight:600,color:'rgba(191,90,242,.85)',margin:'2px 0 0',lineHeight:1.2,letterSpacing:.1 }}>API Docs</p>
+              </div>
             </button>
+
           </div>
         </div>
 
@@ -1940,11 +1961,14 @@ export default function AppPage() {
                 const isCashback = tx.type === 'cashback' || tx.type === 'cashback_redemption';
                 const isTransferOut = tx.type === 'transfer_out';
                 const isTransferIn = tx.type === 'transfer_in';
+                const isApiPurchase = tx.type === 'api_purchase';
                 
                 // Icon and color mapping
                 const typeConfig: Record<string, {icon: any; color: string; bg: string; label: string}> = {
                   deposit: { icon: Icons.arrowDown(GREEN, 18), color: GREEN, bg: 'rgba(48,209,88,.08)', label: 'Deposit' },
                   data: { icon: Icons.bolt(BLUE, 18), color: BLUE, bg: 'rgba(0,113,227,.08)', label: 'Data Purchase' },
+                  api_data: { icon: Icons.bolt(BLUE, 18), color: BLUE, bg: 'rgba(0,113,227,.08)', label: 'API Data Purchase' },
+                  api_purchase: { icon: Icons.code(PURPLE, 18), color: PURPLE, bg: 'rgba(191,90,242,.08)', label: 'API Purchase' },
                   product: { icon: Icons.download(PURPLE, 18), color: PURPLE, bg: 'rgba(191,90,242,.08)', label: 'Product' },
                   cashback: { icon: Icons.arrowUp(ORANGE, 18), color: ORANGE, bg: 'rgba(255,159,10,.08)', label: 'Cashback' },
                   transfer_in: { icon: Icons.arrowDown(TEAL, 18), color: TEAL, bg: 'rgba(90,200,250,.08)', label: 'Money Received' },

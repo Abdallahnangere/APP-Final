@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
         SELECT id, type, description, amount, status, network, phone_number, product_name, amigo_reference, receipt_data, created_at
         FROM transactions
         WHERE user_id = ${payload.userId as string}
+          AND type != 'api_data'
 
         UNION ALL
 
@@ -70,7 +71,7 @@ export async function GET(req: NextRequest) {
           dat.id,
           'api_purchase' AS type,
           (dat.network || ' - ' || dat.plan_code || ' to ' || dat.phone_number) AS description,
-          dat.app_price AS amount,
+          dat.developer_price AS amount,
           dat.status,
           dat.network,
           dat.phone_number,
@@ -78,7 +79,7 @@ export async function GET(req: NextRequest) {
           dat.amigo_reference,
           jsonb_build_object(
             'ref', dat.id::text,
-            'amount', dat.app_price,
+            'amount', dat.developer_price,
             'date', dat.created_at,
             'type', 'api_purchase',
             'productName', dat.network || ' - ' || dat.plan_code,
