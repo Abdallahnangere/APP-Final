@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
           NULL AS product_name,
           d.flw_ref AS amigo_reference,
           jsonb_build_object(
-            'ref', COALESCE(d.flw_ref, d.flw_transaction_id, d.id),
+            'ref', COALESCE(d.flw_ref, d.flw_transaction_id, d.id::text),
             'amount', d.amount,
             'date', d.created_at,
             'type', 'deposit',
@@ -63,6 +63,37 @@ export async function GET(req: NextRequest) {
             WHERE t.user_id = d.user_id
               AND t.idempotency_key = ('deposit:' || COALESCE(d.flw_transaction_id, ''))
           )
+
+        UNION ALL
+
+        SELECT
+          dat.id,
+          'api_purchase' AS type,
+          (dat.network || ' - ' || dat.plan_code || ' to ' || dat.phone_number) AS description,
+          dat.app_price AS amount,
+          dat.status,
+          dat.network,
+          dat.phone_number,
+          NULL AS product_name,
+          dat.amigo_reference,
+          jsonb_build_object(
+            'ref', dat.id::text,
+            'amount', dat.app_price,
+            'date', dat.created_at,
+            'type', 'api_purchase',
+            'productName', dat.network || ' - ' || dat.plan_code,
+            'itemName', dat.plan_code,
+            'description', dat.network || ' to ' || dat.phone_number,
+            'userName', 'API Call',
+            'userPhone', dat.phone_number,
+            'deliveryAddress', dat.phone_number,
+            'endpoint', dat.endpoint,
+            'idempotencyKey', dat.idempotency_key,
+            'amigoRef', dat.amigo_reference
+          ) AS receipt_data,
+          dat.created_at
+        FROM developer_api_transactions dat
+        WHERE dat.user_id = ${payload.userId as string}
       ) AS activity
       ORDER BY created_at DESC LIMIT ${limit}
     `;
@@ -77,7 +108,7 @@ export async function GET(req: NextRequest) {
     response.headers.set('Cache-Control', 'no-store');
     return response;
   } catch (err) {
-    // Fallback so users still see transfer/purchase history even if deposits merge fails.
+    // Fallback so users still see transfer/purchase history even if deposits/api merge fails.
     console.error('Transactions activity query failed, falling back to base transactions:', err);
 
     const txns = await sql`
