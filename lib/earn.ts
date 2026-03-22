@@ -1,5 +1,7 @@
 import sql from '@/lib/db';
 
+let schemaEnsured = false;
+
 export const REFERRAL_TARGET_GB = 50;
 export const REFERRAL_REWARD_AMOUNT = 2000;
 export const MIN_WITHDRAWAL_AMOUNT = 1000;
@@ -7,6 +9,12 @@ export const MIN_WITHDRAWAL_AMOUNT = 1000;
 const REFERRAL_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 export async function ensureEarnSchema(): Promise<void> {
+  if (schemaEnsured) return;
+  schemaEnsured = true;
+
+  // Each statement must be a separate sql call.
+  // Neon's prepared-statement protocol rejects multiple commands per query (PG error 42601).
+
   await sql`
     CREATE TABLE IF NOT EXISTS withdrawals (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -24,35 +32,25 @@ export async function ensureEarnSchema(): Promise<void> {
       paid_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
+    )
+  `;
 
-    DO $$
-    BEGIN
-      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='referral_id') THEN
-        ALTER TABLE users ADD COLUMN referral_id TEXT;
-      END IF;
-      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='referred_by') THEN
-        ALTER TABLE users ADD COLUMN referred_by UUID REFERENCES users(id) ON DELETE SET NULL;
-      END IF;
-      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='referral_balance') THEN
-        ALTER TABLE users ADD COLUMN referral_balance NUMERIC(12,2) DEFAULT 0;
-      END IF;
-      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='total_gb_purchased') THEN
-        ALTER TABLE users ADD COLUMN total_gb_purchased NUMERIC(12,2) DEFAULT 0;
-      END IF;
-      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='referral_reward_earned') THEN
-        ALTER TABLE users ADD COLUMN referral_reward_earned BOOLEAN DEFAULT FALSE;
-      END IF;
-    END $$;
+  // ADD COLUMN IF NOT EXISTS (PG 9.6+) is safe to call repeatedly
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_id TEXT`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by UUID REFERENCES users(id) ON DELETE SET NULL`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_balance NUMERIC(12,2) DEFAULT 0`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS total_gb_purchased NUMERIC(12,2) DEFAULT 0`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_reward_earned BOOLEAN DEFAULT FALSE`;
 
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_id_unique ON users(referral_id) WHERE referral_id IS NOT NULL;
-    CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by);
-    CREATE INDEX IF NOT EXISTS idx_withdrawals_user_created_at ON withdrawals(user_id, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_withdrawals_status_created_at ON withdrawals(status, created_at DESC);
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_id_unique ON users(referral_id) WHERE referral_id IS NOT NULL`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_withdrawals_user_created_at ON withdrawals(user_id, created_at DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_withdrawals_status_created_at ON withdrawals(status, created_at DESC)`;
 
+  await sql`
     UPDATE users
     SET referral_balance = GREATEST(COALESCE(referral_balance, 0), COALESCE(referral_bonus, 0))
-    WHERE COALESCE(referral_balance, 0) <> GREATEST(COALESCE(referral_balance, 0), COALESCE(referral_bonus, 0));
+    WHERE COALESCE(referral_balance, 0) < GREATEST(COALESCE(referral_balance, 0), COALESCE(referral_bonus, 0))
   `;
 }
 
