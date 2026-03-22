@@ -2880,7 +2880,7 @@ export default function AppPage() {
                 {freshDeveloperKey && (
                   <div style={{ background:'rgba(76,175,80,.12)',border:'1px solid rgba(76,175,80,.3)',borderRadius:12,padding:12,marginBottom:12 }}>
                     <p style={{ fontSize:11,fontWeight:700,color:GREEN,margin:'0 0 6px',textTransform:'uppercase',letterSpacing:'0.05em' }}>⬆️ NEW KEY (COPY NOW)</p>
-                    <p style={{ fontFamily:'mono',fontSize:11,color:GREEN,fontWeight:900,margin:0,wordBreak:'break-all',fontFamily:'monospace' }}>{freshDeveloperKey}</p>
+                    <p style={{ fontSize:11,color:GREEN,fontWeight:900,margin:0,wordBreak:'break-all',fontFamily:'monospace' }}>{freshDeveloperKey}</p>
                   </div>
                 )}
                 <button onClick={()=>{ if (freshDeveloperKey) navigator.clipboard.writeText(freshDeveloperKey); else if (developerApiPreview) navigator.clipboard.writeText(developerApiPreview); showToast('Key copied'); }} style={{ width:'100%',padding:'10px',borderRadius:10,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:12,fontWeight:700,cursor:'pointer',transition:'all .2s' }}
