@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db';
-import { createAndStoreDeveloperKey, requireAppUser } from '@/lib/developerAuth';
+import { createAndStoreDeveloperKey, getActiveDeveloperKeyFullValue, requireAppUser } from '@/lib/developerAuth';
 
 export async function GET(req: NextRequest) {
   const user = await requireAppUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!user.is_developer) return NextResponse.json({ error: 'Developer access required' }, { status: 403 });
 
-  const keys = await sql`
+  let keys = await sql`
     SELECT id, key_prefix, key_last4, is_active, created_at, last_used_at
     FROM developer_api_keys
     WHERE user_id = ${user.id}
@@ -15,12 +15,41 @@ export async function GET(req: NextRequest) {
     LIMIT 20
   `;
 
+  let activeApiKey = await getActiveDeveloperKeyFullValue(user.id);
+  let autoReissued = false;
+
+  // Backward compatibility: old keys were not stored encrypted, so reissue once.
+  if (!activeApiKey) {
+    const hasActive = keys.some((k) => Boolean(k.is_active));
+    if (hasActive) {
+      await sql`
+        UPDATE developer_api_keys
+        SET is_active = FALSE,
+            revoked_at = NOW(),
+            updated_at = NOW()
+        WHERE user_id = ${user.id} AND is_active = TRUE
+      `;
+      const created = await createAndStoreDeveloperKey(user.id);
+      activeApiKey = created.fullKey;
+      autoReissued = true;
+      keys = await sql`
+        SELECT id, key_prefix, key_last4, is_active, created_at, last_used_at
+        FROM developer_api_keys
+        WHERE user_id = ${user.id}
+        ORDER BY created_at DESC
+        LIMIT 20
+      `;
+    }
+  }
+
   return NextResponse.json({
     success: true,
     discountPercent: Number(user.developer_discount_percent || 0),
     baseUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://www.saukimart.online',
     plansEndpoint: '/api/v1/developer/data-plans',
     purchaseEndpoint: '/api/v1/developer/purchase-data',
+    activeApiKey,
+    autoReissued,
     keys: keys.map((k) => ({
       id: k.id,
       prefix: k.key_prefix,
@@ -57,7 +86,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    message: 'API key rotated successfully. Store this key securely; it will not be shown again.',
+    message: 'API key rotated successfully.',
     apiKey: created.fullKey,
     key: {
       id: created.id,

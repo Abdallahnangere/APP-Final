@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS developer_api_keys (
   key_prefix TEXT NOT NULL,
   key_hash TEXT NOT NULL,
   key_last4 TEXT NOT NULL,
+  encrypted_key TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -27,6 +28,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_developer_api_keys_prefix_active
 
 CREATE INDEX IF NOT EXISTS idx_developer_api_keys_user_id
   ON developer_api_keys (user_id, created_at DESC);
+
+ALTER TABLE developer_api_keys
+  ADD COLUMN IF NOT EXISTS encrypted_key TEXT;
 
 CREATE TABLE IF NOT EXISTS developer_api_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

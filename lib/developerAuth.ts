@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { createHash, randomBytes, timingSafeEqual } from 'crypto';
+import { createHash, createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from 'crypto';
 import sql from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 
@@ -27,6 +27,48 @@ export function hashApiKey(rawKey: string): string {
   return createHash('sha256').update(rawKey).digest('hex');
 }
 
+function getDeveloperKeySecret(): string {
+  const secret = process.env.DEVELOPER_KEY_ENCRYPTION_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error('Missing DEVELOPER_KEY_ENCRYPTION_SECRET (or NEXTAUTH_SECRET fallback)');
+  }
+  return secret;
+}
+
+function encryptDeveloperKey(rawKey: string): string {
+  const key = createHash('sha256').update(getDeveloperKeySecret()).digest();
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(rawKey, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted.toString('hex')}`;
+}
+
+function decryptDeveloperKey(payload: string | null | undefined): string | null {
+  if (!payload) return null;
+  const parts = String(payload).split(':');
+  if (parts.length !== 3) return null;
+
+  const [ivHex, tagHex, encryptedHex] = parts;
+  const key = createHash('sha256').update(getDeveloperKeySecret()).digest();
+  const iv = Buffer.from(ivHex, 'hex');
+  const tag = Buffer.from(tagHex, 'hex');
+  const encrypted = Buffer.from(encryptedHex, 'hex');
+
+  try {
+    const decipher = createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+    return decrypted.toString('utf8');
+  } catch {
+    return null;
+  }
+}
+
+async function ensureDeveloperKeySchema() {
+  await sql`ALTER TABLE developer_api_keys ADD COLUMN IF NOT EXISTS encrypted_key TEXT`;
+}
+
 export function generateDeveloperApiKey() {
   const prefix = randomBytes(6).toString('hex');
   const secret = randomBytes(24).toString('hex');
@@ -41,14 +83,16 @@ export function generateDeveloperApiKey() {
 }
 
 export async function createAndStoreDeveloperKey(userId: string) {
+  await ensureDeveloperKeySchema();
   const generated = generateDeveloperApiKey();
+  const encryptedKey = encryptDeveloperKey(generated.fullKey);
 
   const [inserted] = await sql`
     INSERT INTO developer_api_keys (
-      user_id, key_prefix, key_hash, key_last4, is_active, created_at, updated_at
+      user_id, key_prefix, key_hash, key_last4, encrypted_key, is_active, created_at, updated_at
     )
     VALUES (
-      ${userId}, ${generated.keyPrefix}, ${generated.keyHash}, ${generated.keyLast4}, TRUE, NOW(), NOW()
+      ${userId}, ${generated.keyPrefix}, ${generated.keyHash}, ${generated.keyLast4}, ${encryptedKey}, TRUE, NOW(), NOW()
     )
     RETURNING id, key_prefix, key_last4, created_at
   `;
@@ -60,6 +104,20 @@ export async function createAndStoreDeveloperKey(userId: string) {
     createdAt: inserted.created_at as string,
     fullKey: generated.fullKey,
   };
+}
+
+export async function getActiveDeveloperKeyFullValue(userId: string): Promise<string | null> {
+  await ensureDeveloperKeySchema();
+
+  const [row] = await sql`
+    SELECT encrypted_key
+    FROM developer_api_keys
+    WHERE user_id = ${userId} AND is_active = TRUE
+    ORDER BY created_at DESC
+    LIMIT 1
+  `;
+
+  return decryptDeveloperKey((row?.encrypted_key as string | null | undefined) || null);
 }
 
 export async function requireAppUser(req: NextRequest) {

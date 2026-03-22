@@ -988,8 +988,13 @@ export default function AppPage() {
           purchaseEndpoint: c.purchaseEndpoint || '/api/v1/developer/purchase-data',
           discountPercent: Number(c.discountPercent || 0),
         });
-        if (Array.isArray(c.keys) && c.keys.length > 0) {
+        if (typeof c.activeApiKey === 'string' && c.activeApiKey) {
+          setDeveloperApiPreview(c.activeApiKey);
+        } else if (Array.isArray(c.keys) && c.keys.length > 0) {
           setDeveloperApiPreview(String(c.keys[0].preview || ''));
+        }
+        if (c.autoReissued) {
+          showToast('Your developer key was securely reissued. Update your integrations now.');
         }
       }
 
@@ -1023,7 +1028,7 @@ export default function AppPage() {
 
       if (data.apiKey) {
         setFreshDeveloperKey(String(data.apiKey));
-        setDeveloperApiPreview(`${String(data.apiKey).slice(0, 20)}...`);
+        setDeveloperApiPreview(String(data.apiKey));
       }
 
       await refreshUser();
@@ -1049,7 +1054,7 @@ export default function AppPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to rotate key');
       setFreshDeveloperKey(String(data.apiKey || ''));
-      setDeveloperApiPreview(String(data?.key?.preview || ''));
+      setDeveloperApiPreview(String(data.apiKey || data?.key?.preview || ''));
       showToast('API key rotated. Update your integrations now.');
       await loadDeveloperDashboard();
     } catch (e: unknown) {
