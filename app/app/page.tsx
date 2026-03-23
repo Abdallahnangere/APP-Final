@@ -1934,7 +1934,7 @@ export default function AppPage() {
       <div style={{ position:'fixed',bottom:0,left:0,right:0,background:'var(--card)',borderTop:'1px solid var(--border)',display:'grid',gridTemplateColumns:'repeat(5,1fr)',paddingBottom:'env(safe-area-inset-bottom)',zIndex:50,boxShadow:'0 -8px 24px rgba(0,0,0,.12)',backdropFilter:'blur(10px)' }}>
         {[
           { id:'home', label:'Home', icon: Icons.bolt(BLUE, 24) },
-          { id:'transactions', label:'Activity', icon: Icons.arrowDown(BLUE, 24) },
+          { id:'earn', label:'Earn', icon: Icons.chartBar(BLUE, 24) },
           { id:'share', label:'Share', icon: Icons.sendIcon('#fff', 20) },
           { id:'profile', label:'Account', icon: Icons.user(BLUE, 24) },
           { id:'chat', label:'Chat', icon: Icons.messageSquare(BLUE, 24) },
@@ -2018,43 +2018,45 @@ export default function AppPage() {
       <div style={{ height:'100dvh',overflowY:'auto',background:dark ? 'linear-gradient(180deg,#040810 0%,#0A1221 48%,#08101D 100%)' : 'linear-gradient(180deg,#F3F7FF 0%,#EEF3FB 52%,#F7F9FD 100%)',paddingTop:'80px',paddingBottom:100,backgroundImage: dark ? 'radial-gradient(ellipse at 50% -8%, rgba(0,113,227,0.18) 0%, transparent 56%)' : 'radial-gradient(ellipse at 50% -18%, rgba(0,113,227,0.12) 0%, transparent 58%)',backgroundAttachment: 'fixed' }}>
         <Header />
         
-        {/* Wallet Card - Professional Fintech Design */}
-        <div style={{ margin:'0 16px',background:'linear-gradient(140deg,#011A4D 0%,#003EAD 55%,#0068D8 100%)',borderRadius:24,padding:'20px',border:'1px solid rgba(255,255,255,.14)',boxShadow:'0 16px 42px rgba(0,66,173,.35)',position:'relative',overflow:'hidden' }}>
+        {/* Wallet Card */}
+        <div style={{ margin:'0 16px',background:'linear-gradient(140deg,#011A4D 0%,#003EAD 55%,#0068D8 100%)',borderRadius:24,padding:'16px',border:'1px solid rgba(255,255,255,.14)',boxShadow:'0 16px 42px rgba(0,66,173,.35)',position:'relative',overflow:'hidden' }}>
           <div style={{ position:'absolute',right:-65,top:-68,width:210,height:210,borderRadius:'50%',background:'rgba(255,255,255,.08)',pointerEvents:'none' }} />
           <div style={{ position:'absolute',left:-48,bottom:-56,width:170,height:170,borderRadius:'50%',background:'rgba(0,210,255,.11)',pointerEvents:'none' }} />
-          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,marginBottom:20 }}>
-            <div>
-              <p style={{ color:'rgba(255,255,255,.7)',fontSize:12,fontWeight:700,marginBottom:8,letterSpacing:.5 }}>TOTAL BALANCE</p>
-              <div style={{ display:'flex',alignItems:'baseline',gap:2 }}>
-                <span style={{ fontSize:28,fontWeight:900,color:'#FFFFFF' }}>₦</span>
-                <span style={{ fontSize:28,fontWeight:900,color:'#FFFFFF' }}>{user.walletBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
-              </div>
-            </div>
-            <div style={{ display:'flex',gap:8,flexWrap:'wrap',justifyContent:'flex-end' }}>
-              <button onClick={refreshUser} className="tactile-btn" style={{ background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',borderRadius:11,padding:'10px 14px',cursor:'pointer',fontSize:12,fontWeight:700,color:'#FFFFFF',transition:'all .2s' }}>↻ Sync</button>
-              <button onClick={() => setScreen('earn')} className="tactile-btn" style={{ background:'rgba(90,200,250,.18)',border:'1px solid rgba(90,200,250,.32)',borderRadius:11,padding:'10px 14px',cursor:'pointer',fontSize:12,fontWeight:700,color:'#DDF5FF',transition:'all .2s' }}>Earn</button>
-              <button onClick={() => setRedeemOpen(true)} disabled={user.cashbackBalance <= 0} className="tactile-btn" style={{ background:user.cashbackBalance > 0 ? 'rgba(255,159,10,.22)' : 'rgba(255,255,255,.08)',border:user.cashbackBalance > 0 ? '1px solid rgba(255,159,10,.38)' : '1px solid rgba(255,255,255,.14)',borderRadius:11,padding:'10px 14px',cursor:user.cashbackBalance > 0 ? 'pointer' : 'not-allowed',fontSize:12,fontWeight:700,color:user.cashbackBalance > 0 ? '#FFD9A6' : 'rgba(255,255,255,.45)',transition:'all .2s' }}>+ Redeem</button>
-            </div>
+          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:12,position:'relative',zIndex:1 }}>
+            <button onClick={()=>setScreen('transactions')} style={{ display:'inline-flex',alignItems:'center',gap:6,background:'none',border:'none',padding:0,color:'rgba(255,255,255,.8)',fontSize:12,fontWeight:800,letterSpacing:'0.04em',cursor:'pointer' }}>
+              <span style={{ width:6,height:6,borderRadius:'50%',background:'#8ED8FF' }} />
+              <span>Transaction History</span>
+            </button>
+            <button onClick={refreshUser} className="tactile-btn" style={{ background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',borderRadius:999,padding:'8px 12px',cursor:'pointer',fontSize:11,fontWeight:800,color:'#FFFFFF',transition:'all .2s' }}>↻ Sync</button>
           </div>
-          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16 }}>
-            <div style={{ background:'rgba(255,255,255,.1)',borderRadius:14,padding:'12px',border:'1px solid rgba(255,255,255,.16)' }}>
-              <p style={{ color:'rgba(255,255,255,.72)',fontSize:11,fontWeight:700,margin:0,letterSpacing:.3 }}>CASHBACK</p>
-              <p style={{ color:'#FFD38D',fontWeight:800,fontSize:16,margin:'6px 0 0' }}>₦{user.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+          <div style={{ display:'grid',gridTemplateColumns:'minmax(0,1.3fr) repeat(2,minmax(0,1fr))',gap:10,marginBottom:12,position:'relative',zIndex:1 }}>
+            <div style={{ background:'rgba(255,255,255,.1)',borderRadius:16,padding:'14px 14px',border:'1px solid rgba(255,255,255,.16)' }}>
+              <p style={{ color:'rgba(255,255,255,.72)',fontSize:10,fontWeight:800,margin:0,letterSpacing:'.08em',textTransform:'uppercase' }}>Balance</p>
+              <p style={{ color:'#FFFFFF',fontWeight:900,fontSize:24,margin:'8px 0 0',lineHeight:1.1 }}>₦{user.walletBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
             </div>
-            <button onClick={()=>setScreen('earn')} style={{ background:'rgba(255,255,255,.1)',borderRadius:14,padding:'12px',border:'1px solid rgba(255,255,255,.16)',textAlign:'left',cursor:'pointer' }}>
-              <p style={{ color:'rgba(255,255,255,.72)',fontSize:11,fontWeight:700,margin:0,letterSpacing:.3 }}>REFERRAL</p>
-              <p style={{ color:'#BFE2FF',fontWeight:800,fontSize:16,margin:'6px 0 0' }}>₦{referralBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
-              <p style={{ color:'rgba(255,255,255,.68)',fontSize:10,fontWeight:700,marginTop:6 }}>Open Earn Center</p>
+            <div style={{ background:'rgba(255,255,255,.1)',borderRadius:16,padding:'12px',border:'1px solid rgba(255,255,255,.16)',display:'flex',flexDirection:'column',justifyContent:'space-between',gap:8 }}>
+              <div>
+                <p style={{ color:'rgba(255,255,255,.72)',fontSize:10,fontWeight:800,margin:0,letterSpacing:'.08em',textTransform:'uppercase' }}>Cashback</p>
+                <p style={{ color:'#FFD38D',fontWeight:800,fontSize:15,margin:'7px 0 0',lineHeight:1.2 }}>₦{user.cashbackBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+              </div>
+              <button onClick={() => setRedeemOpen(true)} disabled={user.cashbackBalance <= 0} className="tactile-btn" style={{ alignSelf:'flex-start',background:user.cashbackBalance > 0 ? 'rgba(255,159,10,.22)' : 'rgba(255,255,255,.08)',border:user.cashbackBalance > 0 ? '1px solid rgba(255,159,10,.38)' : '1px solid rgba(255,255,255,.14)',borderRadius:999,padding:'6px 10px',cursor:user.cashbackBalance > 0 ? 'pointer' : 'not-allowed',fontSize:10,fontWeight:800,color:user.cashbackBalance > 0 ? '#FFD9A6' : 'rgba(255,255,255,.45)' }}>Redeem</button>
+            </div>
+            <button onClick={()=>setScreen('earn')} style={{ background:'rgba(255,255,255,.1)',borderRadius:16,padding:'12px',border:'1px solid rgba(255,255,255,.16)',textAlign:'left',cursor:'pointer',display:'flex',flexDirection:'column',justifyContent:'space-between',gap:8 }}>
+              <div>
+                <p style={{ color:'rgba(255,255,255,.72)',fontSize:10,fontWeight:800,margin:0,letterSpacing:'.08em',textTransform:'uppercase' }}>Referral</p>
+                <p style={{ color:'#BFE2FF',fontWeight:800,fontSize:15,margin:'7px 0 0',lineHeight:1.2 }}>₦{referralBalance.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+              </div>
+              <p style={{ color:'rgba(255,255,255,.68)',fontSize:10,fontWeight:800,margin:0 }}>Open Earn</p>
             </button>
           </div>
-          <div style={{ background:'rgba(255,255,255,.1)',borderRadius:14,padding:'12px',border:'1px solid rgba(255,255,255,.18)' }}>
-            <p style={{ color:'rgba(255,255,255,.72)',fontSize:11,fontWeight:700,margin:0,marginBottom:6,letterSpacing:.3 }}>ACCOUNT DETAILS</p>
-            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center' }}>
-              <div>
-                <p style={{ color:'#FFFFFF',fontWeight:700,fontSize:14,margin:0 }}>{user.bankName || 'No Bank'}</p>
-                <p style={{ color:'rgba(255,255,255,.78)',fontSize:12,margin:'4px 0 0',fontFamily:'monospace',fontWeight:600 }}>{user.accountNumber || 'N/A'}</p>
+          <div style={{ background:'rgba(255,255,255,.1)',borderRadius:16,padding:'12px 14px',border:'1px solid rgba(255,255,255,.18)',position:'relative',zIndex:1 }}>
+            <p style={{ color:'rgba(255,255,255,.72)',fontSize:10,fontWeight:800,margin:0,marginBottom:8,letterSpacing:'.08em',textTransform:'uppercase' }}>Account Details</p>
+            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:10 }}>
+              <div style={{ minWidth:0 }}>
+                <p style={{ color:'#FFFFFF',fontWeight:800,fontSize:15,margin:0,fontFamily:'monospace',letterSpacing:'0.05em' }}>{user.accountNumber || 'N/A'}</p>
+                <p style={{ color:'rgba(255,255,255,.78)',fontSize:12,margin:'4px 0 0',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{user.bankName || 'No Bank'}</p>
               </div>
-              <button onClick={() => { navigator.clipboard.writeText(user.accountNumber || ''); showToast('✓ Copied'); }} className="tactile-btn" style={{ background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.22)',borderRadius:8,padding:'8px 12px',cursor:'pointer',fontSize:11,fontWeight:700,color:'#FFFFFF',transition:'all .2s' }}>Copy</button>
+              <button onClick={() => { navigator.clipboard.writeText(user.accountNumber || ''); showToast('✓ Copied'); }} className="tactile-btn" style={{ background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.22)',borderRadius:999,padding:'8px 12px',cursor:'pointer',fontSize:11,fontWeight:800,color:'#FFFFFF',transition:'all .2s',flexShrink:0 }}>Copy</button>
             </div>
           </div>
         </div>
@@ -2802,6 +2804,7 @@ export default function AppPage() {
           </div>
         </div>
       </div>
+      {BottomNav({ active: 'earn' })}
     </>
   );
 
