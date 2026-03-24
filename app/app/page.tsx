@@ -879,6 +879,7 @@ export default function AppPage() {
   const [bankSearch, setBankSearch] = useState('');
   const [electricityProviders, setElectricityProviders] = useState<ElectricityProvider[]>([]);
   const [electricityProviderSearch, setElectricityProviderSearch] = useState('');
+  const [electricityProviderOpen, setElectricityProviderOpen] = useState(false);
   const [electricityStatus, setElectricityStatus] = useState<ElectricityStatus>('idle');
   const [electricitySummaryOpen, setElectricitySummaryOpen] = useState(false);
   const [electricitySuccess, setElectricitySuccess] = useState<Record<string, unknown> | null>(null);
@@ -1299,6 +1300,7 @@ export default function AppPage() {
     }
     if (screen === 'electricity') {
       loadElectricityProviders();
+      setElectricityProviderOpen(false);
       setElectricityForm((prev) => ({
         ...prev,
         phoneNumber: prev.phoneNumber || user?.phone || '',
@@ -2787,7 +2789,7 @@ export default function AppPage() {
           </div>
         )}
 
-        <div style={{ minHeight:'100dvh',background:dark ? 'linear-gradient(180deg,#040810 0%,#0A1221 48%,#08101D 100%)' : 'linear-gradient(180deg,#F3F7FF 0%,#EEF3FB 52%,#F7F9FD 100%)',paddingBottom:100 }}>
+        <div style={{ height:'100dvh',overflowY:'auto',WebkitOverflowScrolling:'touch',background:dark ? 'linear-gradient(180deg,#040810 0%,#0A1221 48%,#08101D 100%)' : 'linear-gradient(180deg,#F3F7FF 0%,#EEF3FB 52%,#F7F9FD 100%)',paddingBottom:116 }}>
           <div style={{ padding:'52px 16px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12 }}>
             <button onClick={()=>setScreen('home')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
             <button onClick={loadElectricityProviders} style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:12,padding:'10px 14px',color:'var(--text)',fontSize:13,fontWeight:700 }}>Refresh</button>
@@ -2802,7 +2804,11 @@ export default function AppPage() {
               {(['prepaid','postpaid'] as const).map((t) => (
                 <button
                   key={t}
-                  onClick={() => setElectricityForm((prev) => ({ ...prev, meterType: t, itemCode:'', discoName:'', verified:false, customerName:'' }))}
+                  onClick={() => {
+                    setElectricityForm((prev) => ({ ...prev, meterType: t, itemCode:'', discoName:'', verified:false, customerName:'' }));
+                    setElectricityProviderSearch('');
+                    setElectricityProviderOpen(false);
+                  }}
                   style={{ padding:'8px 12px',borderRadius:999,border:`1px solid ${electricityForm.meterType === t ? BLUE : 'var(--border)'}`,background:electricityForm.meterType === t ? 'rgba(0,113,227,.12)' : 'transparent',fontSize:12,fontWeight:700,color:electricityForm.meterType === t ? BLUE : 'var(--text-secondary)' }}
                 >
                   {t.charAt(0).toUpperCase()+t.slice(1)}
@@ -2811,24 +2817,41 @@ export default function AppPage() {
             </div>
 
             <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>DISCO Provider</label>
-            <input
-              value={electricityProviderSearch}
-              onChange={(e)=>setElectricityProviderSearch(e.target.value)}
-              placeholder="Search DISCO provider"
-              style={{ width:'100%',padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)',marginBottom:8 }}
-            />
-            <div style={{ maxHeight:160,overflowY:'auto',border:'1px solid var(--border)',borderRadius:12,marginBottom:12 }}>
-              {providerOptions.length === 0 ? (
-                <p style={{ fontSize:12,color:'var(--text-secondary)',padding:10,margin:0 }}>No provider found</p>
-              ) : providerOptions.map((p) => (
-                <button
-                  key={`${p.itemCode}-${p.type}`}
-                  onClick={() => setElectricityForm((prev) => ({ ...prev, itemCode: p.itemCode, discoName: p.name, meterType: p.type, verified:false, customerName:'' }))}
-                  style={{ width:'100%',textAlign:'left',padding:'10px 12px',background:electricityForm.itemCode === p.itemCode ? 'rgba(0,113,227,.12)' : 'transparent',border:'none',borderBottom:'1px solid var(--border)',fontSize:13,color:'var(--text)' }}
-                >
-                  {p.name} ({p.type})
-                </button>
-              ))}
+            <div style={{ position:'relative',marginBottom:12 }}>
+              <input
+                value={electricityProviderSearch}
+                onFocus={()=>setElectricityProviderOpen(true)}
+                onChange={(e)=>{ setElectricityProviderSearch(e.target.value); setElectricityProviderOpen(true); }}
+                onBlur={()=>setTimeout(()=>setElectricityProviderOpen(false), 120)}
+                placeholder="Search DISCO provider"
+                style={{ width:'100%',padding:'12px 40px 12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)' }}
+              />
+              <button
+                onClick={()=>setElectricityProviderOpen((prev)=>!prev)}
+                style={{ position:'absolute',right:10,top:10,width:24,height:24,borderRadius:8,border:'none',background:'transparent',color:'var(--text-secondary)',fontSize:14,fontWeight:900,lineHeight:1 }}
+              >
+                {electricityProviderOpen ? '▴' : '▾'}
+              </button>
+              {electricityProviderOpen && (
+                <div style={{ position:'absolute',left:0,right:0,top:'calc(100% + 6px)',maxHeight:180,overflowY:'auto',border:'1px solid var(--border)',borderRadius:12,background:'var(--card)',zIndex:25,boxShadow:dark ? '0 10px 24px rgba(0,0,0,.32)' : '0 10px 24px rgba(0,0,0,.08)' }}>
+                  {providerOptions.length === 0 ? (
+                    <p style={{ fontSize:12,color:'var(--text-secondary)',padding:10,margin:0 }}>No provider found</p>
+                  ) : providerOptions.map((p) => (
+                    <button
+                      key={`${p.itemCode}-${p.type}`}
+                      onMouseDown={(e)=>e.preventDefault()}
+                      onClick={() => {
+                        setElectricityForm((prev) => ({ ...prev, itemCode: p.itemCode, discoName: p.name, meterType: p.type, verified:false, customerName:'' }));
+                        setElectricityProviderSearch(`${p.name} (${p.type})`);
+                        setElectricityProviderOpen(false);
+                      }}
+                      style={{ width:'100%',textAlign:'left',padding:'10px 12px',background:electricityForm.itemCode === p.itemCode ? 'rgba(0,113,227,.12)' : 'transparent',border:'none',borderBottom:'1px solid var(--border)',fontSize:13,color:'var(--text)' }}
+                    >
+                      {p.name} ({p.type})
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Meter Number</label>
