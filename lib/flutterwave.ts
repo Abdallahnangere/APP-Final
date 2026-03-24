@@ -85,7 +85,57 @@ export async function resolveAccountNumber(accountNumber: string, accountBank: s
     },
     body: JSON.stringify({ account_number: accountNumber, account_bank: accountBank }),
   });
-  return res.json();
+  return parseFlutterwaveResponse(res);
+}
+
+export interface FLWBalanceItem {
+  currency: string;
+  available_balance: number;
+  ledger_balance: number;
+}
+
+export interface FLWTransferPayload {
+  accountBank: string;
+  accountNumber: string;
+  amount: number;
+  narration?: string;
+  reference: string;
+  callbackUrl?: string;
+}
+
+export async function getBalances() {
+  const res = await fetch(`${FLW_BASE}/balances`, {
+    headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
+  });
+  return parseFlutterwaveResponse(res);
+}
+
+export async function initiateTransfer(payload: FLWTransferPayload) {
+  const res = await fetch(`${FLW_BASE}/transfers`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      account_bank: payload.accountBank,
+      account_number: payload.accountNumber,
+      amount: payload.amount,
+      narration: payload.narration || 'Admin transfer',
+      currency: 'NGN',
+      reference: payload.reference,
+      callback_url: payload.callbackUrl || process.env.FLW_TRANSFER_CALLBACK_URL,
+      debit_currency: 'NGN',
+    }),
+  });
+  return parseFlutterwaveResponse(res);
+}
+
+export async function getTransferById(transferId: string | number) {
+  const res = await fetch(`${FLW_BASE}/transfers/${transferId}`, {
+    headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
+  });
+  return parseFlutterwaveResponse(res);
 }
 
 export type ElectricityMeterType = 'prepaid' | 'postpaid';
