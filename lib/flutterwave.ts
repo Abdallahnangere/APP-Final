@@ -135,3 +135,30 @@ export async function purchaseElectricityBill(payload: FLWElectricityPurchasePay
   });
   return res.json();
 }
+
+export interface FLWAirtimePurchasePayload {
+  phoneNumber: string;
+  amount: number;
+  networkName: string;
+  reference: string;
+}
+
+export async function purchaseAirtime(payload: FLWAirtimePurchasePayload) {
+  const res = await fetch(`${FLW_BASE}/bills`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      country: 'NG',
+      customer: payload.phoneNumber,
+      amount: payload.amount,
+      recurrence: 'ONCE',
+      type: `${payload.networkName} Mobile Recharge`,
+      reference: payload.reference,
+      biller_name: payload.networkName,
+    }),
+  });
+  return res.json();
+}

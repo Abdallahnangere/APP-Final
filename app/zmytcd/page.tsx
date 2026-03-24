@@ -141,6 +141,26 @@ type ElectricityTx = {
   createdAt: string;
   updatedAt: string;
 };
+type AirtimeTx = {
+  id: string;
+  transactionId?: string | null;
+  userId: string;
+  userName: string;
+  userPhone: string;
+  network: string;
+  phone: string;
+  amount: number;
+  status: string;
+  flwReference?: string | null;
+  txReference?: string | null;
+  errorMessage?: string | null;
+  flwResponse?: Record<string, unknown> | null;
+  refunded?: boolean;
+  refundedAt?: string | null;
+  retryAttempts?: number;
+  createdAt: string;
+  updatedAt: string;
+};
 
 const GlobalStyle = () => (
   <style>{`
@@ -178,13 +198,13 @@ const Card = ({ children, style }: { children: React.ReactNode; style?: React.CS
   <div style={{ background:'linear-gradient(180deg, rgba(250,252,255,0.96) 0%, rgba(240,246,255,0.94) 100%)',borderRadius:24,padding:'24px',boxShadow:'0 22px 70px rgba(0,0,0,0.18)',border:'1px solid rgba(205,220,244,0.82)', backdropFilter:'blur(18px)', color:'#14233a', ...style }}>{children}</div>
 );
 
-const Btn = ({ children, onClick, variant='primary', size='md', style: s }: { children: React.ReactNode; onClick?: ()=>void; variant?: 'primary'|'danger'|'ghost'|'success'; size?: 'sm'|'md'; style?: React.CSSProperties }) => {
+const Btn = ({ children, onClick, variant='primary', size='md', style: s, disabled }: { children: React.ReactNode; onClick?: ()=>void; variant?: 'primary'|'danger'|'ghost'|'success'; size?: 'sm'|'md'; style?: React.CSSProperties; disabled?: boolean }) => {
   const bg = variant==='primary'?'linear-gradient(135deg, #2359b8 0%, #5bb3ff 100%)':variant==='danger'?'linear-gradient(135deg, #7b2130 0%, #cf5466 100%)':variant==='success'?'linear-gradient(135deg, #0f6655 0%, #2ea486 100%)':'rgba(255,255,255,0.03)';
   const color = variant==='ghost'?TEXT:'#fff';
   const border = variant==='ghost'?`1px solid ${BORDER}`:'none';
   const pad = size==='sm'?'9px 14px':'12px 20px';
   const font = size==='sm'?13:15;
-  return <button onClick={onClick} style={{ background:bg,color,border,borderRadius:14,padding:pad,fontSize:font,fontWeight:700,cursor:'pointer',transition:'all 0.2s cubic-bezier(0.25,0.1,0.25,1)', boxShadow:variant==='ghost'?'none':'0 16px 30px rgba(0,0,0,0.18)', letterSpacing:'0.01em', ...s }} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(-1px)'}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(0)'}}>{children}</button>;
+  return <button onClick={onClick} disabled={disabled} style={{ background:bg,color,border,borderRadius:14,padding:pad,fontSize:font,fontWeight:700,cursor:disabled?'not-allowed':'pointer',opacity:disabled?0.55:1,transition:'all 0.2s cubic-bezier(0.25,0.1,0.25,1)', boxShadow:variant==='ghost'?'none':'0 16px 30px rgba(0,0,0,0.18)', letterSpacing:'0.01em', ...s }} onMouseEnter={e=>{if(!disabled)(e.currentTarget as HTMLElement).style.transform='translateY(-1px)'}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(0)'}}>{children}</button>;
 };
 
 const Input = ({ value, onChange, placeholder, type='text', label, multiline=false }: { value: string; onChange: (v:string)=>void; placeholder?: string; type?: string; label?: string; multiline?: boolean; }) => (
@@ -210,7 +230,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [adminToken, setAdminToken] = useState('');
-  const [tab, setTab] = useState<'overview'|'users'|'withdrawals'|'electricity'|'developers'|'plans'|'products'|'transactions'|'orders'|'analytics'|'broadcasts'|'push'|'chat'|'sim'|'webhooks'|'console'>('overview');
+  const [tab, setTab] = useState<'overview'|'users'|'withdrawals'|'electricity'|'airtime'|'developers'|'plans'|'products'|'transactions'|'orders'|'analytics'|'broadcasts'|'push'|'chat'|'sim'|'webhooks'|'console'>('overview');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
   const [error, setError] = useState('');
@@ -230,6 +250,8 @@ export default function AdminPage() {
   const [withdrawalStats, setWithdrawalStats] = useState<Record<string, unknown>>({});
   const [electricityTx, setElectricityTx] = useState<ElectricityTx[]>([]);
   const [electricityStats, setElectricityStats] = useState<Record<string, unknown>>({});
+  const [airtimeTx, setAirtimeTx] = useState<AirtimeTx[]>([]);
+  const [airtimeStats, setAirtimeStats] = useState<Record<string, unknown>>({});
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [simActs, setSimActs] = useState<SimAct[]>([]);
@@ -256,6 +278,13 @@ export default function AdminPage() {
   const [electricityFromDate, setElectricityFromDate] = useState('');
   const [electricityToDate, setElectricityToDate] = useState('');
   const [selectedElectricity, setSelectedElectricity] = useState<ElectricityTx | null>(null);
+  const [airtimeStatusFilter, setAirtimeStatusFilter] = useState('all');
+  const [airtimeNetworkFilter, setAirtimeNetworkFilter] = useState('');
+  const [airtimeSearch, setAirtimeSearch] = useState('');
+  const [airtimeFromDate, setAirtimeFromDate] = useState('');
+  const [airtimeToDate, setAirtimeToDate] = useState('');
+  const [selectedAirtime, setSelectedAirtime] = useState<AirtimeTx | null>(null);
+  const [airtimeBusy, setAirtimeBusy] = useState(false);
   const [withdrawalActionBusy, setWithdrawalActionBusy] = useState('');
   const [pinForm, setPinForm] = useState('');
   const [developerForm, setDeveloperForm] = useState({ userId:'', discountPercent:'8.00', termsVersion:'v1.0' });
@@ -417,6 +446,25 @@ export default function AdminPage() {
     }
   }, [authH, electricityDiscoFilter, electricityFromDate, electricityMeterTypeFilter, electricitySearch, electricityStatusFilter, electricityToDate]);
 
+  const loadAirtime = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (airtimeStatusFilter && airtimeStatusFilter !== 'all') params.set('status', airtimeStatusFilter);
+      if (airtimeNetworkFilter.trim()) params.set('network', airtimeNetworkFilter.trim());
+      if (airtimeSearch.trim()) params.set('search', airtimeSearch.trim());
+      if (airtimeFromDate) params.set('from', airtimeFromDate);
+      if (airtimeToDate) params.set('to', airtimeToDate);
+
+      const res = await fetch(`/api/zmytcd/airtime${params.toString() ? `?${params.toString()}` : ''}`, { headers: authH() });
+      if (!res.ok) throw new Error('Failed to load airtime transactions');
+      const data = await res.json();
+      setAirtimeTx(Array.isArray(data?.transactions) ? data.transactions : []);
+      setAirtimeStats((data?.stats || {}) as Record<string, unknown>);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Failed to load airtime transactions');
+    }
+  }, [authH, airtimeNetworkFilter, airtimeFromDate, airtimeSearch, airtimeStatusFilter, airtimeToDate]);
+
   const loadAdminSessions = useCallback(async (filter = chatFilter, search = chatSearch) => {
     try {
       const params = new URLSearchParams();
@@ -523,6 +571,7 @@ export default function AdminPage() {
     if (tab === 'users') load('users').then(d => setUsers(Array.isArray(d)?d:[]));
     if (tab === 'withdrawals') loadWithdrawals();
     if (tab === 'electricity') loadElectricity();
+    if (tab === 'airtime') loadAirtime();
     if (tab === 'developers') {
       load('developers').then(d => setDevelopers(Array.isArray(d)?d:[]));
       load('users').then(d => setUsers(Array.isArray(d)?d:[]));
@@ -537,7 +586,7 @@ export default function AdminPage() {
     if (tab === 'webhooks') load('webhooks').then(d => setWebhooks(Array.isArray(d)?d:[]));
     if (tab === 'sim') load('sim-activations').then(d => setSimActs(Array.isArray(d)?d:[]));
     if (tab === 'analytics') loadAnalytics();
-  }, [tab, authed, load, loadAdminSessions, loadAnalytics, analyticsDate, loadOrders, loadWithdrawals, loadElectricity]);
+  }, [tab, authed, load, loadAdminSessions, loadAnalytics, analyticsDate, loadOrders, loadWithdrawals, loadElectricity, loadAirtime]);
 
   useEffect(() => {
     if (!authed || tab !== 'analytics') return;
@@ -558,6 +607,11 @@ export default function AdminPage() {
     if (!authed || tab !== 'electricity') return;
     loadElectricity();
   }, [authed, tab, loadElectricity]);
+
+  useEffect(() => {
+    if (!authed || tab !== 'airtime') return;
+    loadAirtime();
+  }, [authed, tab, loadAirtime]);
 
   useEffect(() => {
     if (!selectedOrder) return;
@@ -827,6 +881,7 @@ export default function AdminPage() {
     { id:'users', label:'Users', icon:'👥' },
     { id:'withdrawals', label:'Withdrawals', icon:'💸' },
     { id:'electricity', label:'Electricity', icon:'⚡' },
+    { id:'airtime', label:'Airtime', icon:'📱' },
     { id:'developers', label:'Developers', icon:'🧩' },
     { id:'plans', label:'Data Plans', icon:'📶' },
     { id:'products', label:'Products', icon:'📦' },
@@ -1519,6 +1574,189 @@ export default function AdminPage() {
                           }}
                         >
                           Refund Wallet
+                        </Btn>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ─── AIRTIME ─── */}
+          {tab === 'airtime' && (
+            <div className="fade-in">
+              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,gap:12,flexWrap:'wrap' }}>
+                <h1 style={{ fontSize:22,fontWeight:900 }}>Airtime Transactions</h1>
+                <Btn size="sm" variant="ghost" onClick={loadAirtime}>Refresh</Btn>
+              </div>
+
+              <Card style={{ marginBottom:16,padding:'14px 16px' }}>
+                <div style={{ display:'grid',gridTemplateColumns:'1.2fr 1fr 1fr 1fr 1fr 0.9fr',gap:8 }}>
+                  <input
+                    value={airtimeSearch}
+                    onChange={e=>setAirtimeSearch(e.target.value)}
+                    placeholder="Search phone number or user"
+                    style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}
+                  />
+                  <select
+                    value={airtimeStatusFilter}
+                    onChange={e=>setAirtimeStatusFilter(e.target.value)}
+                    style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}
+                  >
+                    {['all','success','failed','pending'].map((status) => (
+                      <option key={status} value={status}>{status.charAt(0).toUpperCase()+status.slice(1)}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={airtimeNetworkFilter}
+                    onChange={e=>setAirtimeNetworkFilter(e.target.value)}
+                    style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}
+                  >
+                    <option value="">All Networks</option>
+                    {['MTN','Airtel','GLO','9mobile'].map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="date"
+                    value={airtimeFromDate}
+                    onChange={e=>setAirtimeFromDate(e.target.value)}
+                    style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}
+                  />
+                  <input
+                    type="date"
+                    value={airtimeToDate}
+                    onChange={e=>setAirtimeToDate(e.target.value)}
+                    style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}
+                  />
+                  <Btn size="sm" onClick={loadAirtime}>Apply</Btn>
+                </div>
+              </Card>
+
+              <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:22 }}>
+                {[
+                  { label:'Transactions Today', value: Number(airtimeStats.todayCount || 0), color:BLUE },
+                  { label:'Amount Today', value: formatMoney(airtimeStats.todayAmount), color:GREEN },
+                  { label:'Success Rate', value: `${Number(airtimeStats.successRate || 0).toFixed(2)}%`, color:'#0E9F6E' },
+                  { label:'Failed Today', value: Number(airtimeStats.failedCount || 0), color:RED },
+                ].map((s) => (
+                  <Card key={s.label} style={{ padding:'16px 18px' }}>
+                    <p style={{ fontSize:12,fontWeight:700,color:'#6C809E',textTransform:'uppercase',letterSpacing:'0.08em' }}>{s.label}</p>
+                    <p style={{ marginTop:8,fontSize:26,fontWeight:900,color:s.color }}>{s.value as string | number}</p>
+                  </Card>
+                ))}
+              </div>
+
+              <Card>
+                <div style={{ overflowX:'auto' }}>
+                  <table style={{ width:'100%',borderCollapse:'collapse',minWidth:1100 }}>
+                    <thead>
+                      <tr style={{ background:'#F9FAFD' }}>
+                        {['Transaction ID','Date & Time','User Name','User Phone','Network','Airtime Phone','Amount','Status','Flutterwave Ref','Actions'].map((h) => (
+                          <th key={h} style={{ padding:'10px 12px',fontSize:11,fontWeight:800,color:'#7A8EAB',textAlign:'left',borderBottom:'1px solid #E6EDF8',whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.05em' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {airtimeTx.length === 0 && (
+                        <tr>
+                          <td colSpan={10} style={{ padding:28,textAlign:'center',color:'#7A8EAB',fontSize:14 }}>No airtime transactions found</td>
+                        </tr>
+                      )}
+                      {airtimeTx.map((row) => (
+                        <tr key={row.id} style={{ borderBottom:'1px solid #F0F4FB' }}>
+                          <td className="admin-code" style={{ padding:'12px',fontSize:11,color:'#4F6380' }}>{row.txReference || row.id}</td>
+                          <td style={{ padding:'12px',fontSize:12,color:'#4F6380',whiteSpace:'nowrap' }}>{formatDateTime(row.createdAt)}</td>
+                          <td style={{ padding:'12px',fontSize:13,fontWeight:700,color:'#17385F' }}>{row.userName || '—'}</td>
+                          <td style={{ padding:'12px',fontSize:13,color:'#4F6380' }}>{row.userPhone || '—'}</td>
+                          <td style={{ padding:'12px' }}>
+                            <span style={{ background:'rgba(35,89,184,.09)',color:BLUE,padding:'4px 9px',borderRadius:999,fontSize:11,fontWeight:800 }}>{row.network}</span>
+                          </td>
+                          <td className="admin-code" style={{ padding:'12px',fontSize:12,color:'#17385F' }}>{row.phone}</td>
+                          <td style={{ padding:'12px',fontSize:13,fontWeight:800,color:'#17385F' }}>{formatMoney(row.amount)}</td>
+                          <td style={{ padding:'12px' }}>
+                            <span style={{ background:row.status === 'success' ? 'rgba(52,199,89,.12)' : row.status === 'failed' ? 'rgba(255,59,48,.12)' : 'rgba(255,159,10,.12)',color:row.status === 'success' ? GREEN : row.status === 'failed' ? RED : '#FF9F0A',padding:'4px 9px',borderRadius:999,fontSize:11,fontWeight:800,textTransform:'uppercase' }}>{row.status}</span>
+                          </td>
+                          <td className="admin-code" style={{ padding:'12px',fontSize:11,color:'#4F6380',maxWidth:190,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{row.flwReference || '—'}</td>
+                          <td style={{ padding:'12px' }}>
+                            <Btn size="sm" variant="ghost" onClick={()=>setSelectedAirtime(row)}>View Details</Btn>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+
+              {selectedAirtime && (
+                <div style={{ position:'fixed',inset:0,background:'rgba(4,10,20,.58)',zIndex:550,display:'flex',alignItems:'center',justifyContent:'center',padding:20 }}>
+                  <div style={{ width:'min(720px, 96vw)',maxHeight:'88vh',overflowY:'auto',background:'#fff',borderRadius:22,padding:20,border:'1px solid #DCE5F2',boxShadow:'0 26px 70px rgba(0,0,0,.25)' }}>
+                    <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:14 }}>
+                      <h3 style={{ fontSize:20,fontWeight:900,color:'#11253E' }}>Airtime Transaction Details</h3>
+                      <Btn size="sm" variant="ghost" onClick={()=>setSelectedAirtime(null)}>Close</Btn>
+                    </div>
+
+                    <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14 }}>
+                      <Card style={{ padding:'14px 16px' }}>
+                        <p style={{ fontSize:12,color:'#7A8EAB',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8 }}>Transaction</p>
+                        <div style={{ display:'grid',gap:7 }}>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Transaction ID:</b> {selectedAirtime.id}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>TX Ref:</b> {selectedAirtime.txReference || '—'}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Flutterwave Ref:</b> {selectedAirtime.flwReference || '—'}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Status:</b> {selectedAirtime.status}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Date:</b> {formatDateTime(selectedAirtime.createdAt)}</p>
+                          {selectedAirtime.refunded && <p style={{ fontSize:13,color:GREEN }}><b>Refunded at:</b> {selectedAirtime.refundedAt ? formatDateTime(selectedAirtime.refundedAt) : 'Yes'}</p>}
+                        </div>
+                      </Card>
+                      <Card style={{ padding:'14px 16px' }}>
+                        <p style={{ fontSize:12,color:'#7A8EAB',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8 }}>User</p>
+                        <div style={{ display:'grid',gap:7 }}>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Name:</b> {selectedAirtime.userName || '—'}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Phone:</b> {selectedAirtime.userPhone || '—'}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>User ID:</b> {selectedAirtime.userId}</p>
+                        </div>
+                      </Card>
+                    </div>
+
+                    <Card style={{ padding:'14px 16px',marginBottom:14 }}>
+                      <p style={{ fontSize:12,color:'#7A8EAB',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8 }}>Airtime Details</p>
+                      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10 }}>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Network:</b> {selectedAirtime.network}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Phone:</b> {selectedAirtime.phone}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Amount:</b> {formatMoney(selectedAirtime.amount)}</p>
+                        {selectedAirtime.errorMessage && <p style={{ fontSize:13,color:RED,gridColumn:'1/-1' }}><b>Error:</b> {selectedAirtime.errorMessage}</p>}
+                      </div>
+                    </Card>
+
+                    <Card style={{ padding:'14px 16px' }}>
+                      <p style={{ fontSize:12,color:'#7A8EAB',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8 }}>Flutterwave Response JSON</p>
+                      <pre style={{ background:'#0A1628',color:'#D5E5FF',padding:14,borderRadius:12,fontSize:11,overflow:'auto',maxHeight:180,whiteSpace:'pre-wrap' }}>{JSON.stringify(selectedAirtime.flwResponse || {}, null, 2)}</pre>
+                    </Card>
+
+                    {selectedAirtime.status === 'failed' && !selectedAirtime.refunded && (
+                      <div style={{ marginTop:14,display:'flex',justifyContent:'flex-end' }}>
+                        <Btn
+                          variant="danger"
+                          disabled={airtimeBusy}
+                          onClick={async()=>{
+                            try {
+                              setAirtimeBusy(true);
+                              const adminNote = window.prompt('Refund note (optional):', '') || '';
+                              const res = await fetch('/api/zmytcd/airtime', { method:'PATCH', headers: authH(), body: JSON.stringify({ airtimeId: selectedAirtime.id, action: 'refund', adminNote }) });
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data.error || 'Refund failed');
+                              showToast('Refund completed');
+                              setSelectedAirtime(null);
+                              await loadAirtime();
+                            } catch (e: unknown) {
+                              showError(e instanceof Error ? e.message : 'Refund failed');
+                            } finally {
+                              setAirtimeBusy(false);
+                            }
+                          }}
+                        >
+                          {airtimeBusy ? 'Processing...' : 'Refund Wallet'}
                         </Btn>
                       </div>
                     )}

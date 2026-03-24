@@ -812,7 +812,7 @@ function ShareSaukiMartModal({
 
 /* ─────────────── MAIN APP ─────────────── */
 export default function AppPage() {
-  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'|'chat'|'earn'|'electricity'|'developer-terms'|'developer-dashboard'>('splash');
+  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'|'chat'|'earn'|'electricity'|'airtime'|'developer-terms'|'developer-dashboard'>('splash');
   const [dark, setDark] = useState(false);
   const [user, setUser] = useState<User|null>(null);
   const [token, setToken] = useState('');
@@ -863,9 +863,9 @@ export default function AppPage() {
   const [redeemError, setRedeemError] = useState('');
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [showPin, setShowPin] = useState(false);
-  const [pinAction, setPinAction] = useState<'buy-data'|'buy-product'|'sim-pay'|'transfer'|'withdraw'|'electricity'|null>(null);
+  const [pinAction, setPinAction] = useState<'buy-data'|'buy-product'|'sim-pay'|'transfer'|'withdraw'|'electricity'|'airtime'|null>(null);
   const [receipt, setReceipt] = useState<Record<string,unknown>|null>(null);
-  const [txFilter, setTxFilter] = useState<'all'|'electricity'>('all');
+  const [txFilter, setTxFilter] = useState<'all'|'electricity'|'airtime'>('all');
   const [isBuyingData, setIsBuyingData] = useState(false);
   const [buyDataProgressStage, setBuyDataProgressStage] = useState(0);
   const [earnSummary, setEarnSummary] = useState<EarnSummary|null>(null);
@@ -897,6 +897,15 @@ export default function AppPage() {
     verified: false,
   });
 
+  // Airtime states
+  const [airtimePhone, setAirtimePhone] = useState('');
+  const [airtimeAmount, setAirtimeAmount] = useState('');
+  const [airtimeSummaryOpen, setAirtimeSummaryOpen] = useState(false);
+  const [airtimeStatus, setAirtimeStatus] = useState<'idle'|'processing'|'success'|'failed'>('idle');
+  const [airtimeSuccess, setAirtimeSuccess] = useState<Record<string, unknown> | null>(null);
+  const [airtimeFailure, setAirtimeFailure] = useState('');
+  const [airtimeIdempotencyKey, setAirtimeIdempotencyKey] = useState('');
+
   // Transfer states
   const [transferPhone, setTransferPhone] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
@@ -927,6 +936,8 @@ export default function AppPage() {
   const referralBalance = user?.referralBalance ?? user?.referralBonus ?? 0;
   const filteredTransactions = txFilter === 'electricity'
     ? transactions.filter((tx) => tx.type === 'electricity_purchase')
+    : txFilter === 'airtime'
+    ? transactions.filter((tx) => tx.type === 'airtime_purchase')
     : transactions;
 
   const showToast = (msg: string) => { playSound('success'); setToast(msg); setTimeout(() => setToast(''), 3000); };
@@ -1686,6 +1697,68 @@ export default function AppPage() {
     }
   };
 
+  const beginAirtimePurchase = () => {
+    if (!user) return;
+    const amount = Number(airtimeAmount || 0);
+
+    if (!/^\d{11}$/.test(airtimePhone)) {
+      showError('Enter an 11-digit phone number');
+      return;
+    }
+    if (!Number.isFinite(amount) || amount < 50 || amount > 50000) {
+      showError('Amount must be between ₦50 and ₦50,000');
+      return;
+    }
+    if (user.walletBalance < amount) {
+      showError('Insufficient balance. Please fund your wallet.');
+      return;
+    }
+
+    setAirtimeSummaryOpen(true);
+  };
+
+  const handleAirtimePurchase = async (pin: string) => {
+    const amount = Number(airtimeAmount || 0);
+    setAirtimeStatus('processing');
+    setLoading(true);
+    setAirtimeFailure('');
+
+    try {
+      const idem = airtimeIdempotencyKey || generateIdempotencyKey();
+      if (!airtimeIdempotencyKey) setAirtimeIdempotencyKey(idem);
+
+      const res = await fetch('/api/airtime/purchase', {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({
+          pin,
+          phoneNumber: airtimePhone,
+          amount,
+          idempotencyKey: idem,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Airtime purchase failed');
+
+      setReceipt(data.receipt);
+      setAirtimeSuccess(data.receipt || null);
+      setAirtimeStatus('success');
+      setAirtimeIdempotencyKey('');
+      setAirtimeSummaryOpen(false);
+      await refreshUser();
+      await loadHomeData();
+      showToast('Airtime purchase successful');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Airtime purchase failed';
+      setAirtimeFailure(message);
+      setAirtimeStatus('failed');
+      showError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /* ── SIM ACTIVATION ── */
   const handleSimPay = async (pin: string) => {
     setLoading(true);
@@ -1697,6 +1770,7 @@ export default function AppPage() {
       if (simBack) fd.append('backImage', simBack);
       const res = await fetch('/api/sim-activation', { method:'POST', headers:{ Authorization:`Bearer ${token}` }, body: fd });
       const data = await res.json();
+
       if (!res.ok) throw new Error(data.error);
       showToast('✅ SIM activation request submitted!');
       setSimActivations(prev => [data.activation, ...prev]);
@@ -1715,6 +1789,7 @@ export default function AppPage() {
     else if (pinAction === 'transfer') handleTransfer(pin);
     else if (pinAction === 'withdraw') handleWithdrawalRequest(pin);
     else if (pinAction === 'electricity') handleElectricityPurchase(pin);
+    else if (pinAction === 'airtime') handleAirtimePurchase(pin);
   };
 
   const sendChat = useCallback(async () => {
@@ -2269,6 +2344,18 @@ export default function AppPage() {
               <div style={{ textAlign:'center' }}>
                 <p style={{ fontSize:11,fontWeight:800,color:'var(--text)',margin:0,lineHeight:1.2 }}>Electricity</p>
                 <p style={{ fontSize:9,fontWeight:600,color:'rgba(255,159,10,.88)',margin:'2px 0 0',lineHeight:1.2,letterSpacing:.1 }}>Pay Bill</p>
+              </div>
+            </button>
+
+            {/* Airtime */}
+            <button onClick={()=>setScreen('airtime')} className="tactile-btn"
+              style={{ width:'100%',height:96,borderRadius:16,padding:'12px 8px 10px',background:dark ? 'linear-gradient(160deg,rgba(72,187,120,.22) 0%,rgba(72,187,120,.09) 100%)' : 'linear-gradient(160deg,rgba(72,187,120,.13) 0%,rgba(72,187,120,.05) 100%)',border:'1px solid rgba(72,187,120,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between',cursor:'pointer',transition:'transform .18s,box-shadow .18s',boxShadow:'0 2px 8px rgba(72,187,120,.10)' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px) scale(1.03)';e.currentTarget.style.boxShadow='0 8px 22px rgba(72,187,120,.26)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0) scale(1)';e.currentTarget.style.boxShadow='0 2px 8px rgba(72,187,120,.10)'}}>
+              <div style={{ width:38,height:38,borderRadius:10,background:'rgba(72,187,120,.18)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:19 }}>📱</div>
+              <div style={{ textAlign:'center' }}>
+                <p style={{ fontSize:11,fontWeight:800,color:'var(--text)',margin:0,lineHeight:1.2 }}>Airtime</p>
+                <p style={{ fontSize:9,fontWeight:600,color:'rgba(72,187,120,.88)',margin:'2px 0 0',lineHeight:1.2,letterSpacing:.1 }}>Top Up</p>
               </div>
             </button>
 
@@ -2898,6 +2985,79 @@ export default function AppPage() {
     );
   }
 
+  /* AIRTIME */
+  if (screen === 'airtime') {
+    const amount = Number(airtimeAmount || 0);
+    const total = amount;
+
+    return (
+      <>
+        <GlobalStyle dark={dark} />
+        {showPin && <PinKeyboard title="Confirm airtime PIN" subtitle="Authorize airtime purchase with your PIN" onComplete={handlePinComplete} onClose={()=>setShowPin(false)} pinAction={pinAction} />}
+
+        {airtimeSummaryOpen && (
+          <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:420,display:'flex',alignItems:'center',justifyContent:'center',padding:16 }}>
+            <div style={{ width:'100%',maxWidth:420,background:'var(--card)',border:'1px solid var(--border)',borderRadius:18,padding:16 }}>
+              <h3 style={{ fontSize:18,fontWeight:900,color:'var(--text)',marginBottom:10 }}>Confirm Airtime Purchase</h3>
+              <div style={{ display:'grid',gap:8 }}>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>Phone:</b> {airtimePhone}</p>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>Amount:</b> ₦{amount.toLocaleString('en-NG')}</p>
+                <p style={{ fontSize:14,fontWeight:900,color:'var(--text)',margin:'4px 0 0' }}><b>Total:</b> ₦{total.toLocaleString('en-NG')}</p>
+              </div>
+              <div style={{ display:'flex',gap:8,marginTop:16 }}>
+                <button onClick={()=>setAirtimeSummaryOpen(false)} style={{ flex:1,padding:'12px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontWeight:700,color:'var(--text)' }}>Cancel</button>
+                <button onClick={()=>{ setAirtimeSummaryOpen(false); setPinAction('airtime'); setShowPin(true); }} style={{ flex:1,padding:'12px',borderRadius:12,border:'none',background:'linear-gradient(135deg,#0047CC,#0071E3)',fontWeight:800,color:'#fff' }}>Confirm Purchase</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {airtimeSuccess && (
+          <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:420,display:'flex',alignItems:'center',justifyContent:'center',padding:16 }}>
+            <div style={{ width:'100%',maxWidth:420,background:'var(--card)',border:'1px solid var(--border)',borderRadius:18,padding:16 }}>
+              <p style={{ fontSize:18,fontWeight:900,color:'#30D158',marginBottom:8 }}>Purchase Successful</p>
+              <p style={{ fontSize:13,color:'var(--text-secondary)',marginBottom:14 }}>Your airtime has been delivered. Check your balance.</p>
+              <div style={{ display:'flex',gap:8 }}>
+                <button onClick={()=>setAirtimeSuccess(null)} style={{ flex:1,padding:'12px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontWeight:700,color:'var(--text)' }}>Close</button>
+                <button onClick={()=>{ setAirtimeSuccess(null); setScreen('transactions'); }} style={{ flex:1,padding:'12px',borderRadius:12,border:'none',background:'linear-gradient(135deg,#0047CC,#0071E3)',fontWeight:800,color:'#fff' }}>View Receipt</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={{ height:'100dvh',overflowY:'auto',WebkitOverflowScrolling:'touch',background:dark ? 'linear-gradient(180deg,#040810 0%,#0A1221 48%,#08101D 100%)' : 'linear-gradient(180deg,#F3F7FF 0%,#EEF3FB 52%,#F7F9FD 100%)',paddingBottom:116 }}>
+          <div style={{ padding:'52px 16px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12 }}>
+            <button onClick={()=>setScreen('home')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+          </div>
+
+          <div style={{ margin:'0 16px',background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:16 }}>
+            <h2 style={{ fontSize:20,fontWeight:900,color:'var(--text)',marginBottom:6 }}>Airtime Top Up</h2>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginBottom:14 }}>Send airtime instantly to any network.</p>
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Phone Number</label>
+            <input value={airtimePhone} onChange={(e)=>setAirtimePhone(e.target.value.replace(/\D/g,'').slice(0,11))} placeholder="081234567890" style={{ width:'100%',padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)',marginBottom:14 }} />
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Amount</label>
+            <div style={{ display:'flex',gap:8,flexWrap:'wrap',marginBottom:8 }}>
+              {[50,100,500,1000].map((v) => (
+                <button key={v} onClick={()=>setAirtimeAmount(String(v))} style={{ padding:'7px 10px',borderRadius:999,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:12,fontWeight:700,color:'var(--text)' }}>₦{v}</button>
+              ))}
+            </div>
+            <input value={airtimeAmount} onChange={(e)=>setAirtimeAmount(e.target.value.replace(/\D/g,''))} placeholder="Enter amount (₦50 - ₦50,000)" style={{ width:'100%',padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)',marginBottom:8 }} />
+            <p style={{ fontSize:12,color:'var(--text-secondary)',margin:'0 0 14px' }}>Total: <b style={{ color:'var(--text)' }}>₦{(Number(airtimeAmount || 0)).toLocaleString('en-NG')}</b></p>
+
+            {airtimeFailure && <p style={{ fontSize:12,color:RED,margin:'0 0 10px' }}>{airtimeFailure}</p>}
+            <button onClick={beginAirtimePurchase} disabled={airtimeStatus === 'processing'} style={{ width:'100%',padding:'14px',borderRadius:14,border:'none',background:airtimeStatus === 'processing' ? 'rgba(0,0,0,.25)' : 'linear-gradient(135deg,#0047CC,#0071E3)',fontSize:15,fontWeight:900,color:'#fff',opacity:airtimeStatus === 'processing' ? .6 : 1 }}>
+              {airtimeStatus === 'processing' ? 'Processing your airtime purchase...' : 'Buy Airtime'}
+            </button>
+          </div>
+        </div>
+
+        {BottomNav({ active: 'home' })}
+      </>
+    );
+  }
+
   /* TRANSACTIONS */
   if (screen === 'transactions') return (
     <>
@@ -2910,6 +3070,7 @@ export default function AppPage() {
           <div style={{ display:'flex',gap:8,marginTop:12 }}>
             <button onClick={()=>setTxFilter('all')} style={{ padding:'7px 12px',borderRadius:999,border:`1px solid ${txFilter==='all' ? BLUE : 'var(--border)'}`,background:txFilter==='all' ? 'rgba(0,113,227,.12)' : 'transparent',fontSize:12,fontWeight:700,color:txFilter==='all' ? BLUE : 'var(--text-secondary)' }}>All</button>
             <button onClick={()=>setTxFilter('electricity')} style={{ padding:'7px 12px',borderRadius:999,border:`1px solid ${txFilter==='electricity' ? BLUE : 'var(--border)'}`,background:txFilter==='electricity' ? 'rgba(0,113,227,.12)' : 'transparent',fontSize:12,fontWeight:700,color:txFilter==='electricity' ? BLUE : 'var(--text-secondary)' }}>Electricity</button>
+            <button onClick={()=>setTxFilter('airtime')} style={{ padding:'7px 12px',borderRadius:999,border:`1px solid ${txFilter==='airtime' ? BLUE : 'var(--border)'}`,background:txFilter==='airtime' ? 'rgba(0,113,227,.12)' : 'transparent',fontSize:12,fontWeight:700,color:txFilter==='airtime' ? BLUE : 'var(--text-secondary)' }}>Airtime</button>
           </div>
         </div>
         <div style={{ flex:1,overflowY:'auto',padding:'16px 16px 24px' }}>
@@ -2938,6 +3099,31 @@ export default function AppPage() {
                     <span style={{ fontSize:12,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.discoName || tx.description || 'Electricity')}</span>
                     <span style={{ fontSize:12,color:'var(--text-secondary)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.meterNumber || '—')}</span>
                     <span style={{ fontSize:12,fontWeight:800,color:'var(--text)' }}>₦{Number((r.totalAmount as number) || tx.amount || 0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                    <span style={{ fontSize:11,fontWeight:800,color:status === 'success' ? GREEN : status === 'failed' ? RED : '#FF9F0A' }}>{status}</span>
+                    <button onClick={()=>{ if (tx.receipt) setReceipt({ ...(tx.receipt as Record<string, unknown>), type: tx.type }); }} style={{ padding:'6px 8px',borderRadius:8,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:11,fontWeight:700,color:'var(--text)' }}>View Receipt</button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : txFilter === 'airtime' ? (
+            <div style={{ background:'var(--card)',borderRadius:16,overflow:'hidden',border:'1px solid var(--border)' }}>
+              <div style={{ display:'grid',gridTemplateColumns:'1.2fr 1fr 1fr 0.9fr 0.7fr 0.8fr',gap:8,padding:'10px 12px',borderBottom:'1px solid var(--border)',fontSize:11,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase' }}>
+                <span>Date & Time</span>
+                <span>Network</span>
+                <span>Phone Number</span>
+                <span>Amount</span>
+                <span>Status</span>
+                <span>Action</span>
+              </div>
+              {filteredTransactions.map((tx) => {
+                const r = (tx.receipt || {}) as Record<string, unknown>;
+                const status = String(tx.status || 'pending');
+                return (
+                  <div key={tx.id} style={{ display:'grid',gridTemplateColumns:'1.2fr 1fr 1fr 0.9fr 0.7fr 0.8fr',gap:8,padding:'11px 12px',borderBottom:'1px solid var(--border)',alignItems:'center' }}>
+                    <span style={{ fontSize:12,color:'var(--text-secondary)' }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</span>
+                    <span style={{ fontSize:12,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.networkName || 'Airtime')}</span>
+                    <span style={{ fontSize:12,color:'var(--text-secondary)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.phoneNumber || '—')}</span>
+                    <span style={{ fontSize:12,fontWeight:800,color:'var(--text)' }}>₦{Number((r.totalAmount as number) || (r.amount as number) || tx.amount || 0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                     <span style={{ fontSize:11,fontWeight:800,color:status === 'success' ? GREEN : status === 'failed' ? RED : '#FF9F0A' }}>{status}</span>
                     <button onClick={()=>{ if (tx.receipt) setReceipt({ ...(tx.receipt as Record<string, unknown>), type: tx.type }); }} style={{ padding:'6px 8px',borderRadius:8,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:11,fontWeight:700,color:'var(--text)' }}>View Receipt</button>
                   </div>
