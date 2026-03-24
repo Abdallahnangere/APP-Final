@@ -276,7 +276,7 @@ const GlobalStyle = ({ dark }: { dark: boolean }) => (
 
 /* ─────────────── PIN KEYBOARD ─────────────── */
 function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', subtitle = '', pinAction }: {
-  onComplete: (pin: string) => void; onClose: () => void; title?: string; subtitle?: string; pinAction?: "buy-data" | "buy-product" | "sim-pay" | "transfer" | "withdraw" | null;
+  onComplete: (pin: string) => void; onClose: () => void; title?: string; subtitle?: string; pinAction?: "buy-data" | "buy-product" | "sim-pay" | "transfer" | "withdraw" | "electricity" | null;
 }) {
   const [pin, setPin] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -2898,9 +2898,10 @@ export default function AppPage() {
             </div>
           ) : txFilter === 'electricity' ? (
             <div style={{ background:'var(--card)',borderRadius:16,overflow:'hidden',border:'1px solid var(--border)' }}>
-              <div style={{ display:'grid',gridTemplateColumns:'1.2fr 1.1fr 0.9fr 0.7fr 0.6fr',gap:8,padding:'10px 12px',borderBottom:'1px solid var(--border)',fontSize:11,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase' }}>
+              <div style={{ display:'grid',gridTemplateColumns:'1.2fr 1fr 1fr 0.9fr 0.7fr 0.8fr',gap:8,padding:'10px 12px',borderBottom:'1px solid var(--border)',fontSize:11,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase' }}>
                 <span>Date & Time</span>
-                <span>DISCO / Meter</span>
+                <span>DISCO</span>
+                <span>Meter Number</span>
                 <span>Amount</span>
                 <span>Status</span>
                 <span>Action</span>
@@ -2909,15 +2910,13 @@ export default function AppPage() {
                 const r = (tx.receipt || {}) as Record<string, unknown>;
                 const status = String(tx.status || 'pending');
                 return (
-                  <div key={tx.id} style={{ display:'grid',gridTemplateColumns:'1.2fr 1.1fr 0.9fr 0.7fr 0.6fr',gap:8,padding:'11px 12px',borderBottom:'1px solid var(--border)',alignItems:'center' }}>
+                  <div key={tx.id} style={{ display:'grid',gridTemplateColumns:'1.2fr 1fr 1fr 0.9fr 0.7fr 0.8fr',gap:8,padding:'11px 12px',borderBottom:'1px solid var(--border)',alignItems:'center' }}>
                     <span style={{ fontSize:12,color:'var(--text-secondary)' }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</span>
-                    <div style={{ minWidth:0 }}>
-                      <p style={{ margin:0,fontSize:12,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.discoName || tx.description || 'Electricity')}</p>
-                      <p style={{ margin:'2px 0 0',fontSize:11,color:'var(--text-secondary)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.meterNumber || '—')}</p>
-                    </div>
+                    <span style={{ fontSize:12,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.discoName || tx.description || 'Electricity')}</span>
+                    <span style={{ fontSize:12,color:'var(--text-secondary)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.meterNumber || '—')}</span>
                     <span style={{ fontSize:12,fontWeight:800,color:'var(--text)' }}>₦{Number((r.totalAmount as number) || tx.amount || 0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                     <span style={{ fontSize:11,fontWeight:800,color:status === 'success' ? GREEN : status === 'failed' ? RED : '#FF9F0A' }}>{status}</span>
-                    <button onClick={()=>{ if (tx.receipt) setReceipt({ ...(tx.receipt as Record<string, unknown>), type: tx.type }); }} style={{ padding:'6px 8px',borderRadius:8,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:11,fontWeight:700,color:'var(--text)' }}>View</button>
+                    <button onClick={()=>{ if (tx.receipt) setReceipt({ ...(tx.receipt as Record<string, unknown>), type: tx.type }); }} style={{ padding:'6px 8px',borderRadius:8,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:11,fontWeight:700,color:'var(--text)' }}>View Receipt</button>
                   </div>
                 );
               })}
