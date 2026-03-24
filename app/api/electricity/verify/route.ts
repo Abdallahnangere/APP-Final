@@ -28,8 +28,13 @@ export async function POST(req: NextRequest) {
     const ok = response?.status === 'success' && response?.data?.response_code === '00';
 
     if (!ok) {
+      const msg = String(response?.data?.response_message || response?.message || '').toLowerCase();
+      const friendly = msg.includes('service unavailable')
+        ? 'Electricity verification service is temporarily unavailable. Please try again shortly.'
+        : response?.data?.response_message || response?.message || 'Invalid meter number. Please check and try again.';
+
       return NextResponse.json({
-        error: response?.data?.response_message || response?.message || 'Invalid meter number. Please check and try again.',
+        error: friendly,
       }, { status: 400 });
     }
 
@@ -41,6 +46,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error('Electricity meter verification error:', err);
-    return NextResponse.json({ error: 'Network error. Please check your connection.' }, { status: 500 });
+    return NextResponse.json({ error: 'Electricity verification service is temporarily unavailable. Please try again shortly.' }, { status: 500 });
   }
 }

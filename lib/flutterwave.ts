@@ -1,5 +1,28 @@
 const FLW_BASE = 'https://api.flutterwave.com/v3';
 
+async function parseFlutterwaveResponse(res: Response) {
+  const contentType = res.headers.get('content-type') || '';
+  const text = await res.text();
+
+  if (contentType.toLowerCase().includes('application/json')) {
+    try {
+      return JSON.parse(text);
+    } catch {
+      return {
+        status: 'error',
+        message: 'Provider returned invalid JSON response',
+        raw: text.slice(0, 200),
+      };
+    }
+  }
+
+  return {
+    status: 'error',
+    message: 'Provider service unavailable. Please try again shortly.',
+    raw: text.slice(0, 200),
+  };
+}
+
 export interface FLWVirtualAccountPayload {
   email: string;
   is_permanent: boolean;
@@ -96,7 +119,7 @@ export async function listElectricityBillers() {
   const res = await fetch(`${FLW_BASE}/bill-categories/BIL099/billers`, {
     headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
   });
-  return res.json();
+  return parseFlutterwaveResponse(res);
 }
 
 export async function validateElectricityMeter(itemCode: string, meterNumber: string) {
@@ -112,7 +135,7 @@ export async function validateElectricityMeter(itemCode: string, meterNumber: st
       customer: meterNumber,
     }),
   });
-  return res.json();
+  return parseFlutterwaveResponse(res);
 }
 
 export async function purchaseElectricityBill(payload: FLWElectricityPurchasePayload) {
