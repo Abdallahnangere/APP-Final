@@ -29,13 +29,14 @@ export async function POST(req: NextRequest) {
 
     if (!ok) {
       const msg = String(response?.data?.response_message || response?.message || '').toLowerCase();
-      const friendly = msg.includes('service unavailable')
+      const providerUnavailable = msg.includes('service unavailable') || msg.includes('temporarily unavailable');
+      const friendly = providerUnavailable
         ? 'Electricity verification service is temporarily unavailable. Please try again shortly.'
         : response?.data?.response_message || response?.message || 'Invalid meter number. Please check and try again.';
 
       return NextResponse.json({
         error: friendly,
-      }, { status: 400 });
+      }, { status: providerUnavailable ? 503 : 400 });
     }
 
     return NextResponse.json({

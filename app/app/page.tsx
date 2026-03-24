@@ -1190,6 +1190,7 @@ export default function AppPage() {
     }
 
     setElectricityStatus('verifying');
+    setElectricityFailure('');
     try {
       const res = await fetch('/api/electricity/verify', {
         method: 'POST',
@@ -1205,11 +1206,14 @@ export default function AppPage() {
 
       setElectricityForm((prev) => ({ ...prev, customerName: String(data.customerName || ''), verified: true }));
       setElectricityStatus('verified');
+      setElectricityFailure('');
       showToast('Meter verified successfully');
     } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Meter verification failed';
       setElectricityStatus('failed');
       setElectricityForm((prev) => ({ ...prev, customerName: '', verified: false }));
-      showError(e instanceof Error ? e.message : 'Meter verification failed');
+      setElectricityFailure(message);
+      showError(message);
     }
   }, [token, authHeader, electricityForm.itemCode, electricityForm.meterNumber, electricityForm.meterType]);
 
@@ -2962,7 +2966,7 @@ export default function AppPage() {
               <button onClick={verifyElectricityMeter} disabled={electricityStatus === 'verifying'} style={{ padding:'0 12px',borderRadius:12,border:'none',background:'linear-gradient(135deg,#0047CC,#0071E3)',fontSize:12,fontWeight:800,color:'#fff' }}>{electricityStatus === 'verifying' ? 'Verifying…' : 'Verify Meter'}</button>
             </div>
             {electricityForm.verified && electricityForm.customerName && <p style={{ fontSize:12,color:'#30D158',margin:'2px 0 10px' }}>✓ {electricityForm.customerName}</p>}
-            {!electricityForm.verified && electricityStatus === 'failed' && <p style={{ fontSize:12,color:RED,margin:'2px 0 10px' }}>✗ Meter verification failed</p>}
+            {!electricityForm.verified && electricityStatus === 'failed' && <p style={{ fontSize:12,color:RED,margin:'2px 0 10px' }}>✗ {electricityFailure || 'Meter verification failed'}</p>}
 
             <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Amount</label>
             <div style={{ display:'flex',gap:8,flexWrap:'wrap',marginBottom:8 }}>
