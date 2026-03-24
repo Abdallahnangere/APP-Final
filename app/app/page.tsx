@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { generateIdempotencyKey } from '@/lib/utils';
+import { NIGERIAN_BANKS } from '@/lib/nigerianBanks';
 import SupportChat from '@/app/support/page';
 
 /* ─────────────── TYPES ─────────────── */
@@ -166,6 +167,8 @@ const NETWORKS = [
   { name: 'AIRTEL', id: 4 },
   { name: '9MOBILE', id: 9 },
 ];
+const BANK_TRANSFER_SERVICE_CHARGE = 200;
+const BANK_TRANSFER_MIN_AMOUNT = 100;
 
 /* ─────────────── SVG ICONS ─────────────── */
 const Icons = {
@@ -276,7 +279,7 @@ const GlobalStyle = ({ dark }: { dark: boolean }) => (
 
 /* ─────────────── PIN KEYBOARD ─────────────── */
 function PinKeyboard({ onComplete, onClose, title = 'Enter your 4-digit PIN', subtitle = '', pinAction }: {
-  onComplete: (pin: string) => void; onClose: () => void; title?: string; subtitle?: string; pinAction?: "buy-data" | "buy-product" | "sim-pay" | "transfer" | "withdraw" | "electricity" | "airtime" | null;
+  onComplete: (pin: string) => void; onClose: () => void; title?: string; subtitle?: string; pinAction?: "buy-data" | "buy-product" | "sim-pay" | "transfer" | "bank-transfer" | "withdraw" | "electricity" | "airtime" | null;
 }) {
   const [pin, setPin] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -449,6 +452,7 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
 
   const date = new Date(data.date as string).toLocaleString('en-NG', { dateStyle:'short', timeStyle:'short' });
   const isDataPurchase = data.type === 'data' || data.network;
+  const isBankTransfer = data.type === 'bank_transfer' || data.transactionType === 'Bank Transfer';
   const isTransfer = data.type === 'transfer' || data.type === 'transfer_out' || data.type === 'transfer_in';
   const isElectricity = data.type === 'electricity_purchase' || data.transactionType === 'Electricity Purchase';
   const amount = Number(data.totalAmount || data.price || data.amount || 0);
@@ -549,6 +553,19 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
                 <Row label="Network"   value={(data.network     as string) || '—'} />
                 <Row label="Data Plan" value={`${(data.dataSize as string)||'—'} · ${(data.validity as string)||'—'}`} />
                 <Row label="Recipient" value={(data.phoneNumber as string) || '—'} mono />
+              </>
+            ) : isBankTransfer ? (
+              <>
+                <Row label="Transaction Type" value="Bank Transfer" />
+                <Row label="Bank Name" value={(data.bankName as string) || '—'} />
+                <Row label="Account Number" value={(data.accountNumber as string) || '—'} mono />
+                <Row label="Recipient Name" value={(data.recipientName as string) || '—'} />
+                <Row label="Amount Sent" value={`₦${Number(data.amountSent || data.amount || 0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}`} />
+                <Row label="Service Charge" value={`₦${Number(data.serviceCharge || 0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}`} />
+                <Row label="Total Deducted" value={`₦${Number(data.totalDeducted || data.amount || 0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}`} />
+                <Row label="Narration" value={(data.narration as string) || '—'} />
+                <Row label="Flutterwave Ref" value={(data.flutterwaveReference as string) || (data.flwReference as string) || '—'} mono />
+                <Row label="Status" value={String(data.status || 'pending')} />
               </>
             ) : isTransfer ? (
               <>
@@ -812,7 +829,7 @@ function ShareSaukiMartModal({
 
 /* ─────────────── MAIN APP ─────────────── */
 export default function AppPage() {
-  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'|'chat'|'earn'|'electricity'|'airtime'|'developer-terms'|'developer-dashboard'>('splash');
+  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'|'bank-transfer'|'chat'|'earn'|'electricity'|'airtime'|'developer-terms'|'developer-dashboard'>('splash');
   const [dark, setDark] = useState(false);
   const [user, setUser] = useState<User|null>(null);
   const [token, setToken] = useState('');
@@ -863,9 +880,9 @@ export default function AppPage() {
   const [redeemError, setRedeemError] = useState('');
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [showPin, setShowPin] = useState(false);
-  const [pinAction, setPinAction] = useState<'buy-data'|'buy-product'|'sim-pay'|'transfer'|'withdraw'|'electricity'|'airtime'|null>(null);
+  const [pinAction, setPinAction] = useState<'buy-data'|'buy-product'|'sim-pay'|'transfer'|'bank-transfer'|'withdraw'|'electricity'|'airtime'|null>(null);
   const [receipt, setReceipt] = useState<Record<string,unknown>|null>(null);
-  const [txFilter, setTxFilter] = useState<'all'|'electricity'|'airtime'>('all');
+  const [txFilter, setTxFilter] = useState<'all'|'electricity'|'airtime'|'bank-transfer'>('all');
   const [isBuyingData, setIsBuyingData] = useState(false);
   const [buyDataProgressStage, setBuyDataProgressStage] = useState(0);
   const [earnSummary, setEarnSummary] = useState<EarnSummary|null>(null);
@@ -914,6 +931,19 @@ export default function AppPage() {
   const [transferRecipient, setTransferRecipient] = useState<{name:string; phone:string; email?:string}|null>(null);
   const [transferLoading, setTransferLoading] = useState(false);
 
+  // Bank transfer states
+  const [bankTransferBankSearch, setBankTransferBankSearch] = useState('');
+  const [bankTransferBankCode, setBankTransferBankCode] = useState('');
+  const [bankTransferBankName, setBankTransferBankName] = useState('');
+  const [bankTransferAccountNumber, setBankTransferAccountNumber] = useState('');
+  const [bankTransferAccountName, setBankTransferAccountName] = useState('');
+  const [bankTransferAmount, setBankTransferAmount] = useState('');
+  const [bankTransferNarration, setBankTransferNarration] = useState('');
+  const [bankTransferVerifyState, setBankTransferVerifyState] = useState<'idle'|'verifying'|'verified'|'failed'>('idle');
+  const [bankTransferError, setBankTransferError] = useState('');
+  const [bankTransferSummaryOpen, setBankTransferSummaryOpen] = useState(false);
+  const [bankTransferProcessing, setBankTransferProcessing] = useState(false);
+
   // Product delivery states
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryCity, setDeliveryCity] = useState('');
@@ -939,6 +969,8 @@ export default function AppPage() {
     ? transactions.filter((tx) => tx.type === 'electricity_purchase')
     : txFilter === 'airtime'
     ? transactions.filter((tx) => tx.type === 'airtime_purchase')
+    : txFilter === 'bank-transfer'
+    ? transactions.filter((tx) => tx.type === 'bank_transfer')
     : transactions;
 
   const showToast = (msg: string) => { playSound('success'); setToast(msg); setTimeout(() => setToast(''), 3000); };
@@ -1797,6 +1829,7 @@ export default function AppPage() {
     else if (pinAction === 'buy-product') handleBuyProduct(pin);
     else if (pinAction === 'sim-pay') handleSimPay(pin);
     else if (pinAction === 'transfer') handleTransfer(pin);
+    else if (pinAction === 'bank-transfer') handleBankTransfer(pin);
     else if (pinAction === 'withdraw') handleWithdrawalRequest(pin);
     else if (pinAction === 'electricity') handleElectricityPurchase(pin);
     else if (pinAction === 'airtime') handleAirtimePurchase(pin);
@@ -1922,6 +1955,120 @@ export default function AppPage() {
     } catch(e:unknown) { 
       showError(e instanceof Error ? e.message : 'Transfer failed');
     } finally { setTransferLoading(false); }
+  };
+
+  const verifyBankTransferAccount = async () => {
+    if (!bankTransferBankCode) {
+      showError('Select a bank');
+      return;
+    }
+    if (!/^\d{10}$/.test(bankTransferAccountNumber)) {
+      showError('Account number must be exactly 10 digits');
+      return;
+    }
+
+    setBankTransferVerifyState('verifying');
+    setBankTransferError('');
+    setBankTransferAccountName('');
+
+    try {
+      const res = await fetch('/api/bank-transfer/verify', {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({ bankCode: bankTransferBankCode, accountNumber: bankTransferAccountNumber }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verification failed');
+
+      setBankTransferBankName(String(data.bankName || bankTransferBankName));
+      setBankTransferAccountName(String(data.accountName || ''));
+      setBankTransferVerifyState('verified');
+      showToast('Account verified successfully');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Verification failed';
+      setBankTransferVerifyState('failed');
+      setBankTransferError(msg);
+      showError(msg);
+    }
+  };
+
+  const beginBankTransfer = () => {
+    if (!user) return;
+    const amount = Number(bankTransferAmount || 0);
+    const totalDeducted = amount + BANK_TRANSFER_SERVICE_CHARGE;
+
+    if (!bankTransferBankCode || !bankTransferBankName) {
+      showError('Select a bank');
+      return;
+    }
+    if (!/^\d{10}$/.test(bankTransferAccountNumber)) {
+      showError('Account number must be exactly 10 digits');
+      return;
+    }
+    if (bankTransferVerifyState !== 'verified' || !bankTransferAccountName) {
+      showError('Verify account before proceeding');
+      return;
+    }
+    if (!Number.isFinite(amount) || amount < BANK_TRANSFER_MIN_AMOUNT) {
+      showError('Amount must be at least ₦100');
+      return;
+    }
+    if (amount > 1000000) {
+      showError('Maximum transfer per transaction is ₦1,000,000');
+      return;
+    }
+    if (user.walletBalance < totalDeducted) {
+      showError(`Insufficient balance. You need ₦${totalDeducted.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}.`);
+      return;
+    }
+
+    setBankTransferSummaryOpen(true);
+  };
+
+  const handleBankTransfer = async (pin: string) => {
+    const amount = Number(bankTransferAmount || 0);
+    setBankTransferProcessing(true);
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/bank-transfer', {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({
+          bankCode: bankTransferBankCode,
+          bankName: bankTransferBankName,
+          accountNumber: bankTransferAccountNumber,
+          accountName: bankTransferAccountName,
+          amount,
+          narration: bankTransferNarration.trim() || undefined,
+          pin,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Transfer failed');
+
+      setReceipt(data.receipt || null);
+      setBankTransferSummaryOpen(false);
+      setBankTransferBankSearch('');
+      setBankTransferBankCode('');
+      setBankTransferBankName('');
+      setBankTransferAccountNumber('');
+      setBankTransferAccountName('');
+      setBankTransferAmount('');
+      setBankTransferNarration('');
+      setBankTransferVerifyState('idle');
+      setBankTransferError('');
+      await refreshUser();
+      await loadHomeData();
+      showToast(data.message || 'Transfer completed');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Transfer failed';
+      setBankTransferError(msg);
+      showError(msg);
+    } finally {
+      setBankTransferProcessing(false);
+      setLoading(false);
+    }
   };
 
   /* ═══════════════════ SCREENS ═══════════════════ */
@@ -2390,6 +2537,18 @@ export default function AppPage() {
               <div style={{ textAlign:'center' }}>
                 <p style={{ fontSize:11,fontWeight:800,color:'var(--text)',margin:0,lineHeight:1.2 }}>Store</p>
                 <p style={{ fontSize:9,fontWeight:600,color:'rgba(48,209,88,.85)',margin:'2px 0 0',lineHeight:1.2,letterSpacing:.1 }}>Premium Gadgets</p>
+              </div>
+            </button>
+
+            {/* Send */}
+            <button onClick={()=>setScreen('bank-transfer')} className="tactile-btn"
+              style={{ width:'100%',height:96,borderRadius:16,padding:'12px 8px 10px',background:dark ? 'linear-gradient(160deg,rgba(255,184,76,.22) 0%,rgba(255,184,76,.09) 100%)' : 'linear-gradient(160deg,rgba(255,184,76,.13) 0%,rgba(255,184,76,.05) 100%)',border:'1px solid rgba(255,184,76,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between',cursor:'pointer',transition:'transform .18s,box-shadow .18s',boxShadow:'0 2px 8px rgba(255,184,76,.10)' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px) scale(1.03)';e.currentTarget.style.boxShadow='0 8px 22px rgba(255,184,76,.26)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0) scale(1)';e.currentTarget.style.boxShadow='0 2px 8px rgba(255,184,76,.10)'}}>
+              <div style={{ width:38,height:38,borderRadius:10,background:'rgba(255,184,76,.18)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:19 }}>🏦</div>
+              <div style={{ textAlign:'center' }}>
+                <p style={{ fontSize:11,fontWeight:800,color:'var(--text)',margin:0,lineHeight:1.2 }}>Bank Transfer</p>
+                <p style={{ fontSize:9,fontWeight:600,color:'rgba(255,184,76,.88)',margin:'2px 0 0',lineHeight:1.2,letterSpacing:.1 }}>Wallet to Bank</p>
               </div>
             </button>
 
@@ -3091,6 +3250,7 @@ export default function AppPage() {
             <button onClick={()=>setTxFilter('all')} style={{ padding:'7px 12px',borderRadius:999,border:`1px solid ${txFilter==='all' ? BLUE : 'var(--border)'}`,background:txFilter==='all' ? 'rgba(0,113,227,.12)' : 'transparent',fontSize:12,fontWeight:700,color:txFilter==='all' ? BLUE : 'var(--text-secondary)' }}>All</button>
             <button onClick={()=>setTxFilter('electricity')} style={{ padding:'7px 12px',borderRadius:999,border:`1px solid ${txFilter==='electricity' ? BLUE : 'var(--border)'}`,background:txFilter==='electricity' ? 'rgba(0,113,227,.12)' : 'transparent',fontSize:12,fontWeight:700,color:txFilter==='electricity' ? BLUE : 'var(--text-secondary)' }}>Electricity</button>
             <button onClick={()=>setTxFilter('airtime')} style={{ padding:'7px 12px',borderRadius:999,border:`1px solid ${txFilter==='airtime' ? BLUE : 'var(--border)'}`,background:txFilter==='airtime' ? 'rgba(0,113,227,.12)' : 'transparent',fontSize:12,fontWeight:700,color:txFilter==='airtime' ? BLUE : 'var(--text-secondary)' }}>Airtime</button>
+            <button onClick={()=>setTxFilter('bank-transfer')} style={{ padding:'7px 12px',borderRadius:999,border:`1px solid ${txFilter==='bank-transfer' ? BLUE : 'var(--border)'}`,background:txFilter==='bank-transfer' ? 'rgba(0,113,227,.12)' : 'transparent',fontSize:12,fontWeight:700,color:txFilter==='bank-transfer' ? BLUE : 'var(--text-secondary)' }}>Bank Transfer</button>
           </div>
         </div>
         <div style={{ flex:1,overflowY:'auto',padding:'16px 16px 24px' }}>
@@ -3144,6 +3304,33 @@ export default function AppPage() {
                     <span style={{ fontSize:12,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.networkName || 'Airtime')}</span>
                     <span style={{ fontSize:12,color:'var(--text-secondary)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.phoneNumber || '—')}</span>
                     <span style={{ fontSize:12,fontWeight:800,color:'var(--text)' }}>₦{Number((r.totalAmount as number) || (r.amount as number) || tx.amount || 0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                    <span style={{ fontSize:11,fontWeight:800,color:status === 'success' ? GREEN : status === 'failed' ? RED : '#FF9F0A' }}>{status}</span>
+                    <button onClick={()=>{ if (tx.receipt) setReceipt({ ...(tx.receipt as Record<string, unknown>), type: tx.type }); }} style={{ padding:'6px 8px',borderRadius:8,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:11,fontWeight:700,color:'var(--text)' }}>View Receipt</button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : txFilter === 'bank-transfer' ? (
+            <div style={{ background:'var(--card)',borderRadius:16,overflow:'hidden',border:'1px solid var(--border)' }}>
+              <div style={{ display:'grid',gridTemplateColumns:'1.1fr 1fr 1fr 1fr 0.9fr 0.7fr 0.8fr',gap:8,padding:'10px 12px',borderBottom:'1px solid var(--border)',fontSize:11,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase' }}>
+                <span>Date & Time</span>
+                <span>Bank</span>
+                <span>Account Number</span>
+                <span>Recipient</span>
+                <span>Total</span>
+                <span>Status</span>
+                <span>Action</span>
+              </div>
+              {filteredTransactions.map((tx) => {
+                const r = (tx.receipt || {}) as Record<string, unknown>;
+                const status = String(tx.status || 'pending');
+                return (
+                  <div key={tx.id} style={{ display:'grid',gridTemplateColumns:'1.1fr 1fr 1fr 1fr 0.9fr 0.7fr 0.8fr',gap:8,padding:'11px 12px',borderBottom:'1px solid var(--border)',alignItems:'center' }}>
+                    <span style={{ fontSize:12,color:'var(--text-secondary)' }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</span>
+                    <span style={{ fontSize:12,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.bankName || 'Bank Transfer')}</span>
+                    <span style={{ fontSize:12,color:'var(--text-secondary)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.accountNumber || '—')}</span>
+                    <span style={{ fontSize:12,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.recipientName || '—')}</span>
+                    <span style={{ fontSize:12,fontWeight:800,color:'var(--text)' }}>₦{Number((r.totalDeducted as number) || tx.amount || 0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                     <span style={{ fontSize:11,fontWeight:800,color:status === 'success' ? GREEN : status === 'failed' ? RED : '#FF9F0A' }}>{status}</span>
                     <button onClick={()=>{ if (tx.receipt) setReceipt({ ...(tx.receipt as Record<string, unknown>), type: tx.type }); }} style={{ padding:'6px 8px',borderRadius:8,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:11,fontWeight:700,color:'var(--text)' }}>View Receipt</button>
                   </div>
@@ -3679,6 +3866,123 @@ export default function AppPage() {
     </>
   );
 
+
+  /* BANK TRANSFER */
+  if (screen === 'bank-transfer') {
+    const bankTransferAmountNum = Number(bankTransferAmount || 0);
+    const bankTransferTotal = bankTransferAmountNum + BANK_TRANSFER_SERVICE_CHARGE;
+    const bankTransferFilteredBanks = NIGERIAN_BANKS.filter((b) => b.name.toLowerCase().includes(bankTransferBankSearch.toLowerCase().trim()));
+
+    return (
+      <>
+        <GlobalStyle dark={dark} />
+        {showPin && <PinKeyboard title="Confirm transfer PIN" subtitle="Authorize bank transfer with your 4-digit PIN" onComplete={handlePinComplete} onClose={()=>setShowPin(false)} pinAction={pinAction} />}
+        {receipt && <Receipt data={receipt} onDownload={()=>{}} onClose={()=>setReceipt(null)} dark={dark} />}
+
+        {bankTransferSummaryOpen && (
+          <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.52)',zIndex:420,display:'flex',alignItems:'center',justifyContent:'center',padding:16 }}>
+            <div style={{ width:'100%',maxWidth:430,background:'var(--card)',border:'1px solid var(--border)',borderRadius:18,padding:16 }}>
+              <h3 style={{ fontSize:18,fontWeight:900,color:'var(--text)',marginBottom:10 }}>Confirm Bank Transfer</h3>
+              <p style={{ fontSize:12,color:'var(--text-secondary)',margin:'0 0 12px' }}>Double-check details before confirming.</p>
+              <div style={{ display:'grid',gap:8 }}>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>Bank:</b> {bankTransferBankName}</p>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>Account Number:</b> {bankTransferAccountNumber}</p>
+                <p style={{ fontSize:13,color:'#30D158',margin:0,fontWeight:900 }}><b>Recipient:</b> {bankTransferAccountName}</p>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>Amount:</b> ₦{bankTransferAmountNum.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                <p style={{ fontSize:13,color:'#FF9F0A',margin:0 }}><b>Service Charge:</b> ₦{BANK_TRANSFER_SERVICE_CHARGE.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                <p style={{ fontSize:14,fontWeight:900,color:'var(--text)',margin:'4px 0 0' }}><b>Total Deduction:</b> ₦{bankTransferTotal.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+                <p style={{ fontSize:12,color:'var(--text-secondary)',margin:'4px 0 0' }}><b>Narration:</b> {bankTransferNarration.trim() || '—'}</p>
+              </div>
+              <div style={{ display:'flex',gap:8,marginTop:16 }}>
+                <button onClick={()=>setBankTransferSummaryOpen(false)} style={{ flex:1,padding:'12px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontWeight:700,color:'var(--text)' }}>Cancel</button>
+                <button onClick={()=>{ setBankTransferSummaryOpen(false); setPinAction('bank-transfer'); setShowPin(true); }} style={{ flex:1,padding:'12px',borderRadius:12,border:'none',background:'linear-gradient(135deg,#C89B3C,#F3D27A)',fontWeight:900,color:'#1C1C1E' }}>Confirm Transfer</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {bankTransferProcessing && (
+          <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:410,display:'grid',placeItems:'center' }}>
+            <div style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:14,padding:'14px 16px',fontSize:14,fontWeight:700,color:'var(--text)' }}>Processing your transfer...</div>
+          </div>
+        )}
+
+        <div style={{ height:'100dvh',overflowY:'auto',WebkitOverflowScrolling:'touch',background:dark ? 'linear-gradient(180deg,#040810 0%,#0A1221 48%,#08101D 100%)' : 'linear-gradient(180deg,#F3F7FF 0%,#EEF3FB 52%,#F7F9FD 100%)',paddingBottom:116 }}>
+          <div style={{ padding:'52px 16px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12 }}>
+            <button onClick={()=>setScreen('home')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+          </div>
+
+          <div style={{ margin:'0 16px',background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:16 }}>
+            <h2 style={{ fontSize:20,fontWeight:900,color:'var(--text)',marginBottom:6 }}>Bank Transfer</h2>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginBottom:14 }}>Send from wallet to any Nigerian bank account.</p>
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Search Bank</label>
+            <input value={bankTransferBankSearch} onChange={(e)=>setBankTransferBankSearch(e.target.value)} placeholder="Search bank name" style={{ width:'100%',padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)',marginBottom:10 }} />
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Bank</label>
+            <select
+              value={bankTransferBankCode}
+              onChange={(e)=>{
+                const nextCode = e.target.value;
+                const found = NIGERIAN_BANKS.find((b)=>b.code === nextCode);
+                setBankTransferBankCode(nextCode);
+                setBankTransferBankName(found?.name || '');
+                setBankTransferVerifyState('idle');
+                setBankTransferError('');
+                setBankTransferAccountName('');
+              }}
+              style={{ width:'100%',padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)',marginBottom:14 }}
+            >
+              <option value="">Select bank</option>
+              {bankTransferFilteredBanks.map((b)=>(
+                <option key={b.code} value={b.code}>{b.name}</option>
+              ))}
+            </select>
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Account Number</label>
+            <div style={{ display:'flex',gap:8,marginBottom:10 }}>
+              <input value={bankTransferAccountNumber} onChange={(e)=>{ setBankTransferAccountNumber(e.target.value.replace(/\D/g,'').slice(0,10)); setBankTransferVerifyState('idle'); setBankTransferError(''); setBankTransferAccountName(''); }} placeholder="10-digit account number" style={{ flex:1,padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)' }} />
+              {bankTransferAccountNumber.length === 10 && (
+                <button onClick={verifyBankTransferAccount} disabled={bankTransferVerifyState === 'verifying'} style={{ padding:'0 12px',borderRadius:12,border:'none',background:'linear-gradient(135deg,#0047CC,#0071E3)',fontSize:12,fontWeight:800,color:'#fff' }}>{bankTransferVerifyState === 'verifying' ? 'Verifying…' : 'Verify Account'}</button>
+              )}
+            </div>
+
+            {bankTransferVerifyState === 'verified' && bankTransferAccountName && (
+              <p style={{ fontSize:13,color:'#30D158',margin:'0 0 10px',padding:'8px 10px',borderRadius:10,background:'rgba(48,209,88,.12)',border:'1px solid rgba(48,209,88,.25)' }}>✓ {bankTransferAccountName}</p>
+            )}
+            {bankTransferVerifyState === 'failed' && (
+              <p style={{ fontSize:12,color:RED,margin:'0 0 10px',padding:'8px 10px',borderRadius:10,background:'rgba(255,59,48,.12)',border:'1px solid rgba(255,59,48,.2)' }}>✗ {bankTransferError || 'Invalid account number'}</p>
+            )}
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Amount</label>
+            <div style={{ display:'flex',gap:8,flexWrap:'wrap',marginBottom:8 }}>
+              {[1000,2000,5000,10000,20000].map((v) => (
+                <button key={v} onClick={()=>setBankTransferAmount(String(v))} disabled={bankTransferVerifyState !== 'verified'} style={{ padding:'7px 10px',borderRadius:999,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:12,fontWeight:700,color:'var(--text)',opacity:bankTransferVerifyState === 'verified' ? 1 : .45 }}>₦{v.toLocaleString('en-NG')}</button>
+              ))}
+            </div>
+            <input value={Number(bankTransferAmount || 0) ? Number(bankTransferAmount || 0).toLocaleString('en-NG') : ''} onChange={(e)=>setBankTransferAmount(e.target.value.replace(/\D/g,''))} disabled={bankTransferVerifyState !== 'verified'} placeholder="Enter amount" style={{ width:'100%',padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)',marginBottom:8,opacity:bankTransferVerifyState === 'verified' ? 1 : .55 }} />
+
+            <p style={{ fontSize:12,color:'var(--text-secondary)',margin:'0 0 8px' }}>Available balance: <b style={{ color:'var(--text)' }}>₦{(user?.walletBalance || 0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</b></p>
+            <div style={{ border:'1px solid var(--border)',borderRadius:12,padding:'10px 12px',marginBottom:10,background:'var(--bg-secondary)' }}>
+              <p style={{ margin:0,fontSize:12,color:'var(--text-secondary)' }}>Amount: <b style={{ color:'var(--text)' }}>₦{bankTransferAmountNum.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</b></p>
+              <p style={{ margin:'5px 0 0',fontSize:12,color:'#FF9F0A' }}>Service Charge: <b>₦{BANK_TRANSFER_SERVICE_CHARGE.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</b></p>
+              <p style={{ margin:'5px 0 0',fontSize:13,color:'var(--text)',fontWeight:900 }}>Total Deduction: ₦{bankTransferTotal.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+            </div>
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Narration (Optional)</label>
+            <input value={bankTransferNarration} onChange={(e)=>setBankTransferNarration(e.target.value.slice(0,100))} placeholder="Payment for goods, services, gift, etc." style={{ width:'100%',padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)',marginBottom:14 }} />
+
+            {bankTransferError && <p style={{ fontSize:12,color:RED,margin:'0 0 10px' }}>{bankTransferError}</p>}
+            <button onClick={beginBankTransfer} disabled={bankTransferProcessing || bankTransferVerifyState !== 'verified'} style={{ width:'100%',padding:'14px',borderRadius:14,border:'none',background:(bankTransferProcessing || bankTransferVerifyState !== 'verified') ? 'rgba(0,0,0,.25)' : 'linear-gradient(135deg,#C89B3C,#F3D27A)',fontSize:15,fontWeight:900,color:(bankTransferProcessing || bankTransferVerifyState !== 'verified') ? '#E5E5EA' : '#1C1C1E',opacity:(bankTransferProcessing || bankTransferVerifyState !== 'verified') ? .6 : 1 }}>
+              {bankTransferProcessing ? 'Processing your transfer...' : 'Proceed'}
+            </button>
+          </div>
+        </div>
+
+        {BottomNav({ active: 'home' })}
+      </>
+    );
+  }
 
   /* TRANSFER */
   if (screen === 'transfer') return (

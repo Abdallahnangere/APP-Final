@@ -162,6 +162,32 @@ type AirtimeTx = {
   createdAt: string;
   updatedAt: string;
 };
+type BankTransferTx = {
+  id: string;
+  transactionId?: string | null;
+  userId: string;
+  userName: string;
+  userPhone: string;
+  bankCode: string;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  amount: number;
+  serviceCharge: number;
+  totalDeducted: number;
+  narration: string;
+  status: string;
+  flwTransferId?: string | null;
+  flwReference?: string | null;
+  txReference: string;
+  flwFee: number;
+  flwResponse?: Record<string, unknown> | null;
+  errorMessage?: string | null;
+  refundStatus: string;
+  refundedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 const GlobalStyle = () => (
   <style>{`
@@ -192,6 +218,30 @@ const GlobalStyle = () => (
     .admin-shell::before{content:'';position:absolute;inset:-20% auto auto -10%;width:420px;height:420px;border-radius:999px;background:radial-gradient(circle, rgba(94,154,255,0.18), transparent 68%);filter:blur(8px);pointer-events:none;animation:drift 12s ease-in-out infinite}
     .admin-shell::after{content:'';position:absolute;right:-120px;top:140px;width:300px;height:300px;border-radius:999px;background:radial-gradient(circle, rgba(90,226,184,0.12), transparent 70%);pointer-events:none;animation:drift 15s ease-in-out infinite reverse}
     .admin-code{font-family:'IBM Plex Mono',monospace}
+
+    .bt-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+    .bt-filter-grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr 0.9fr;gap:8px}
+    .bt-stats-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin-bottom:22px}
+    .bt-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .bt-table{width:100%;border-collapse:collapse;min-width:1520px}
+    .bt-sticky-left{position:sticky;left:0;background:#fff;z-index:2}
+    .bt-sticky-right{position:sticky;right:0;background:#fff;z-index:2}
+    .bt-modal-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+    .bt-modal-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+    @media (max-width: 1280px){
+      .bt-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .bt-stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    }
+    @media (max-width: 900px){
+      .bt-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .bt-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .bt-modal-grid-2,.bt-modal-grid-3{grid-template-columns:1fr}
+    }
+    @media (max-width: 640px){
+      .bt-filter-grid{grid-template-columns:1fr}
+      .bt-stats-grid{grid-template-columns:1fr}
+    }
   `}</style>
 );
 
@@ -231,7 +281,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [adminToken, setAdminToken] = useState('');
-  const [tab, setTab] = useState<'overview'|'users'|'withdrawals'|'flutterwave'|'electricity'|'airtime'|'developers'|'plans'|'products'|'transactions'|'orders'|'analytics'|'broadcasts'|'push'|'chat'|'sim'|'webhooks'|'console'>('overview');
+  const [tab, setTab] = useState<'overview'|'users'|'withdrawals'|'flutterwave'|'bank-transfers'|'electricity'|'airtime'|'developers'|'plans'|'products'|'transactions'|'orders'|'analytics'|'broadcasts'|'push'|'chat'|'sim'|'webhooks'|'console'>('overview');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
   const [error, setError] = useState('');
@@ -253,6 +303,8 @@ export default function AdminPage() {
   const [electricityStats, setElectricityStats] = useState<Record<string, unknown>>({});
   const [airtimeTx, setAirtimeTx] = useState<AirtimeTx[]>([]);
   const [airtimeStats, setAirtimeStats] = useState<Record<string, unknown>>({});
+  const [bankTransferTx, setBankTransferTx] = useState<BankTransferTx[]>([]);
+  const [bankTransferStats, setBankTransferStats] = useState<Record<string, unknown>>({});
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [simActs, setSimActs] = useState<SimAct[]>([]);
@@ -286,6 +338,13 @@ export default function AdminPage() {
   const [airtimeToDate, setAirtimeToDate] = useState('');
   const [selectedAirtime, setSelectedAirtime] = useState<AirtimeTx | null>(null);
   const [airtimeBusy, setAirtimeBusy] = useState(false);
+  const [bankTransferStatusFilter, setBankTransferStatusFilter] = useState('all');
+  const [bankTransferBankFilter, setBankTransferBankFilter] = useState('');
+  const [bankTransferSearch, setBankTransferSearch] = useState('');
+  const [bankTransferFromDate, setBankTransferFromDate] = useState('');
+  const [bankTransferToDate, setBankTransferToDate] = useState('');
+  const [selectedBankTransfer, setSelectedBankTransfer] = useState<BankTransferTx | null>(null);
+  const [bankTransferBusy, setBankTransferBusy] = useState(false);
   const [withdrawalActionBusy, setWithdrawalActionBusy] = useState('');
   const [pinForm, setPinForm] = useState('');
   const [developerForm, setDeveloperForm] = useState({ userId:'', discountPercent:'8.00', termsVersion:'v1.0' });
@@ -466,6 +525,25 @@ export default function AdminPage() {
     }
   }, [authH, airtimeNetworkFilter, airtimeFromDate, airtimeSearch, airtimeStatusFilter, airtimeToDate]);
 
+  const loadBankTransfers = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (bankTransferStatusFilter && bankTransferStatusFilter !== 'all') params.set('status', bankTransferStatusFilter);
+      if (bankTransferBankFilter.trim()) params.set('bank', bankTransferBankFilter.trim());
+      if (bankTransferSearch.trim()) params.set('search', bankTransferSearch.trim());
+      if (bankTransferFromDate) params.set('from', bankTransferFromDate);
+      if (bankTransferToDate) params.set('to', bankTransferToDate);
+
+      const res = await fetch(`/api/zmytcd/bank-transfers${params.toString() ? `?${params.toString()}` : ''}`, { headers: authH() });
+      if (!res.ok) throw new Error('Failed to load bank transfers');
+      const data = await res.json();
+      setBankTransferTx(Array.isArray(data?.transfers) ? data.transfers : []);
+      setBankTransferStats((data?.stats || {}) as Record<string, unknown>);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Failed to load bank transfers');
+    }
+  }, [authH, bankTransferBankFilter, bankTransferFromDate, bankTransferSearch, bankTransferStatusFilter, bankTransferToDate]);
+
   const loadAdminSessions = useCallback(async (filter = chatFilter, search = chatSearch) => {
     try {
       const params = new URLSearchParams();
@@ -571,6 +649,7 @@ export default function AdminPage() {
     }
     if (tab === 'users') load('users').then(d => setUsers(Array.isArray(d)?d:[]));
     if (tab === 'withdrawals') loadWithdrawals();
+    if (tab === 'bank-transfers') loadBankTransfers();
     if (tab === 'electricity') loadElectricity();
     if (tab === 'airtime') loadAirtime();
     if (tab === 'developers') {
@@ -587,7 +666,7 @@ export default function AdminPage() {
     if (tab === 'webhooks') load('webhooks').then(d => setWebhooks(Array.isArray(d)?d:[]));
     if (tab === 'sim') load('sim-activations').then(d => setSimActs(Array.isArray(d)?d:[]));
     if (tab === 'analytics') loadAnalytics();
-  }, [tab, authed, load, loadAdminSessions, loadAnalytics, analyticsDate, loadOrders, loadWithdrawals, loadElectricity, loadAirtime]);
+  }, [tab, authed, load, loadAdminSessions, loadAnalytics, analyticsDate, loadOrders, loadWithdrawals, loadBankTransfers, loadElectricity, loadAirtime]);
 
   useEffect(() => {
     if (!authed || tab !== 'analytics') return;
@@ -613,6 +692,11 @@ export default function AdminPage() {
     if (!authed || tab !== 'airtime') return;
     loadAirtime();
   }, [authed, tab, loadAirtime]);
+
+  useEffect(() => {
+    if (!authed || tab !== 'bank-transfers') return;
+    loadBankTransfers();
+  }, [authed, tab, loadBankTransfers]);
 
   useEffect(() => {
     if (!selectedOrder) return;
@@ -882,6 +966,7 @@ export default function AdminPage() {
     { id:'users', label:'Users', icon:'👥' },
     { id:'withdrawals', label:'Withdrawals', icon:'💸' },
     { id:'flutterwave', label:'Flutterwave', icon:'🏦' },
+    { id:'bank-transfers', label:'Bank Transfers', icon:'🏛️' },
     { id:'electricity', label:'Electricity', icon:'⚡' },
     { id:'airtime', label:'Airtime', icon:'📱' },
     { id:'developers', label:'Developers', icon:'🧩' },
@@ -1769,6 +1854,218 @@ export default function AdminPage() {
                         </Btn>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ─── BANK TRANSFERS ─── */}
+          {tab === 'bank-transfers' && (
+            <div className="fade-in">
+              <div className="bt-header">
+                <h1 style={{ fontSize:22,fontWeight:900 }}>Bank Transfers</h1>
+                <div style={{ display:'flex',gap:8,alignItems:'center',flexWrap:'wrap' }}>
+                  <p style={{ fontSize:12,fontWeight:700,color:'#6C809E' }}>{bankTransferTx.length} result(s)</p>
+                  <Btn
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setBankTransferSearch('');
+                      setBankTransferStatusFilter('all');
+                      setBankTransferBankFilter('');
+                      setBankTransferFromDate('');
+                      setBankTransferToDate('');
+                    }}
+                  >
+                    Reset Filters
+                  </Btn>
+                  <Btn size="sm" variant="ghost" onClick={loadBankTransfers}>Refresh</Btn>
+                </div>
+              </div>
+
+              <Card style={{ marginBottom:16,padding:'14px 16px' }}>
+                <div className="bt-filter-grid">
+                  <input
+                    value={bankTransferSearch}
+                    onChange={e=>setBankTransferSearch(e.target.value)}
+                    placeholder="Search account/user"
+                    style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}
+                  />
+                  <select value={bankTransferStatusFilter} onChange={e=>setBankTransferStatusFilter(e.target.value)} style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}>
+                    {['all','successful','failed','pending'].map((status) => (
+                      <option key={status} value={status}>{status.charAt(0).toUpperCase()+status.slice(1)}</option>
+                    ))}
+                  </select>
+                  <input
+                    value={bankTransferBankFilter}
+                    onChange={e=>setBankTransferBankFilter(e.target.value)}
+                    placeholder="Bank name"
+                    style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}
+                  />
+                  <input type="date" value={bankTransferFromDate} onChange={e=>setBankTransferFromDate(e.target.value)} style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }} />
+                  <input type="date" value={bankTransferToDate} onChange={e=>setBankTransferToDate(e.target.value)} style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }} />
+                  <Btn size="sm" onClick={loadBankTransfers}>Apply</Btn>
+                </div>
+              </Card>
+
+              <div className="bt-stats-grid">
+                {[
+                  { label:'Transfers Today', value: Number(bankTransferStats.todayCount || 0), color:BLUE },
+                  { label:'Amount Today', value: formatMoney(bankTransferStats.todayAmount), color:GREEN },
+                  { label:'Service Charge Earned', value: formatMoney(bankTransferStats.serviceChargeEarnedToday), color:'#0E9F6E' },
+                  { label:'Success Rate', value: `${Number(bankTransferStats.successRate || 0).toFixed(2)}%`, color:'#0E9F6E' },
+                  { label:'Failed Today', value: Number(bankTransferStats.failedCount || 0), color:RED },
+                ].map((s) => (
+                  <Card key={s.label} style={{ padding:'16px 18px' }}>
+                    <p style={{ fontSize:12,fontWeight:700,color:'#6C809E',textTransform:'uppercase',letterSpacing:'0.08em' }}>{s.label}</p>
+                    <p style={{ marginTop:8,fontSize:22,fontWeight:900,color:s.color }}>{s.value as string | number}</p>
+                  </Card>
+                ))}
+              </div>
+
+              <Card>
+                <div className="bt-table-wrap">
+                  <table className="bt-table">
+                    <thead>
+                      <tr style={{ background:'#F9FAFD' }}>
+                        <th className="bt-sticky-left" style={{ padding:'10px 12px',fontSize:11,fontWeight:800,color:'#7A8EAB',textAlign:'left',borderBottom:'1px solid #E6EDF8',whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.05em' }}>Transaction ID</th>
+                        {['Date & Time','User Name','User Phone','Bank','Account Number','Recipient','Amount','Service Charge','Total','Status','FLW Ref'].map((h) => (
+                          <th key={h} style={{ padding:'10px 12px',fontSize:11,fontWeight:800,color:'#7A8EAB',textAlign:'left',borderBottom:'1px solid #E6EDF8',whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.05em' }}>{h}</th>
+                        ))}
+                        <th className="bt-sticky-right" style={{ padding:'10px 12px',fontSize:11,fontWeight:800,color:'#7A8EAB',textAlign:'left',borderBottom:'1px solid #E6EDF8',whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.05em' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bankTransferTx.length === 0 && (
+                        <tr>
+                          <td colSpan={13} style={{ padding:28,textAlign:'center',color:'#7A8EAB',fontSize:14 }}>No bank transfers found</td>
+                        </tr>
+                      )}
+                      {bankTransferTx.map((row) => (
+                        <tr key={row.id} style={{ borderBottom:'1px solid #F0F4FB' }}>
+                          <td className="admin-code bt-sticky-left" style={{ padding:'12px',fontSize:11,color:'#4F6380' }}>{row.txReference || row.id}</td>
+                          <td style={{ padding:'12px',fontSize:12,color:'#4F6380',whiteSpace:'nowrap' }}>{formatDateTime(row.createdAt)}</td>
+                          <td style={{ padding:'12px',fontSize:13,fontWeight:700,color:'#17385F' }}>{row.userName || '—'}</td>
+                          <td style={{ padding:'12px',fontSize:13,color:'#4F6380' }}>{row.userPhone || '—'}</td>
+                          <td style={{ padding:'12px',fontSize:13,color:'#17385F' }}>{row.bankName}</td>
+                          <td className="admin-code" style={{ padding:'12px',fontSize:12,color:'#17385F' }}>{row.accountNumber}</td>
+                          <td style={{ padding:'12px',fontSize:13,color:'#17385F',maxWidth:220,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{row.accountName}</td>
+                          <td style={{ padding:'12px',fontSize:13,fontWeight:800,color:'#17385F' }}>{formatMoney(row.amount)}</td>
+                          <td style={{ padding:'12px',fontSize:12,color:'#4F6380' }}>{formatMoney(row.serviceCharge)}</td>
+                          <td style={{ padding:'12px',fontSize:13,fontWeight:800,color:'#17385F' }}>{formatMoney(row.totalDeducted)}</td>
+                          <td style={{ padding:'12px' }}>
+                            <span style={{ background:row.status === 'successful' ? 'rgba(52,199,89,.12)' : row.status === 'failed' ? 'rgba(255,59,48,.12)' : 'rgba(255,159,10,.12)',color:row.status === 'successful' ? GREEN : row.status === 'failed' ? RED : '#FF9F0A',padding:'4px 9px',borderRadius:999,fontSize:11,fontWeight:800,textTransform:'uppercase' }}>{row.status}</span>
+                          </td>
+                          <td className="admin-code" style={{ padding:'12px',fontSize:11,color:'#4F6380',maxWidth:180,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{row.flwReference || '—'}</td>
+                          <td className="bt-sticky-right" style={{ padding:'12px' }}>
+                            <Btn size="sm" variant="ghost" onClick={()=>setSelectedBankTransfer(row)}>View Details</Btn>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+
+              {selectedBankTransfer && (
+                <div style={{ position:'fixed',inset:0,background:'rgba(4,10,20,.58)',zIndex:550,display:'flex',alignItems:'center',justifyContent:'center',padding:20 }}>
+                  <div style={{ width:'min(900px, 96vw)',maxHeight:'88vh',overflowY:'auto',background:'#fff',borderRadius:22,padding:20,border:'1px solid #DCE5F2',boxShadow:'0 26px 70px rgba(0,0,0,.25)' }}>
+                    <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:14 }}>
+                      <h3 style={{ fontSize:20,fontWeight:900,color:'#11253E' }}>Bank Transfer Details</h3>
+                      <Btn size="sm" variant="ghost" onClick={()=>setSelectedBankTransfer(null)}>Close</Btn>
+                    </div>
+
+                    <div className="bt-modal-grid-2">
+                      <Card style={{ padding:'14px 16px' }}>
+                        <p style={{ fontSize:12,color:'#7A8EAB',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8 }}>Transfer</p>
+                        <div style={{ display:'grid',gap:7 }}>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Transaction ID:</b> {selectedBankTransfer.id}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>TX Ref:</b> {selectedBankTransfer.txReference}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Flutterwave Ref:</b> {selectedBankTransfer.flwReference || '—'}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Flutterwave Transfer ID:</b> {selectedBankTransfer.flwTransferId || '—'}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Status:</b> {selectedBankTransfer.status}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Date:</b> {formatDateTime(selectedBankTransfer.createdAt)}</p>
+                        </div>
+                      </Card>
+                      <Card style={{ padding:'14px 16px' }}>
+                        <p style={{ fontSize:12,color:'#7A8EAB',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8 }}>User</p>
+                        <div style={{ display:'grid',gap:7 }}>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Name:</b> {selectedBankTransfer.userName || '—'}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Phone:</b> {selectedBankTransfer.userPhone || '—'}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>User ID:</b> {selectedBankTransfer.userId}</p>
+                        </div>
+                      </Card>
+                    </div>
+
+                    <Card style={{ padding:'14px 16px',marginBottom:14 }}>
+                      <p style={{ fontSize:12,color:'#7A8EAB',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8 }}>Recipient</p>
+                      <div className="bt-modal-grid-3">
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Bank:</b> {selectedBankTransfer.bankName}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Account Number:</b> {selectedBankTransfer.accountNumber}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Recipient Name:</b> {selectedBankTransfer.accountName}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Amount:</b> {formatMoney(selectedBankTransfer.amount)}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Service Charge:</b> {formatMoney(selectedBankTransfer.serviceCharge)}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Total Deducted:</b> {formatMoney(selectedBankTransfer.totalDeducted)}</p>
+                        <p style={{ fontSize:13,color:'#243F63',gridColumn:'1/-1' }}><b>Narration:</b> {selectedBankTransfer.narration || '—'}</p>
+                        {selectedBankTransfer.errorMessage && <p style={{ fontSize:13,color:RED,gridColumn:'1/-1' }}><b>Error:</b> {selectedBankTransfer.errorMessage}</p>}
+                      </div>
+                    </Card>
+
+                    <Card style={{ padding:'14px 16px' }}>
+                      <p style={{ fontSize:12,color:'#7A8EAB',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8 }}>Flutterwave Response JSON</p>
+                      <pre style={{ background:'#0A1628',color:'#D5E5FF',padding:14,borderRadius:12,fontSize:11,overflow:'auto',maxHeight:220,whiteSpace:'pre-wrap' }}>{JSON.stringify(selectedBankTransfer.flwResponse || {}, null, 2)}</pre>
+                    </Card>
+
+                    <div style={{ marginTop:14,display:'flex',justifyContent:'flex-end',gap:8 }}>
+                      {selectedBankTransfer.status === 'failed' && selectedBankTransfer.refundStatus !== 'refunded' && (
+                        <Btn
+                          variant="danger"
+                          disabled={bankTransferBusy}
+                          onClick={async()=>{
+                            try {
+                              setBankTransferBusy(true);
+                              const res = await fetch('/api/zmytcd/bank-transfers', { method:'PATCH', headers: authH(), body: JSON.stringify({ transferId: selectedBankTransfer.id, action: 'refund' }) });
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data.error || 'Refund failed');
+                              showToast('Wallet refunded successfully');
+                              setSelectedBankTransfer(null);
+                              await loadBankTransfers();
+                            } catch (e: unknown) {
+                              showError(e instanceof Error ? e.message : 'Refund failed');
+                            } finally {
+                              setBankTransferBusy(false);
+                            }
+                          }}
+                        >
+                          {bankTransferBusy ? 'Processing...' : 'Refund'}
+                        </Btn>
+                      )}
+
+                      {['pending','failed'].includes(selectedBankTransfer.status) && selectedBankTransfer.refundStatus !== 'refunded' && (
+                        <Btn
+                          variant="success"
+                          disabled={bankTransferBusy}
+                          onClick={async()=>{
+                            try {
+                              setBankTransferBusy(true);
+                              const res = await fetch('/api/zmytcd/bank-transfers', { method:'PATCH', headers: authH(), body: JSON.stringify({ transferId: selectedBankTransfer.id, action: 'retry' }) });
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data.error || 'Retry failed');
+                              showToast('Transfer retried successfully');
+                              setSelectedBankTransfer(null);
+                              await loadBankTransfers();
+                            } catch (e: unknown) {
+                              showError(e instanceof Error ? e.message : 'Retry failed');
+                            } finally {
+                              setBankTransferBusy(false);
+                            }
+                          }}
+                        >
+                          {bankTransferBusy ? 'Processing...' : 'Retry Transfer'}
+                        </Btn>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
