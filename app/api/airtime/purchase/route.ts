@@ -11,9 +11,27 @@ import {
   ensureAirtimeSchema,
   getNetworkByName,
 } from '@/lib/airtime';
+import type { AirtimeNetwork } from '@/lib/airtime';
 import { purchaseAirtime } from '@/lib/flutterwave';
 
 export const dynamic = 'force-dynamic';
+
+const AIRTIME_NETWORK_OPTIONS: AirtimeNetwork[] = ['MTN', 'Airtel', 'GLO', '9mobile'];
+
+function normalizeAirtimePurchaseError(err: unknown) {
+  const raw = err instanceof Error ? err.message : '';
+  const lower = raw.toLowerCase();
+
+  if (lower.includes('ip whitelisting')) {
+    return 'Airtime service is temporarily unavailable. Please try again shortly.';
+  }
+
+  if (lower.includes('service temporarily unavailable')) {
+    return 'Airtime service is temporarily unavailable. Please try again shortly.';
+  }
+
+  return raw || 'Airtime purchase failed. Please try again.';
+}
 
 export async function POST(req: NextRequest) {
   const auth = req.headers.get('authorization');
@@ -31,10 +49,17 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { pin, phoneNumber, amount, idempotencyKey: clientIdempotency } = body;
+    const { pin, phoneNumber, amount, network, idempotencyKey: clientIdempotency } = body;
 
     const cleanAmount = Number(amount || 0);
     const cleanPhone = String(phoneNumber || '').trim();
+    const selectedNetwork = AIRTIME_NETWORK_OPTIONS.includes(network as AirtimeNetwork)
+      ? (network as AirtimeNetwork)
+      : null;
+
+    if (network && !selectedNetwork) {
+      return NextResponse.json({ error: 'Selected network is not supported' }, { status: 400 });
+    }
 
     if (!/^\d{4}$/.test(String(pin || ''))) {
       return NextResponse.json({ error: 'Enter your 4-digit PIN' }, { status: 400 });
@@ -44,11 +69,13 @@ export async function POST(req: NextRequest) {
     }
 
     const detectedNetwork = detectNetwork(cleanPhone);
-    if (!detectedNetwork) {
+    const resolvedNetwork = selectedNetwork || detectedNetwork;
+
+    if (!resolvedNetwork) {
       return NextResponse.json({ error: 'Invalid phone number or unsupported network' }, { status: 400 });
     }
 
-    const networkConfig = getNetworkByName(detectedNetwork);
+    const networkConfig = getNetworkByName(resolvedNetwork);
     if (!networkConfig) {
       return NextResponse.json({ error: 'Network not supported' }, { status: 400 });
     }
@@ -127,7 +154,7 @@ export async function POST(req: NextRequest) {
       VALUES (
         ${userId},
         'airtime_purchase',
-        ${buildAirtimeTypeLabel(detectedNetwork, cleanPhone)},
+        ${buildAirtimeTypeLabel(resolvedNetwork, cleanPhone)},
         ${totalAmount},
         'pending',
         ${idemKey},
@@ -136,7 +163,7 @@ export async function POST(req: NextRequest) {
           type: 'airtime_purchase',
           transactionType: 'Airtime Purchase',
           date: new Date().toISOString(),
-          networkName: detectedNetwork,
+          networkName: resolvedNetwork,
           phoneNumber: cleanPhone,
           amount: cleanAmount,
           serviceCharge: AIRTIME_SERVICE_CHARGE,
@@ -157,7 +184,7 @@ export async function POST(req: NextRequest) {
         user_id, transaction_id, network_code, network_name, phone_number,
         amount, status, tx_reference, idempotency_key
       ) VALUES (
-        ${userId}, ${transactionId}, ${networkConfig.networkCode}, ${detectedNetwork}, ${cleanPhone},
+        ${userId}, ${transactionId}, ${networkConfig.networkCode}, ${resolvedNetwork}, ${cleanPhone},
         ${cleanAmount}, 'pending', ${receiptRef}, ${idemKey}
       )
       RETURNING id
@@ -168,7 +195,7 @@ export async function POST(req: NextRequest) {
     const flw = await purchaseAirtime({
       phoneNumber: cleanPhone,
       amount: cleanAmount,
-      networkName: detectedNetwork,
+      networkName: resolvedNetwork,
       reference: receiptRef,
     });
 
@@ -176,7 +203,7 @@ export async function POST(req: NextRequest) {
     const flwRef = flw?.data?.flw_ref ? String(flw.data.flw_ref) : null;
 
     if (!flwOk) {
-      throw new Error(flw?.message || 'Service temporarily unavailable. Please try again later.');
+      throw new Error(normalizeAirtimePurchaseError(flw?.message));
     }
 
     await sql`
@@ -196,7 +223,7 @@ export async function POST(req: NextRequest) {
             type: 'airtime_purchase',
             transactionType: 'Airtime Purchase',
             date: new Date().toISOString(),
-            networkName: detectedNetwork,
+            networkName: resolvedNetwork,
             phoneNumber: cleanPhone,
             amount: cleanAmount,
             serviceCharge: AIRTIME_SERVICE_CHARGE,
@@ -222,7 +249,7 @@ export async function POST(req: NextRequest) {
         type: 'airtime_purchase',
         transactionType: 'Airtime Purchase',
         date: new Date().toISOString(),
-        networkName: detectedNetwork,
+        networkName: resolvedNetwork,
         phoneNumber: cleanPhone,
         amount: cleanAmount,
         serviceCharge: AIRTIME_SERVICE_CHARGE,
@@ -235,7 +262,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Airtime purchase failed';
+    const message = normalizeAirtimePurchaseError(err);
     console.error('Airtime purchase error:', err);
 
     if (walletDebited && userId && totalAmount > 0) {

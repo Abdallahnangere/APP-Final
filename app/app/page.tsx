@@ -898,6 +898,7 @@ export default function AppPage() {
   });
 
   // Airtime states
+  const [airtimeNetwork, setAirtimeNetwork] = useState<'MTN' | 'Airtel' | 'GLO' | '9mobile' | ''>('');
   const [airtimePhone, setAirtimePhone] = useState('');
   const [airtimeAmount, setAirtimeAmount] = useState('');
   const [airtimeSummaryOpen, setAirtimeSummaryOpen] = useState(false);
@@ -1701,6 +1702,10 @@ export default function AppPage() {
     if (!user) return;
     const amount = Number(airtimeAmount || 0);
 
+    if (!airtimeNetwork) {
+      showError('Select a network');
+      return;
+    }
     if (!/^\d{11}$/.test(airtimePhone)) {
       showError('Enter an 11-digit phone number');
       return;
@@ -1732,6 +1737,7 @@ export default function AppPage() {
         headers: authHeader(),
         body: JSON.stringify({
           pin,
+          network: airtimeNetwork,
           phoneNumber: airtimePhone,
           amount,
           idempotencyKey: idem,
@@ -3000,6 +3006,7 @@ export default function AppPage() {
             <div style={{ width:'100%',maxWidth:420,background:'var(--card)',border:'1px solid var(--border)',borderRadius:18,padding:16 }}>
               <h3 style={{ fontSize:18,fontWeight:900,color:'var(--text)',marginBottom:10 }}>Confirm Airtime Purchase</h3>
               <div style={{ display:'grid',gap:8 }}>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>Network:</b> {airtimeNetwork}</p>
                 <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>Phone:</b> {airtimePhone}</p>
                 <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>Amount:</b> ₦{amount.toLocaleString('en-NG')}</p>
                 <p style={{ fontSize:14,fontWeight:900,color:'var(--text)',margin:'4px 0 0' }}><b>Total:</b> ₦{total.toLocaleString('en-NG')}</p>
@@ -3033,6 +3040,15 @@ export default function AppPage() {
           <div style={{ margin:'0 16px',background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:16 }}>
             <h2 style={{ fontSize:20,fontWeight:900,color:'var(--text)',marginBottom:6 }}>Airtime Top Up</h2>
             <p style={{ fontSize:12,color:'var(--text-secondary)',marginBottom:14 }}>Send airtime instantly to any network.</p>
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Network</label>
+            <select value={airtimeNetwork} onChange={(e)=>setAirtimeNetwork(e.target.value as 'MTN' | 'Airtel' | 'GLO' | '9mobile' | '')} style={{ width:'100%',padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)',marginBottom:14 }}>
+              <option value="">Select network</option>
+              <option value="MTN">MTN</option>
+              <option value="Airtel">Airtel</option>
+              <option value="GLO">GLO</option>
+              <option value="9mobile">9mobile</option>
+            </select>
 
             <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Phone Number</label>
             <input value={airtimePhone} onChange={(e)=>setAirtimePhone(e.target.value.replace(/\D/g,'').slice(0,11))} placeholder="081234567890" style={{ width:'100%',padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)',marginBottom:14 }} />
