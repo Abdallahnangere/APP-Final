@@ -2772,7 +2772,7 @@ export default function AppPage() {
           <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:420,display:'flex',alignItems:'center',justifyContent:'center',padding:16 }}>
             <div style={{ width:'100%',maxWidth:420,background:'var(--card)',border:'1px solid var(--border)',borderRadius:18,padding:16 }}>
               <p style={{ fontSize:18,fontWeight:900,color:'#30D158',marginBottom:8 }}>Purchase Successful</p>
-              {String(electricitySuccess.meterType || '') === 'prepaid' && electricitySuccess.token && (
+              {String(electricitySuccess.meterType || '') === 'prepaid' && Boolean(electricitySuccess.token) && (
                 <>
                   <p style={{ fontSize:11,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:4 }}>Token</p>
                   <p style={{ fontSize:21,fontWeight:900,color:'var(--text)',fontFamily:'monospace',margin:'0 0 10px' }}>{String(electricitySuccess.token)}</p>
