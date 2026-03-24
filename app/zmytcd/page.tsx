@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import FlutterwaveDashboardPage from './flutterwave/page';
 
 const BLUE = '#7cc7ff';
 const GREEN = '#63d9b0';
@@ -230,7 +231,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [adminToken, setAdminToken] = useState('');
-  const [tab, setTab] = useState<'overview'|'users'|'withdrawals'|'electricity'|'airtime'|'developers'|'plans'|'products'|'transactions'|'orders'|'analytics'|'broadcasts'|'push'|'chat'|'sim'|'webhooks'|'console'>('overview');
+  const [tab, setTab] = useState<'overview'|'users'|'withdrawals'|'flutterwave'|'electricity'|'airtime'|'developers'|'plans'|'products'|'transactions'|'orders'|'analytics'|'broadcasts'|'push'|'chat'|'sim'|'webhooks'|'console'>('overview');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
   const [error, setError] = useState('');
@@ -880,6 +881,7 @@ export default function AdminPage() {
     { id:'overview', label:'Overview', icon:'📊' },
     { id:'users', label:'Users', icon:'👥' },
     { id:'withdrawals', label:'Withdrawals', icon:'💸' },
+    { id:'flutterwave', label:'Flutterwave', icon:'🏦' },
     { id:'electricity', label:'Electricity', icon:'⚡' },
     { id:'airtime', label:'Airtime', icon:'📱' },
     { id:'developers', label:'Developers', icon:'🧩' },
@@ -1391,6 +1393,13 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </Card>
+            </div>
+          )}
+
+          {/* ─── ELECTRICITY ─── */}
+          {tab === 'flutterwave' && (
+            <div className="fade-in" style={{ marginTop: 6 }}>
+              <FlutterwaveDashboardPage />
             </div>
           )}
 

@@ -20,7 +20,8 @@ export function middleware(req: NextRequest) {
     return new NextResponse('Not Found', { status: 404 });
   }
 
-  if (pathname === `${ADMIN_PORTAL_PATH}/support`) {
+  const normalizedAdminRoot = ADMIN_PORTAL_PATH.endsWith('/') ? ADMIN_PORTAL_PATH.slice(0, -1) : ADMIN_PORTAL_PATH;
+  if (pathname.startsWith(`${normalizedAdminRoot}/`) && pathname !== `${normalizedAdminRoot}/`) {
     return new NextResponse('Not Found', { status: 404 });
   }
 
