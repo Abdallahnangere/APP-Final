@@ -112,6 +112,35 @@ type Withdrawal = {
   lastName: string;
   phone: string;
 };
+type ElectricityTx = {
+  id: string;
+  transactionId?: string | null;
+  userId: string;
+  userName: string;
+  userPhone: string;
+  discoName: string;
+  discoCode: string;
+  meterNumber: string;
+  meterType: string;
+  customerName: string;
+  amount: number;
+  serviceCharge: number;
+  totalAmount: number;
+  token?: string | null;
+  units?: string | null;
+  status: string;
+  flwReference?: string | null;
+  txReference?: string | null;
+  phoneNumber?: string | null;
+  email?: string | null;
+  errorMessage?: string | null;
+  flwResponse?: Record<string, unknown> | null;
+  refunded?: boolean;
+  refundedAt?: string | null;
+  retryAttempts?: number;
+  createdAt: string;
+  updatedAt: string;
+};
 
 const GlobalStyle = () => (
   <style>{`
@@ -181,7 +210,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [adminToken, setAdminToken] = useState('');
-  const [tab, setTab] = useState<'overview'|'users'|'withdrawals'|'developers'|'plans'|'products'|'transactions'|'orders'|'analytics'|'broadcasts'|'push'|'chat'|'sim'|'webhooks'|'console'>('overview');
+  const [tab, setTab] = useState<'overview'|'users'|'withdrawals'|'electricity'|'developers'|'plans'|'products'|'transactions'|'orders'|'analytics'|'broadcasts'|'push'|'chat'|'sim'|'webhooks'|'console'>('overview');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
   const [error, setError] = useState('');
@@ -199,6 +228,8 @@ export default function AdminPage() {
   const [orderStats, setOrderStats] = useState<Record<string, unknown>>({});
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [withdrawalStats, setWithdrawalStats] = useState<Record<string, unknown>>({});
+  const [electricityTx, setElectricityTx] = useState<ElectricityTx[]>([]);
+  const [electricityStats, setElectricityStats] = useState<Record<string, unknown>>({});
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [simActs, setSimActs] = useState<SimAct[]>([]);
@@ -218,6 +249,13 @@ export default function AdminPage() {
   const [broadcastForm, setBroadcastForm] = useState({ message:'', editId:'' });
   const [walletForm, setWalletForm] = useState({ amount:'', note:'', target:'wallet' as 'wallet'|'cashback'|'referral' });
   const [withdrawalFilter, setWithdrawalFilter] = useState('all');
+  const [electricityStatusFilter, setElectricityStatusFilter] = useState('all');
+  const [electricityMeterTypeFilter, setElectricityMeterTypeFilter] = useState('all');
+  const [electricityDiscoFilter, setElectricityDiscoFilter] = useState('');
+  const [electricitySearch, setElectricitySearch] = useState('');
+  const [electricityFromDate, setElectricityFromDate] = useState('');
+  const [electricityToDate, setElectricityToDate] = useState('');
+  const [selectedElectricity, setSelectedElectricity] = useState<ElectricityTx | null>(null);
   const [withdrawalActionBusy, setWithdrawalActionBusy] = useState('');
   const [pinForm, setPinForm] = useState('');
   const [developerForm, setDeveloperForm] = useState({ userId:'', discountPercent:'8.00', termsVersion:'v1.0' });
@@ -263,7 +301,7 @@ export default function AdminPage() {
   const login = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password: adminPass }) });
+      const res = await fetch('/api/zmytcd/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password: adminPass }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setAdminToken(data.token);
@@ -289,11 +327,15 @@ export default function AdminPage() {
         localStorage.removeItem('sm_admin_token');
       }
     }
+
+    const q = new URLSearchParams(window.location.search);
+    const tabParam = q.get('tab');
+    if (tabParam === 'electricity') setTab('electricity');
   }, []);
 
   const load = useCallback(async (endpoint: string) => {
     try {
-      const res = await fetch(`/api/admin/${endpoint}`, { headers: authH() });
+      const res = await fetch(`/api/zmytcd/${endpoint}`, { headers: authH() });
       if (res.status === 401 || res.status === 403) {
         // Token expired or invalid — clear session and show login
         localStorage.removeItem('sm_admin_token');
@@ -329,7 +371,7 @@ export default function AdminPage() {
       const params = new URLSearchParams();
       if (filter && filter !== 'all') params.set('filter', filter);
       if (search.trim()) params.set('search', search.trim());
-      const res = await fetch(`/api/admin/orders${params.toString() ? `?${params.toString()}` : ''}`, { headers: authH() });
+      const res = await fetch(`/api/zmytcd/orders${params.toString() ? `?${params.toString()}` : ''}`, { headers: authH() });
       if (!res.ok) throw new Error('Failed to load orders');
       const data = await res.json();
       const nextOrders = Array.isArray(data?.orders) ? data.orders : [];
@@ -345,7 +387,7 @@ export default function AdminPage() {
     try {
       const params = new URLSearchParams();
       if (filter && filter !== 'all') params.set('filter', filter);
-      const res = await fetch(`/api/admin/withdrawals${params.toString() ? `?${params.toString()}` : ''}`, { headers: authH() });
+      const res = await fetch(`/api/zmytcd/withdrawals${params.toString() ? `?${params.toString()}` : ''}`, { headers: authH() });
       if (!res.ok) throw new Error('Failed to load withdrawals');
       const data = await res.json();
       setWithdrawals(Array.isArray(data?.withdrawals) ? data.withdrawals : []);
@@ -355,12 +397,32 @@ export default function AdminPage() {
     }
   }, [authH, withdrawalFilter]);
 
+  const loadElectricity = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (electricityStatusFilter && electricityStatusFilter !== 'all') params.set('status', electricityStatusFilter);
+      if (electricityMeterTypeFilter && electricityMeterTypeFilter !== 'all') params.set('meterType', electricityMeterTypeFilter);
+      if (electricityDiscoFilter.trim()) params.set('disco', electricityDiscoFilter.trim());
+      if (electricitySearch.trim()) params.set('search', electricitySearch.trim());
+      if (electricityFromDate) params.set('from', electricityFromDate);
+      if (electricityToDate) params.set('to', electricityToDate);
+
+      const res = await fetch(`/api/zmytcd/electricity${params.toString() ? `?${params.toString()}` : ''}`, { headers: authH() });
+      if (!res.ok) throw new Error('Failed to load electricity transactions');
+      const data = await res.json();
+      setElectricityTx(Array.isArray(data?.transactions) ? data.transactions : []);
+      setElectricityStats((data?.stats || {}) as Record<string, unknown>);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Failed to load electricity transactions');
+    }
+  }, [authH, electricityDiscoFilter, electricityFromDate, electricityMeterTypeFilter, electricitySearch, electricityStatusFilter, electricityToDate]);
+
   const loadAdminSessions = useCallback(async (filter = chatFilter, search = chatSearch) => {
     try {
       const params = new URLSearchParams();
       if (filter && filter !== 'all') params.set('filter', filter);
       if (search.trim()) params.set('search', search.trim());
-      const res = await fetch(`/api/admin/sessions${params.toString() ? `?${params.toString()}` : ''}`, { headers: authH() });
+      const res = await fetch(`/api/zmytcd/sessions${params.toString() ? `?${params.toString()}` : ''}`, { headers: authH() });
       if (!res.ok) throw new Error('Failed to load chat sessions');
       const data = await res.json();
       setChatSessions(Array.isArray(data?.sessions) ? data.sessions : []);
@@ -372,7 +434,7 @@ export default function AdminPage() {
 
   const openChatSession = useCallback(async (sessionId: string) => {
     try {
-      const res = await fetch(`/api/admin/sessions?sessionId=${encodeURIComponent(sessionId)}`, { headers: authH() });
+      const res = await fetch(`/api/zmytcd/sessions?sessionId=${encodeURIComponent(sessionId)}`, { headers: authH() });
       if (!res.ok) throw new Error('Failed to load conversation');
       const data = await res.json();
       setActiveChatSession((data?.session || null) as AdminChatSession | null);
@@ -460,6 +522,7 @@ export default function AdminPage() {
     }
     if (tab === 'users') load('users').then(d => setUsers(Array.isArray(d)?d:[]));
     if (tab === 'withdrawals') loadWithdrawals();
+    if (tab === 'electricity') loadElectricity();
     if (tab === 'developers') {
       load('developers').then(d => setDevelopers(Array.isArray(d)?d:[]));
       load('users').then(d => setUsers(Array.isArray(d)?d:[]));
@@ -474,7 +537,7 @@ export default function AdminPage() {
     if (tab === 'webhooks') load('webhooks').then(d => setWebhooks(Array.isArray(d)?d:[]));
     if (tab === 'sim') load('sim-activations').then(d => setSimActs(Array.isArray(d)?d:[]));
     if (tab === 'analytics') loadAnalytics();
-  }, [tab, authed, load, loadAdminSessions, loadAnalytics, analyticsDate, loadOrders, loadWithdrawals]);
+  }, [tab, authed, load, loadAdminSessions, loadAnalytics, analyticsDate, loadOrders, loadWithdrawals, loadElectricity]);
 
   useEffect(() => {
     if (!authed || tab !== 'analytics') return;
@@ -490,6 +553,11 @@ export default function AdminPage() {
     if (!authed || tab !== 'withdrawals') return;
     loadWithdrawals();
   }, [authed, tab, withdrawalFilter, loadWithdrawals]);
+
+  useEffect(() => {
+    if (!authed || tab !== 'electricity') return;
+    loadElectricity();
+  }, [authed, tab, loadElectricity]);
 
   useEffect(() => {
     if (!selectedOrder) return;
@@ -510,7 +578,7 @@ export default function AdminPage() {
     const token = localStorage.getItem('sm_admin_token') || adminToken;
     if (!token) return;
 
-    const stream = new EventSource(`/api/admin/stream?token=${encodeURIComponent(token)}`);
+    const stream = new EventSource(`/api/zmytcd/stream?token=${encodeURIComponent(token)}`);
 
     stream.addEventListener('ping', () => {
       setChatStreamConnected(true);
@@ -595,7 +663,7 @@ export default function AdminPage() {
   }, [activeChatSession?.id]);
 
   const api = async (path: string, method: string, body?: unknown) => {
-    const res = await fetch(`/api/admin/${path}`, { method, headers: authH(), body: body ? JSON.stringify(body) : undefined });
+    const res = await fetch(`/api/zmytcd/${path}`, { method, headers: authH(), body: body ? JSON.stringify(body) : undefined });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Request failed');
     return data;
@@ -758,6 +826,7 @@ export default function AdminPage() {
     { id:'overview', label:'Overview', icon:'📊' },
     { id:'users', label:'Users', icon:'👥' },
     { id:'withdrawals', label:'Withdrawals', icon:'💸' },
+    { id:'electricity', label:'Electricity', icon:'⚡' },
     { id:'developers', label:'Developers', icon:'🧩' },
     { id:'plans', label:'Data Plans', icon:'📶' },
     { id:'products', label:'Products', icon:'📦' },
@@ -1267,6 +1336,195 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </Card>
+            </div>
+          )}
+
+          {/* ─── ELECTRICITY ─── */}
+          {tab === 'electricity' && (
+            <div className="fade-in">
+              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,gap:12,flexWrap:'wrap' }}>
+                <h1 style={{ fontSize:22,fontWeight:900 }}>Electricity Transactions</h1>
+                <Btn size="sm" variant="ghost" onClick={loadElectricity}>Refresh</Btn>
+              </div>
+
+              <Card style={{ marginBottom:16,padding:'14px 16px' }}>
+                <div style={{ display:'grid',gridTemplateColumns:'1.1fr 1fr 1fr 1fr 1fr 0.9fr 0.9fr',gap:8 }}>
+                  <input
+                    value={electricitySearch}
+                    onChange={e=>setElectricitySearch(e.target.value)}
+                    placeholder="Search meter number or user"
+                    style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}
+                  />
+                  <select
+                    value={electricityStatusFilter}
+                    onChange={e=>setElectricityStatusFilter(e.target.value)}
+                    style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}
+                  >
+                    {['all','success','failed','pending'].map((status) => (
+                      <option key={status} value={status}>{status.charAt(0).toUpperCase()+status.slice(1)}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={electricityMeterTypeFilter}
+                    onChange={e=>setElectricityMeterTypeFilter(e.target.value)}
+                    style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}
+                  >
+                    {['all','prepaid','postpaid'].map((meterType) => (
+                      <option key={meterType} value={meterType}>{meterType.charAt(0).toUpperCase()+meterType.slice(1)}</option>
+                    ))}
+                  </select>
+                  <input
+                    value={electricityDiscoFilter}
+                    onChange={e=>setElectricityDiscoFilter(e.target.value)}
+                    placeholder="DISCO name"
+                    style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}
+                  />
+                  <input
+                    type="date"
+                    value={electricityFromDate}
+                    onChange={e=>setElectricityFromDate(e.target.value)}
+                    style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}
+                  />
+                  <input
+                    type="date"
+                    value={electricityToDate}
+                    onChange={e=>setElectricityToDate(e.target.value)}
+                    style={{ padding:'10px 12px',borderRadius:10,border:'1px solid #D5DEEC',fontSize:13 }}
+                  />
+                  <Btn size="sm" onClick={loadElectricity}>Apply</Btn>
+                </div>
+              </Card>
+
+              <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:22 }}>
+                {[
+                  { label:'Transactions Today', value: Number(electricityStats.todayCount || 0), color:BLUE },
+                  { label:'Amount Today', value: formatMoney(electricityStats.todayAmount), color:GREEN },
+                  { label:'Success Rate', value: `${Number(electricityStats.successRate || 0).toFixed(2)}%`, color:'#0E9F6E' },
+                  { label:'Failed Today', value: Number(electricityStats.failedCount || 0), color:RED },
+                ].map((s) => (
+                  <Card key={s.label} style={{ padding:'16px 18px' }}>
+                    <p style={{ fontSize:12,fontWeight:700,color:'#6C809E',textTransform:'uppercase',letterSpacing:'0.08em' }}>{s.label}</p>
+                    <p style={{ marginTop:8,fontSize:26,fontWeight:900,color:s.color }}>{s.value as string | number}</p>
+                  </Card>
+                ))}
+              </div>
+
+              <Card>
+                <div style={{ overflowX:'auto' }}>
+                  <table style={{ width:'100%',borderCollapse:'collapse',minWidth:1360 }}>
+                    <thead>
+                      <tr style={{ background:'#F9FAFD' }}>
+                        {['Transaction ID','Date & Time','User Name','User Phone','DISCO','Meter Number','Meter Type','Amount','Token','Status','Flutterwave Ref','Actions'].map((h) => (
+                          <th key={h} style={{ padding:'10px 12px',fontSize:11,fontWeight:800,color:'#7A8EAB',textAlign:'left',borderBottom:'1px solid #E6EDF8',whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.05em' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {electricityTx.length === 0 && (
+                        <tr>
+                          <td colSpan={12} style={{ padding:28,textAlign:'center',color:'#7A8EAB',fontSize:14 }}>No electricity transactions found</td>
+                        </tr>
+                      )}
+                      {electricityTx.map((row) => (
+                        <tr key={row.id} style={{ borderBottom:'1px solid #F0F4FB' }}>
+                          <td className="admin-code" style={{ padding:'12px',fontSize:11,color:'#4F6380' }}>{row.txReference || row.id}</td>
+                          <td style={{ padding:'12px',fontSize:12,color:'#4F6380',whiteSpace:'nowrap' }}>{formatDateTime(row.createdAt)}</td>
+                          <td style={{ padding:'12px',fontSize:13,fontWeight:700,color:'#17385F' }}>{row.userName || '—'}</td>
+                          <td style={{ padding:'12px',fontSize:13,color:'#4F6380' }}>{row.userPhone || '—'}</td>
+                          <td style={{ padding:'12px',fontSize:13,color:'#17385F' }}>{row.discoName}</td>
+                          <td className="admin-code" style={{ padding:'12px',fontSize:12,color:'#17385F' }}>{row.meterNumber}</td>
+                          <td style={{ padding:'12px' }}>
+                            <span style={{ background:row.meterType === 'prepaid' ? 'rgba(35,89,184,.12)' : 'rgba(14,159,110,.12)',color:row.meterType === 'prepaid' ? BLUE : '#0E9F6E',padding:'4px 9px',borderRadius:999,fontSize:11,fontWeight:800,textTransform:'uppercase' }}>{row.meterType}</span>
+                          </td>
+                          <td style={{ padding:'12px',fontSize:13,fontWeight:800,color:'#17385F' }}>{formatMoney(row.totalAmount)}</td>
+                          <td className="admin-code" style={{ padding:'12px',fontSize:11,color:'#4F6380',maxWidth:210,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{row.token || '—'}</td>
+                          <td style={{ padding:'12px' }}>
+                            <span style={{ background:row.status === 'success' ? 'rgba(52,199,89,.12)' : row.status === 'failed' ? 'rgba(255,59,48,.12)' : 'rgba(255,159,10,.12)',color:row.status === 'success' ? GREEN : row.status === 'failed' ? RED : '#FF9F0A',padding:'4px 9px',borderRadius:999,fontSize:11,fontWeight:800,textTransform:'uppercase' }}>{row.status}</span>
+                          </td>
+                          <td className="admin-code" style={{ padding:'12px',fontSize:11,color:'#4F6380',maxWidth:190,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{row.flwReference || '—'}</td>
+                          <td style={{ padding:'12px' }}>
+                            <Btn size="sm" variant="ghost" onClick={()=>setSelectedElectricity(row)}>View Details</Btn>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+
+              {selectedElectricity && (
+                <div style={{ position:'fixed',inset:0,background:'rgba(4,10,20,.58)',zIndex:550,display:'flex',alignItems:'center',justifyContent:'center',padding:20 }}>
+                  <div style={{ width:'min(860px, 96vw)',maxHeight:'88vh',overflowY:'auto',background:'#fff',borderRadius:22,padding:20,border:'1px solid #DCE5F2',boxShadow:'0 26px 70px rgba(0,0,0,.25)' }}>
+                    <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:14 }}>
+                      <h3 style={{ fontSize:20,fontWeight:900,color:'#11253E' }}>Electricity Transaction Details</h3>
+                      <Btn size="sm" variant="ghost" onClick={()=>setSelectedElectricity(null)}>Close</Btn>
+                    </div>
+
+                    <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14 }}>
+                      <Card style={{ padding:'14px 16px' }}>
+                        <p style={{ fontSize:12,color:'#7A8EAB',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8 }}>Transaction</p>
+                        <div style={{ display:'grid',gap:7 }}>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Transaction ID:</b> {selectedElectricity.id}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>TX Ref:</b> {selectedElectricity.txReference || '—'}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Flutterwave Ref:</b> {selectedElectricity.flwReference || '—'}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Status:</b> {selectedElectricity.status}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Date:</b> {formatDateTime(selectedElectricity.createdAt)}</p>
+                        </div>
+                      </Card>
+                      <Card style={{ padding:'14px 16px' }}>
+                        <p style={{ fontSize:12,color:'#7A8EAB',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8 }}>User</p>
+                        <div style={{ display:'grid',gap:7 }}>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Name:</b> {selectedElectricity.userName || '—'}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Phone:</b> {selectedElectricity.userPhone || selectedElectricity.phoneNumber || '—'}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>Email:</b> {selectedElectricity.email || '—'}</p>
+                          <p style={{ fontSize:13,color:'#243F63' }}><b>User ID:</b> {selectedElectricity.userId}</p>
+                        </div>
+                      </Card>
+                    </div>
+
+                    <Card style={{ padding:'14px 16px',marginBottom:14 }}>
+                      <p style={{ fontSize:12,color:'#7A8EAB',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8 }}>Meter & Billing</p>
+                      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10 }}>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>DISCO:</b> {selectedElectricity.discoName}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Meter:</b> {selectedElectricity.meterNumber}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Meter Type:</b> {selectedElectricity.meterType}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Customer:</b> {selectedElectricity.customerName || '—'}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Amount:</b> {formatMoney(selectedElectricity.amount)}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Service Charge:</b> {formatMoney(selectedElectricity.serviceCharge)}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Total:</b> {formatMoney(selectedElectricity.totalAmount)}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Token:</b> {selectedElectricity.token || '—'}</p>
+                        <p style={{ fontSize:13,color:'#243F63' }}><b>Units:</b> {selectedElectricity.units || '—'}</p>
+                      </div>
+                    </Card>
+
+                    <Card style={{ padding:'14px 16px' }}>
+                      <p style={{ fontSize:12,color:'#7A8EAB',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8 }}>Flutterwave Response JSON</p>
+                      <pre style={{ background:'#0A1628',color:'#D5E5FF',padding:14,borderRadius:12,fontSize:11,overflow:'auto',maxHeight:220,whiteSpace:'pre-wrap' }}>{JSON.stringify(selectedElectricity.flwResponse || {}, null, 2)}</pre>
+                    </Card>
+
+                    {selectedElectricity.status === 'failed' && !selectedElectricity.refunded && (
+                      <div style={{ marginTop:14,display:'flex',justifyContent:'flex-end' }}>
+                        <Btn
+                          variant="danger"
+                          onClick={async()=>{
+                            try {
+                              const adminNote = window.prompt('Refund note (optional):', '') || '';
+                              await api('electricity', 'PATCH', { electricityId: selectedElectricity.id, action: 'refund', adminNote });
+                              showToast('Refund completed');
+                              setSelectedElectricity(null);
+                              await loadElectricity();
+                            } catch (e: unknown) {
+                              showError(e instanceof Error ? e.message : 'Refund failed');
+                            }
+                          }}
+                        >
+                          Refund Wallet
+                        </Btn>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -2100,7 +2358,7 @@ export default function AdminPage() {
                     try {
                       let parsed; try{ parsed = JSON.parse(consoleInput); }catch{ showError('Invalid JSON'); return; }
                       setConsoleLogs(prev=>[{ dir:'sent', payload:JSON.stringify(parsed,null,2), ts:new Date().toLocaleTimeString() }, ...prev]);
-                      const res = await fetch('/api/admin/console', { method:'POST', headers: authH(), body: JSON.stringify({ service: consoleEndpoint, endpoint: consoleEndpoint==='amigo'?'/data/':'/', method:'POST', payload: parsed }) });
+                      const res = await fetch('/api/zmytcd/console', { method:'POST', headers: authH(), body: JSON.stringify({ service: consoleEndpoint, endpoint: consoleEndpoint==='amigo'?'/data/':'/', method:'POST', payload: parsed }) });
                       const data = await res.json();
                       setConsoleLogs(prev=>[{ dir:'received', payload:JSON.stringify(data,null,2), ts:new Date().toLocaleTimeString() }, ...prev]);
                     } catch(e:unknown){ showError(e instanceof Error?e.message:'Request failed'); }

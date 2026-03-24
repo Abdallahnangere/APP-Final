@@ -7,6 +7,7 @@ import SupportChat from '@/app/support/page';
 /* ─────────────── TYPES ─────────────── */
 type User = {
   id: string; firstName: string; lastName: string; phone: string;
+  email?: string;
   walletBalance: number; cashbackBalance: number; referralBonus: number;
   referralBalance?: number; referralId?: string; totalGbPurchased?: number;
   accountNumber: string; bankName: string; theme: string;
@@ -81,6 +82,8 @@ type WithdrawalItem = {
   updatedAt: string;
 };
 type BankOption = { id: string; code: string; name: string; };
+type ElectricityProvider = { itemCode: string; name: string; type: 'prepaid' | 'postpaid' };
+type ElectricityStatus = 'idle' | 'verifying' | 'verified' | 'failed' | 'processing' | 'success';
 
 /* ─────────────── CONSTANTS ─────────────── */
 const BLUE = '#0071E3';
@@ -447,8 +450,11 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
   const date = new Date(data.date as string).toLocaleString('en-NG', { dateStyle:'short', timeStyle:'short' });
   const isDataPurchase = data.type === 'data' || data.network;
   const isTransfer = data.type === 'transfer' || data.type === 'transfer_out' || data.type === 'transfer_in';
-  const amount = Number(data.price || data.amount || 0);
+  const isElectricity = data.type === 'electricity_purchase' || data.transactionType === 'Electricity Purchase';
+  const amount = Number(data.totalAmount || data.price || data.amount || 0);
   const refNum = ((data.ref || data.amigoRef || '—') as string).toUpperCase();
+  const isElectricityPrepaid = isElectricity && String(data.meterType || '').toLowerCase() === 'prepaid';
+  const electricityToken = isElectricityPrepaid ? String(data.token || '') : '';
 
   /* compact label/value row */
   const Row = ({ label, value, mono }: { label: string; value: string; mono?: boolean }) => (
@@ -518,7 +524,27 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
 
           {/* ── White paper body ── */}
           <div style={{ background:'#FFFFFF',padding:'2px 22px 8px' }}>
-            {isDataPurchase ? (
+            {isElectricity ? (
+              <>
+                {isElectricityPrepaid && electricityToken && (
+                  <div style={{ margin:'8px 0 14px',padding:'12px 14px',borderRadius:14,background:'linear-gradient(135deg,#F2F8FF,#EDF6FF)',border:'1px solid #D6E7FF' }}>
+                    <p style={{ fontSize:10,color:'#6A7EA5',fontWeight:800,margin:0,letterSpacing:'0.09em',textTransform:'uppercase' }}>Electricity Token</p>
+                    <p style={{ fontSize:22,color:'#14396B',fontWeight:900,margin:'6px 0 0',fontFamily:"'SF Mono','Menlo','Courier New',monospace",letterSpacing:'0.04em',lineHeight:1.2 }}>{electricityToken}</p>
+                  </div>
+                )}
+                <Row label="Transaction Type" value="Electricity Purchase" />
+                <Row label="DISCO" value={(data.discoName as string) || '—'} />
+                <Row label="Meter Number" value={(data.meterNumber as string) || '—'} mono />
+                <Row label="Customer Name" value={(data.customerName as string) || '—'} />
+                <Row label="Meter Type" value={String(data.meterType || '—').toUpperCase()} />
+                <Row label="Amount" value={`₦${Number(data.amount || 0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}`} />
+                <Row label="Service Charge" value={`₦${Number(data.serviceCharge || 0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}`} />
+                {data.units && <Row label="Units Purchased" value={String(data.units)} />}
+                {data.flwRef && <Row label="Flutterwave Ref" value={String(data.flwRef)} mono />}
+                <Row label="Payment Method" value="Wallet" />
+                <Row label="Status" value={String(data.status || 'success')} />
+              </>
+            ) : isDataPurchase ? (
               <>
                 <Row label="Network"   value={(data.network     as string) || '—'} />
                 <Row label="Data Plan" value={`${(data.dataSize as string)||'—'} · ${(data.validity as string)||'—'}`} />
@@ -562,6 +588,16 @@ function Receipt({ data, onDownload, onClose, dark, autoDownload }: { data: Reco
 
         {/* ════ Action buttons — outside download area ════ */}
         <div style={{ background:dark?'#1C1C1E':'#FFFFFF',padding:'12px 18px 30px',display:'flex',gap:10,borderTop:`1px solid ${dark?'rgba(255,255,255,.06)':'rgba(0,0,0,.07)'}` }}>
+          {isElectricityPrepaid && electricityToken && (
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(electricityToken);
+              }}
+              style={{ height:52,padding:'0 14px',borderRadius:16,background:dark?'#2C2C2E':'#F2F2F7',color:dark?'#EBEBF5':'#3A3A3C',fontWeight:700,fontSize:13,border:'none',cursor:'pointer',flexShrink:0 }}
+            >
+              Copy Token
+            </button>
+          )}
           <button
             onClick={downloadPng}
             style={{ flex:1,height:52,borderRadius:16,background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontWeight:700,fontSize:15,border:'none',cursor:'pointer',transition:'all .25s cubic-bezier(.16,.1,0,1)',boxShadow:'0 8px 24px rgba(0,113,227,0.32)',display:'flex',alignItems:'center',justifyContent:'center',gap:8,letterSpacing:'-0.01em' }}
@@ -776,7 +812,7 @@ function ShareSaukiMartModal({
 
 /* ─────────────── MAIN APP ─────────────── */
 export default function AppPage() {
-  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'|'chat'|'earn'|'developer-terms'|'developer-dashboard'>('splash');
+  const [screen, setScreen] = useState<'splash'|'login'|'register'|'registered'|'home'|'data-networks'|'data-phone'|'data-plans'|'buy-confirm'|'store'|'product'|'transactions'|'deposits'|'profile'|'change-pin'|'sim-activation'|'notifications'|'about'|'transfer'|'chat'|'earn'|'electricity'|'developer-terms'|'developer-dashboard'>('splash');
   const [dark, setDark] = useState(false);
   const [user, setUser] = useState<User|null>(null);
   const [token, setToken] = useState('');
@@ -827,8 +863,9 @@ export default function AppPage() {
   const [redeemError, setRedeemError] = useState('');
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [showPin, setShowPin] = useState(false);
-  const [pinAction, setPinAction] = useState<'buy-data'|'buy-product'|'sim-pay'|'transfer'|'withdraw'|null>(null);
+  const [pinAction, setPinAction] = useState<'buy-data'|'buy-product'|'sim-pay'|'transfer'|'withdraw'|'electricity'|null>(null);
   const [receipt, setReceipt] = useState<Record<string,unknown>|null>(null);
+  const [txFilter, setTxFilter] = useState<'all'|'electricity'>('all');
   const [isBuyingData, setIsBuyingData] = useState(false);
   const [buyDataProgressStage, setBuyDataProgressStage] = useState(0);
   const [earnSummary, setEarnSummary] = useState<EarnSummary|null>(null);
@@ -840,6 +877,24 @@ export default function AppPage() {
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [withdrawResolving, setWithdrawResolving] = useState(false);
   const [bankSearch, setBankSearch] = useState('');
+  const [electricityProviders, setElectricityProviders] = useState<ElectricityProvider[]>([]);
+  const [electricityProviderSearch, setElectricityProviderSearch] = useState('');
+  const [electricityStatus, setElectricityStatus] = useState<ElectricityStatus>('idle');
+  const [electricitySummaryOpen, setElectricitySummaryOpen] = useState(false);
+  const [electricitySuccess, setElectricitySuccess] = useState<Record<string, unknown> | null>(null);
+  const [electricityFailure, setElectricityFailure] = useState('');
+  const [electricityIdempotencyKey, setElectricityIdempotencyKey] = useState('');
+  const [electricityForm, setElectricityForm] = useState({
+    itemCode: '',
+    discoName: '',
+    meterType: 'prepaid' as 'prepaid' | 'postpaid',
+    meterNumber: '',
+    amount: '',
+    phoneNumber: '',
+    email: '',
+    customerName: '',
+    verified: false,
+  });
 
   // Transfer states
   const [transferPhone, setTransferPhone] = useState('');
@@ -869,6 +924,9 @@ export default function AppPage() {
 
   const authHeader = useCallback(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
   const referralBalance = user?.referralBalance ?? user?.referralBonus ?? 0;
+  const filteredTransactions = txFilter === 'electricity'
+    ? transactions.filter((tx) => tx.type === 'electricity_purchase')
+    : transactions;
 
   const showToast = (msg: string) => { playSound('success'); setToast(msg); setTimeout(() => setToast(''), 3000); };
   const showError = (msg: string) => { playSound('error'); setError(msg); setTimeout(() => setError(''), 4000); };
@@ -936,7 +994,7 @@ export default function AppPage() {
     const initDatabase = async () => {
       try {
         const adminPass = process.env.NEXT_PUBLIC_ADMIN_PASS || 'saukimart2025';
-        const loginRes = await fetch('/api/admin/login', {
+        const loginRes = await fetch('/api/zmytcd/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ password: adminPass })
@@ -946,7 +1004,7 @@ export default function AppPage() {
           const loginData = await loginRes.json();
           const token = loginData.token;
           
-          const initRes = await fetch('/api/admin/init-db', {
+          const initRes = await fetch('/api/zmytcd/init-db', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
           });
@@ -1095,6 +1153,53 @@ export default function AppPage() {
     }
   }, [token, authHeader, banks.length]);
 
+  const loadElectricityProviders = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/electricity/providers', { headers: authHeader(), cache: 'no-store' as RequestCache });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to load DISCO providers');
+      setElectricityProviders(Array.isArray(data.providers) ? data.providers : []);
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : 'Unable to load DISCO providers');
+    }
+  }, [token, authHeader]);
+
+  const verifyElectricityMeter = useCallback(async () => {
+    if (!token) return;
+    if (!electricityForm.itemCode) {
+      showError('Select a DISCO provider');
+      return;
+    }
+    if (!/^\d{11}$/.test(electricityForm.meterNumber)) {
+      showError('Meter number must be 11 digits');
+      return;
+    }
+
+    setElectricityStatus('verifying');
+    try {
+      const res = await fetch('/api/electricity/verify', {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({
+          itemCode: electricityForm.itemCode,
+          meterNumber: electricityForm.meterNumber,
+          meterType: electricityForm.meterType,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Invalid meter number. Please check and try again.');
+
+      setElectricityForm((prev) => ({ ...prev, customerName: String(data.customerName || ''), verified: true }));
+      setElectricityStatus('verified');
+      showToast('Meter verified successfully');
+    } catch (e: unknown) {
+      setElectricityStatus('failed');
+      setElectricityForm((prev) => ({ ...prev, customerName: '', verified: false }));
+      showError(e instanceof Error ? e.message : 'Meter verification failed');
+    }
+  }, [token, authHeader, electricityForm.itemCode, electricityForm.meterNumber, electricityForm.meterType]);
+
   const resolveWithdrawalAccount = useCallback(async () => {
     if (!token) return;
     if (!withdrawForm.bankCode || !/^\d{10}$/.test(withdrawForm.accountNumber)) {
@@ -1192,7 +1297,15 @@ export default function AppPage() {
       loadHomeData();
       refreshUser();
     }
-  }, [screen, loadHomeData, refreshUser]);
+    if (screen === 'electricity') {
+      loadElectricityProviders();
+      setElectricityForm((prev) => ({
+        ...prev,
+        phoneNumber: prev.phoneNumber || user?.phone || '',
+        email: prev.email || user?.email || `${user?.phone || ''}@saukimart.app`,
+      }));
+    }
+  }, [screen, loadHomeData, refreshUser, loadElectricityProviders, user?.phone, user?.email]);
 
   useEffect(() => {
     if (!showShareCoach) return;
@@ -1434,6 +1547,83 @@ export default function AppPage() {
     }
   };
 
+  const beginElectricityPurchase = () => {
+    if (!user) return;
+    const amount = Number(electricityForm.amount || 0);
+    const total = amount + 100;
+
+    if (!electricityForm.itemCode || !electricityForm.discoName) {
+      showError('Select a DISCO provider');
+      return;
+    }
+    if (!/^\d{11}$/.test(electricityForm.meterNumber)) {
+      showError('Meter number must be 11 digits');
+      return;
+    }
+    if (!electricityForm.verified || !electricityForm.customerName) {
+      showError('Verify the meter before purchase');
+      return;
+    }
+    if (!Number.isFinite(amount) || amount < 1000 || amount > 100000) {
+      showError('Amount must be between ₦1,000 and ₦100,000');
+      return;
+    }
+    if (user.walletBalance < total) {
+      showError('Insufficient balance. Please fund your wallet.');
+      return;
+    }
+
+    setElectricitySummaryOpen(true);
+  };
+
+  const handleElectricityPurchase = async (pin: string) => {
+    const amount = Number(electricityForm.amount || 0);
+    setElectricityStatus('processing');
+    setLoading(true);
+    setElectricityFailure('');
+
+    try {
+      const idem = electricityIdempotencyKey || generateIdempotencyKey();
+      if (!electricityIdempotencyKey) setElectricityIdempotencyKey(idem);
+
+      const res = await fetch('/api/electricity/purchase', {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({
+          pin,
+          itemCode: electricityForm.itemCode,
+          discoName: electricityForm.discoName,
+          meterType: electricityForm.meterType,
+          meterNumber: electricityForm.meterNumber,
+          amount,
+          customerName: electricityForm.customerName,
+          phoneNumber: electricityForm.phoneNumber,
+          email: electricityForm.email,
+          idempotencyKey: idem,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Electricity purchase failed');
+
+      setReceipt(data.receipt);
+      setElectricitySuccess(data.receipt || null);
+      setElectricityStatus('success');
+      setElectricityIdempotencyKey('');
+      setElectricitySummaryOpen(false);
+      await refreshUser();
+      await loadHomeData();
+      showToast('Electricity purchase successful');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Electricity purchase failed';
+      setElectricityFailure(message);
+      setElectricityStatus('failed');
+      showError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const beginWithdrawalRequest = () => {
     if (!user) return;
     const amount = Number(withdrawForm.amount || 0);
@@ -1522,6 +1712,7 @@ export default function AppPage() {
     else if (pinAction === 'sim-pay') handleSimPay(pin);
     else if (pinAction === 'transfer') handleTransfer(pin);
     else if (pinAction === 'withdraw') handleWithdrawalRequest(pin);
+    else if (pinAction === 'electricity') handleElectricityPurchase(pin);
   };
 
   const sendChat = useCallback(async () => {
@@ -2067,6 +2258,18 @@ export default function AppPage() {
           <p style={{ fontSize:11,fontWeight:700,color:'var(--text-secondary)',letterSpacing:.8,marginBottom:10,marginLeft:2,textTransform:'uppercase' }}>Quick Actions</p>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:8 }}>
 
+            {/* Electricity */}
+            <button onClick={()=>setScreen('electricity')} className="tactile-btn"
+              style={{ width:'100%',height:96,borderRadius:16,padding:'12px 8px 10px',background:dark ? 'linear-gradient(160deg,rgba(255,159,10,.22) 0%,rgba(255,159,10,.09) 100%)' : 'linear-gradient(160deg,rgba(255,159,10,.14) 0%,rgba(255,159,10,.05) 100%)',border:'1px solid rgba(255,159,10,.3)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between',cursor:'pointer',transition:'transform .18s,box-shadow .18s',boxShadow:'0 2px 8px rgba(255,159,10,.12)' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px) scale(1.03)';e.currentTarget.style.boxShadow='0 8px 22px rgba(255,159,10,.26)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0) scale(1)';e.currentTarget.style.boxShadow='0 2px 8px rgba(255,159,10,.12)'}}>
+              <div style={{ width:38,height:38,borderRadius:10,background:'rgba(255,159,10,.18)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:19 }}>⚡</div>
+              <div style={{ textAlign:'center' }}>
+                <p style={{ fontSize:11,fontWeight:800,color:'var(--text)',margin:0,lineHeight:1.2 }}>Electricity</p>
+                <p style={{ fontSize:9,fontWeight:600,color:'rgba(255,159,10,.88)',margin:'2px 0 0',lineHeight:1.2,letterSpacing:.1 }}>Pay Bill</p>
+              </div>
+            </button>
+
             {/* Data */}
             <button onClick={()=>setScreen('data-networks')} className="tactile-btn"
               style={{ width:'100%',height:96,borderRadius:16,padding:'12px 8px 10px',background:dark ? 'linear-gradient(160deg,rgba(0,113,227,.22) 0%,rgba(0,113,227,.09) 100%)' : 'linear-gradient(160deg,rgba(0,113,227,.13) 0%,rgba(0,113,227,.05) 100%)',border:'1px solid rgba(0,113,227,.28)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between',cursor:'pointer',transition:'transform .18s,box-shadow .18s',boxShadow:'0 2px 8px rgba(0,113,227,.10)' }}
@@ -2528,6 +2731,150 @@ export default function AppPage() {
     </>
   );
 
+  /* ELECTRICITY */
+  if (screen === 'electricity') {
+    const amount = Number(electricityForm.amount || 0);
+    const serviceCharge = 100;
+    const total = amount + serviceCharge;
+    const providerOptions = electricityProviders.filter((p) => {
+      const q = electricityProviderSearch.trim().toLowerCase();
+      if (!q) return p.type === electricityForm.meterType;
+      return p.type === electricityForm.meterType && (`${p.name} ${p.itemCode}`.toLowerCase().includes(q));
+    });
+
+    return (
+      <>
+        <GlobalStyle dark={dark} />
+        {showPin && <PinKeyboard title="Confirm electricity PIN" subtitle="Authorize electricity purchase with your PIN" onComplete={handlePinComplete} onClose={()=>setShowPin(false)} pinAction={pinAction} />}
+
+        {electricitySummaryOpen && (
+          <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:420,display:'flex',alignItems:'center',justifyContent:'center',padding:16 }}>
+            <div style={{ width:'100%',maxWidth:420,background:'var(--card)',border:'1px solid var(--border)',borderRadius:18,padding:16 }}>
+              <h3 style={{ fontSize:18,fontWeight:900,color:'var(--text)',marginBottom:10 }}>Confirm Electricity Purchase</h3>
+              <div style={{ display:'grid',gap:8 }}>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>DISCO:</b> {electricityForm.discoName}</p>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>Meter:</b> {electricityForm.meterNumber}</p>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>Customer:</b> {electricityForm.customerName}</p>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>Meter Type:</b> {electricityForm.meterType}</p>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>Amount:</b> ₦{amount.toLocaleString('en-NG')}</p>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',margin:0 }}><b>Service Charge:</b> ₦{serviceCharge.toLocaleString('en-NG')}</p>
+                <p style={{ fontSize:14,fontWeight:900,color:'var(--text)',margin:'4px 0 0' }}><b>Total:</b> ₦{total.toLocaleString('en-NG')}</p>
+              </div>
+              <div style={{ display:'flex',gap:8,marginTop:16 }}>
+                <button onClick={()=>setElectricitySummaryOpen(false)} style={{ flex:1,padding:'12px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontWeight:700,color:'var(--text)' }}>Cancel</button>
+                <button onClick={()=>{ setElectricitySummaryOpen(false); setPinAction('electricity'); setShowPin(true); }} style={{ flex:1,padding:'12px',borderRadius:12,border:'none',background:'linear-gradient(135deg,#0047CC,#0071E3)',fontWeight:800,color:'#fff' }}>Confirm Purchase</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {electricitySuccess && (
+          <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:420,display:'flex',alignItems:'center',justifyContent:'center',padding:16 }}>
+            <div style={{ width:'100%',maxWidth:420,background:'var(--card)',border:'1px solid var(--border)',borderRadius:18,padding:16 }}>
+              <p style={{ fontSize:18,fontWeight:900,color:'#30D158',marginBottom:8 }}>Purchase Successful</p>
+              {String(electricitySuccess.meterType || '') === 'prepaid' && electricitySuccess.token && (
+                <>
+                  <p style={{ fontSize:11,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:4 }}>Token</p>
+                  <p style={{ fontSize:21,fontWeight:900,color:'var(--text)',fontFamily:'monospace',margin:'0 0 10px' }}>{String(electricitySuccess.token)}</p>
+                  <button onClick={()=>{ navigator.clipboard.writeText(String(electricitySuccess.token)); showToast('Token copied!'); }} style={{ padding:'9px 12px',borderRadius:10,border:'1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text)',fontWeight:700,marginBottom:10 }}>Copy Token</button>
+                </>
+              )}
+              <div style={{ display:'flex',gap:8 }}>
+                <button onClick={()=>setElectricitySuccess(null)} style={{ flex:1,padding:'12px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontWeight:700,color:'var(--text)' }}>Close</button>
+                <button onClick={()=>{ setElectricitySuccess(null); setScreen('transactions'); }} style={{ flex:1,padding:'12px',borderRadius:12,border:'none',background:'linear-gradient(135deg,#0047CC,#0071E3)',fontWeight:800,color:'#fff' }}>View Receipt</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={{ minHeight:'100dvh',background:dark ? 'linear-gradient(180deg,#040810 0%,#0A1221 48%,#08101D 100%)' : 'linear-gradient(180deg,#F3F7FF 0%,#EEF3FB 52%,#F7F9FD 100%)',paddingBottom:100 }}>
+          <div style={{ padding:'52px 16px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12 }}>
+            <button onClick={()=>setScreen('home')} style={{ color:BLUE,fontSize:16,fontWeight:700 }}>← Back</button>
+            <button onClick={loadElectricityProviders} style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:12,padding:'10px 14px',color:'var(--text)',fontSize:13,fontWeight:700 }}>Refresh</button>
+          </div>
+
+          <div style={{ margin:'0 16px',background:'var(--card)',border:'1px solid var(--border)',borderRadius:20,padding:16 }}>
+            <h2 style={{ fontSize:20,fontWeight:900,color:'var(--text)',marginBottom:6 }}>Electricity Bill Payment</h2>
+            <p style={{ fontSize:12,color:'var(--text-secondary)',marginBottom:14 }}>Verify meter first, then complete payment with your PIN.</p>
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Meter Type</label>
+            <div style={{ display:'flex',gap:10,marginBottom:12 }}>
+              {(['prepaid','postpaid'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setElectricityForm((prev) => ({ ...prev, meterType: t, itemCode:'', discoName:'', verified:false, customerName:'' }))}
+                  style={{ padding:'8px 12px',borderRadius:999,border:`1px solid ${electricityForm.meterType === t ? BLUE : 'var(--border)'}`,background:electricityForm.meterType === t ? 'rgba(0,113,227,.12)' : 'transparent',fontSize:12,fontWeight:700,color:electricityForm.meterType === t ? BLUE : 'var(--text-secondary)' }}
+                >
+                  {t.charAt(0).toUpperCase()+t.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>DISCO Provider</label>
+            <input
+              value={electricityProviderSearch}
+              onChange={(e)=>setElectricityProviderSearch(e.target.value)}
+              placeholder="Search DISCO provider"
+              style={{ width:'100%',padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)',marginBottom:8 }}
+            />
+            <div style={{ maxHeight:160,overflowY:'auto',border:'1px solid var(--border)',borderRadius:12,marginBottom:12 }}>
+              {providerOptions.length === 0 ? (
+                <p style={{ fontSize:12,color:'var(--text-secondary)',padding:10,margin:0 }}>No provider found</p>
+              ) : providerOptions.map((p) => (
+                <button
+                  key={`${p.itemCode}-${p.type}`}
+                  onClick={() => setElectricityForm((prev) => ({ ...prev, itemCode: p.itemCode, discoName: p.name, meterType: p.type, verified:false, customerName:'' }))}
+                  style={{ width:'100%',textAlign:'left',padding:'10px 12px',background:electricityForm.itemCode === p.itemCode ? 'rgba(0,113,227,.12)' : 'transparent',border:'none',borderBottom:'1px solid var(--border)',fontSize:13,color:'var(--text)' }}
+                >
+                  {p.name} ({p.type})
+                </button>
+              ))}
+            </div>
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Meter Number</label>
+            <div style={{ display:'flex',gap:8,marginBottom:8 }}>
+              <input
+                value={electricityForm.meterNumber}
+                onChange={(e)=>{
+                  const meter = e.target.value.replace(/\D/g,'').slice(0,11);
+                  setElectricityForm((prev)=>({ ...prev, meterNumber: meter, verified:false, customerName:'' }));
+                  if (electricityStatus !== 'idle') setElectricityStatus('idle');
+                }}
+                placeholder="11-digit meter number"
+                style={{ flex:1,padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)' }}
+              />
+              <button onClick={verifyElectricityMeter} disabled={electricityStatus === 'verifying'} style={{ padding:'0 12px',borderRadius:12,border:'none',background:'linear-gradient(135deg,#0047CC,#0071E3)',fontSize:12,fontWeight:800,color:'#fff' }}>{electricityStatus === 'verifying' ? 'Verifying…' : 'Verify Meter'}</button>
+            </div>
+            {electricityForm.verified && electricityForm.customerName && <p style={{ fontSize:12,color:'#30D158',margin:'2px 0 10px' }}>✓ {electricityForm.customerName}</p>}
+            {!electricityForm.verified && electricityStatus === 'failed' && <p style={{ fontSize:12,color:RED,margin:'2px 0 10px' }}>✗ Meter verification failed</p>}
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Amount</label>
+            <div style={{ display:'flex',gap:8,flexWrap:'wrap',marginBottom:8 }}>
+              {[2000,5000,10000,20000].map((v) => (
+                <button key={v} onClick={()=>setElectricityForm((prev)=>({ ...prev, amount:String(v) }))} style={{ padding:'7px 10px',borderRadius:999,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:12,fontWeight:700,color:'var(--text)' }}>₦{(v/1000)}K</button>
+              ))}
+            </div>
+            <input value={electricityForm.amount} onChange={(e)=>setElectricityForm((prev)=>({ ...prev, amount:e.target.value.replace(/\D/g,'') }))} placeholder="Enter amount (₦1,000 - ₦100,000)" style={{ width:'100%',padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)',marginBottom:8 }} />
+            <p style={{ fontSize:12,color:'var(--text-secondary)',margin:'0 0 10px' }}>Service charge: ₦100 · Total: <b style={{ color:'var(--text)' }}>₦{(Number(electricityForm.amount || 0) + 100).toLocaleString('en-NG')}</b></p>
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Phone Number</label>
+            <input value={electricityForm.phoneNumber} onChange={(e)=>setElectricityForm((prev)=>({ ...prev, phoneNumber:e.target.value.replace(/\D/g,'').slice(0,11) }))} placeholder="Phone number" style={{ width:'100%',padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)',marginBottom:10 }} />
+
+            <label style={{ display:'block',fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6 }}>Email</label>
+            <input value={electricityForm.email} onChange={(e)=>setElectricityForm((prev)=>({ ...prev, email:e.target.value }))} placeholder="Email address" style={{ width:'100%',padding:'12px 13px',borderRadius:12,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:14,color:'var(--text)',marginBottom:14 }} />
+
+            {electricityFailure && <p style={{ fontSize:12,color:RED,margin:'0 0 10px' }}>{electricityFailure}</p>}
+            <button onClick={beginElectricityPurchase} disabled={!electricityForm.verified || electricityStatus === 'processing'} style={{ width:'100%',padding:'14px',borderRadius:14,border:'none',background:(!electricityForm.verified || electricityStatus === 'processing') ? 'rgba(0,0,0,.25)' : 'linear-gradient(135deg,#0047CC,#0071E3)',fontSize:15,fontWeight:900,color:'#fff',opacity:(!electricityForm.verified || electricityStatus === 'processing') ? .6 : 1 }}>
+              {electricityStatus === 'processing' ? 'Processing your electricity purchase...' : 'Purchase Electricity'}
+            </button>
+          </div>
+        </div>
+
+        {BottomNav({ active: 'home' })}
+      </>
+    );
+  }
+
   /* TRANSACTIONS */
   if (screen === 'transactions') return (
     <>
@@ -2537,17 +2884,47 @@ export default function AppPage() {
         <div style={{ padding:'60px 20px 20px',borderBottom:`1px solid ${dark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)'}`,background:dark ? 'linear-gradient(180deg,rgba(0,113,227,.18),transparent)' : 'linear-gradient(180deg,rgba(0,113,227,.1),transparent)' }}>
           <h2 style={{ fontSize:28,fontWeight:900,color:'var(--text)',letterSpacing:-0.7 }}>Activity</h2>
           <p style={{ color:'var(--text-secondary)',fontSize:13,marginTop:6,letterSpacing:'0.02em' }}>Fintech timeline of your credits and debits</p>
+          <div style={{ display:'flex',gap:8,marginTop:12 }}>
+            <button onClick={()=>setTxFilter('all')} style={{ padding:'7px 12px',borderRadius:999,border:`1px solid ${txFilter==='all' ? BLUE : 'var(--border)'}`,background:txFilter==='all' ? 'rgba(0,113,227,.12)' : 'transparent',fontSize:12,fontWeight:700,color:txFilter==='all' ? BLUE : 'var(--text-secondary)' }}>All</button>
+            <button onClick={()=>setTxFilter('electricity')} style={{ padding:'7px 12px',borderRadius:999,border:`1px solid ${txFilter==='electricity' ? BLUE : 'var(--border)'}`,background:txFilter==='electricity' ? 'rgba(0,113,227,.12)' : 'transparent',fontSize:12,fontWeight:700,color:txFilter==='electricity' ? BLUE : 'var(--text-secondary)' }}>Electricity</button>
+          </div>
         </div>
         <div style={{ flex:1,overflowY:'auto',padding:'16px 16px 24px' }}>
-          {transactions.length === 0 ? (
+          {filteredTransactions.length === 0 ? (
             <div style={{ textAlign:'center',padding:'64px 24px',background:'var(--card)',borderRadius:20,border:'1px solid var(--border)' }}>
               <div style={{ width:76,height:76,borderRadius:22,margin:'0 auto 16px',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(140deg,rgba(0,113,227,.16),rgba(90,200,250,.12))',fontSize:34,color:BLUE }}>◎</div>
               <p style={{ fontSize:17,fontWeight:800,color:'var(--text)' }}>No activity yet</p>
               <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:8,lineHeight:1.6 }}>Your completed transactions will show here in a clean ledger format.</p>
             </div>
+          ) : txFilter === 'electricity' ? (
+            <div style={{ background:'var(--card)',borderRadius:16,overflow:'hidden',border:'1px solid var(--border)' }}>
+              <div style={{ display:'grid',gridTemplateColumns:'1.2fr 1.1fr 0.9fr 0.7fr 0.6fr',gap:8,padding:'10px 12px',borderBottom:'1px solid var(--border)',fontSize:11,fontWeight:800,color:'var(--text-secondary)',textTransform:'uppercase' }}>
+                <span>Date & Time</span>
+                <span>DISCO / Meter</span>
+                <span>Amount</span>
+                <span>Status</span>
+                <span>Action</span>
+              </div>
+              {filteredTransactions.map((tx) => {
+                const r = (tx.receipt || {}) as Record<string, unknown>;
+                const status = String(tx.status || 'pending');
+                return (
+                  <div key={tx.id} style={{ display:'grid',gridTemplateColumns:'1.2fr 1.1fr 0.9fr 0.7fr 0.6fr',gap:8,padding:'11px 12px',borderBottom:'1px solid var(--border)',alignItems:'center' }}>
+                    <span style={{ fontSize:12,color:'var(--text-secondary)' }}>{new Date(tx.createdAt).toLocaleString('en-NG',{dateStyle:'short',timeStyle:'short'})}</span>
+                    <div style={{ minWidth:0 }}>
+                      <p style={{ margin:0,fontSize:12,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.discoName || tx.description || 'Electricity')}</p>
+                      <p style={{ margin:'2px 0 0',fontSize:11,color:'var(--text-secondary)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{String(r.meterNumber || '—')}</p>
+                    </div>
+                    <span style={{ fontSize:12,fontWeight:800,color:'var(--text)' }}>₦{Number((r.totalAmount as number) || tx.amount || 0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                    <span style={{ fontSize:11,fontWeight:800,color:status === 'success' ? GREEN : status === 'failed' ? RED : '#FF9F0A' }}>{status}</span>
+                    <button onClick={()=>{ if (tx.receipt) setReceipt({ ...(tx.receipt as Record<string, unknown>), type: tx.type }); }} style={{ padding:'6px 8px',borderRadius:8,border:'1px solid var(--border)',background:'var(--bg-secondary)',fontSize:11,fontWeight:700,color:'var(--text)' }}>View</button>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <div style={{ display:'grid',gap:12 }}>
-              {transactions.map((tx, idx) => {
+              {filteredTransactions.map((tx, idx) => {
                 const isDeposit = tx.type === 'deposit';
                 const isCashbackTx = tx.type === 'cashback' || tx.type === 'cashback_redemption';
                 const isTransferIn = tx.type === 'transfer_in';

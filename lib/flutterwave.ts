@@ -64,3 +64,74 @@ export async function resolveAccountNumber(accountNumber: string, accountBank: s
   });
   return res.json();
 }
+
+export type ElectricityMeterType = 'prepaid' | 'postpaid';
+
+export interface FLWElectricityBiller {
+  id: number;
+  biller_code: string;
+  name: string;
+  item_code: string;
+  is_active?: number;
+}
+
+export interface FLWElectricityValidateResult {
+  response_code?: string;
+  response_message?: string;
+  name?: string;
+  address?: string;
+  customer?: string;
+  product_code?: string;
+}
+
+export interface FLWElectricityPurchasePayload {
+  meterNumber: string;
+  amount: number;
+  meterType: ElectricityMeterType;
+  discoName: string;
+  reference: string;
+}
+
+export async function listElectricityBillers() {
+  const res = await fetch(`${FLW_BASE}/bill-categories/BIL099/billers`, {
+    headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
+  });
+  return res.json();
+}
+
+export async function validateElectricityMeter(itemCode: string, meterNumber: string) {
+  const res = await fetch(`${FLW_BASE}/bill-items/${itemCode}/validate`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      item_code: itemCode,
+      code: meterNumber,
+      customer: meterNumber,
+    }),
+  });
+  return res.json();
+}
+
+export async function purchaseElectricityBill(payload: FLWElectricityPurchasePayload) {
+  const type = `${payload.discoName} ${payload.meterType.toUpperCase()}`;
+  const res = await fetch(`${FLW_BASE}/bills`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      country: 'NG',
+      customer: payload.meterNumber,
+      amount: payload.amount,
+      recurrence: 'ONCE',
+      type,
+      reference: payload.reference,
+      biller_name: payload.discoName,
+    }),
+  });
+  return res.json();
+}

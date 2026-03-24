@@ -24,22 +24,6 @@ export function middleware(req: NextRequest) {
     return new NextResponse('Not Found', { status: 404 });
   }
 
-  if (pathname === ADMIN_PORTAL_PATH || pathname.startsWith(`${ADMIN_PORTAL_PATH}/`)) {
-    const suffix = pathname.slice(ADMIN_PORTAL_PATH.length);
-    if (suffix === '/support') {
-      return new NextResponse('Not Found', { status: 404 });
-    }
-
-    const rewriteUrl = req.nextUrl.clone();
-    rewriteUrl.pathname = `/admin${suffix || ''}`;
-    const response = NextResponse.rewrite(rewriteUrl);
-    response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
-    response.headers.set('X-Frame-Options', 'DENY');
-    response.headers.set('Referrer-Policy', 'same-origin');
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-    return response;
-  }
-
   return NextResponse.next();
 }
 
