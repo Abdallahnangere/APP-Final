@@ -1627,22 +1627,120 @@ export default function AppPage() {
 
   /* ── BUY DATA ── */
   /* ── CONTACT PICKER ── */
+  const applySelectedContactPhone = useCallback((value: string) => {
+    const digits = value.replace(/\D/g, '');
+    const local = digits.startsWith('234') && digits.length >= 13
+      ? `0${digits.slice(-10)}`
+      : digits.slice(-11);
+    if (local.length === 11) {
+      setBuyPhone(local);
+      setContactPickerOpen(false);
+      return true;
+    }
+    return false;
+  }, []);
+
+  useEffect(() => {
+    const handleContactEvent = (event: Event) => {
+      const detail = (event as CustomEvent)?.detail as unknown;
+      const candidate = typeof detail === 'string'
+        ? detail
+        : typeof detail === 'object' && detail !== null && 'phone' in (detail as Record<string, unknown>)
+        ? String((detail as Record<string, unknown>).phone || '')
+        : '';
+      if (candidate) applySelectedContactPhone(candidate);
+    };
+
+    const nativeWindow = window as Window & {
+      __setSaukiMartSelectedContact?: (value: string) => void;
+    };
+
+    nativeWindow.__setSaukiMartSelectedContact = (value: string) => {
+      applySelectedContactPhone(value);
+    };
+
+    window.addEventListener('sm-contact-selected', handleContactEvent as EventListener);
+    window.addEventListener('sm-phone-contact-selected', handleContactEvent as EventListener);
+
+    return () => {
+      window.removeEventListener('sm-contact-selected', handleContactEvent as EventListener);
+      window.removeEventListener('sm-phone-contact-selected', handleContactEvent as EventListener);
+      try { delete nativeWindow.__setSaukiMartSelectedContact; } catch {}
+    };
+  }, [applySelectedContactPhone]);
+
   const openContactPicker = async () => {
     if (showContactCoach) {
       setShowContactCoach(false);
       try { localStorage.setItem('dataBuyContactCoachSeen', '1'); } catch {}
     }
-    if (typeof window !== 'undefined' && 'contacts' in navigator && typeof (navigator as any).contacts?.select === 'function') {
+
+    // First, try Web Contact Picker API (Android Chrome, Edge)
+    if (typeof window !== 'undefined' && 'contacts' in navigator) {
       try {
         const selected = await (navigator as any).contacts.select(['name', 'tel'], { multiple: false });
         if (selected?.length > 0) {
-          const raw: string = selected[0].tel?.[0] ?? '';
-          const tel = raw.replace(/\D/g, '').slice(-11);
-          if (tel.length > 0) setBuyPhone(tel.slice(0, 11));
-          return;
+          const phoneNumber: string = selected[0].tel?.[0]?.replace(/\D/g, '') ?? '';
+          if (phoneNumber && applySelectedContactPhone(phoneNumber)) {
+            return;
+          }
         }
-      } catch { /* user cancelled or permission denied */ }
+      } catch (err) {
+        console.log('Web Contact API unavailable or denied:', err);
+      }
     }
+
+    // Fall back to native bridges for Android
+    const nativeHost = window as Window & {
+      SaukiMartAndroid?: {
+        openContactPicker?: () => void;
+        pickPhoneContact?: () => void;
+        selectContact?: () => void;
+      };
+      Android?: {
+        openContactPicker?: () => void;
+        pickPhoneContact?: () => void;
+        selectContact?: () => void;
+      };
+      webkit?: {
+        messageHandlers?: {
+          saukiMartPickContact?: { postMessage?: (message: unknown) => void };
+        };
+      };
+    };
+
+    let nativePickerTriggered = false;
+    try { nativeHost.SaukiMartAndroid?.openContactPicker?.(); nativePickerTriggered = true; } catch {}
+    if (!nativePickerTriggered) {
+      try { nativeHost.SaukiMartAndroid?.pickPhoneContact?.(); nativePickerTriggered = true; } catch {}
+    }
+    if (!nativePickerTriggered) {
+      try { nativeHost.SaukiMartAndroid?.selectContact?.(); nativePickerTriggered = true; } catch {}
+    }
+    if (!nativePickerTriggered) {
+      try { nativeHost.Android?.openContactPicker?.(); nativePickerTriggered = true; } catch {}
+    }
+    if (!nativePickerTriggered) {
+      try { nativeHost.Android?.pickPhoneContact?.(); nativePickerTriggered = true; } catch {}
+    }
+    if (!nativePickerTriggered) {
+      try { nativeHost.Android?.selectContact?.(); nativePickerTriggered = true; } catch {}
+    }
+    if (!nativePickerTriggered) {
+      try {
+        nativeHost.webkit?.messageHandlers?.saukiMartPickContact?.postMessage?.({ type: 'pick-contact' });
+        nativePickerTriggered = true;
+      } catch {}
+    }
+
+    if (nativePickerTriggered) {
+      setTimeout(() => {
+        setContactPickerOpen((prev) => prev ? prev : true);
+      }, 1200);
+      return;
+    }
+
+    // Final fallback: show recent recipients
     try {
       const saved = localStorage.getItem('recentDataRecipients');
       if (saved) setRecentRecipients(JSON.parse(saved));
@@ -2536,28 +2634,32 @@ export default function AppPage() {
   const displayName = (user.firstName || '').trim() || 'Customer';
 
   const Header = () => (
-    <div style={{ padding:'8px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(255,255,255,.78)',borderBottom:'1px solid var(--border)',position:'fixed',top:0,left:0,right:0,zIndex:100,backdropFilter:'blur(16px)',backgroundImage: dark ? 'linear-gradient(180deg,rgba(4,8,16,.92),rgba(4,8,16,.78))' : 'linear-gradient(180deg,rgba(255,255,255,.84),rgba(255,255,255,.76))' }}>
-      <div style={{ display:'flex',alignItems:'center',gap:10,minWidth:0,flex:1 }}>
-        <img src="/images/logo-sm.png" alt="SaukiMart" style={{ height:36,width:'auto',borderRadius:8,flexShrink:0 }} />
-        <div style={{ display:'flex',flexDirection:'column',minWidth:0,justifyContent:'center',gap:3 }}>
-          <span style={{ fontSize:17,fontWeight:800,fontFamily:'-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,sans-serif',color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'34vw',letterSpacing:'-0.02em' }}>
-            {displayName}
-          </span>
-          <span style={{ fontSize:10,fontWeight:900,color:user?.isDeveloper ? '#FF6D00' : BLUE,background:user?.isDeveloper ? 'rgba(255,109,0,.15)' : 'rgba(0,113,227,.15)',border:user?.isDeveloper ? '1px solid rgba(255,109,0,.28)' : '1px solid rgba(0,113,227,.28)',borderRadius:6,padding:'2px 8px',whiteSpace:'nowrap',letterSpacing:'0.06em',textTransform:'uppercase',width:'fit-content' }}>
-            {user?.isDeveloper ? 'Developer' : 'User'}
+    <div style={{ padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(255,255,255,.82)',borderBottom:'1px solid var(--border)',position:'fixed',top:0,left:0,right:0,zIndex:100,backdropFilter:'blur(18px)',backgroundImage: dark ? 'linear-gradient(180deg,rgba(4,8,16,.94),rgba(4,8,16,.82))' : 'linear-gradient(180deg,rgba(255,255,255,.88),rgba(255,255,255,.80))',boxShadow: dark ? '0 4px 20px rgba(0,0,0,.35)' : '0 4px 16px rgba(0,0,0,.08)' }}>
+      <div style={{ display:'flex',alignItems:'center',gap:12,minWidth:0,flex:1 }}>
+        <div style={{ width:40,height:40,borderRadius:12,background:'linear-gradient(135deg,#0047CC,#0071E3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:'0 4px 12px rgba(0,113,227,.28)',border:'1px solid rgba(0,113,227,.4)' }}>
+          <img src="/images/logo-sm.png" alt="SaukiMart" style={{ height:24,width:'auto',borderRadius:6 }} />
+        </div>
+        <div style={{ display:'flex',flexDirection:'column',minWidth:0,justifyContent:'center',gap:4 }}>
+          <div style={{ display:'flex',alignItems:'center',gap:8,minWidth:0 }}>
+            <span style={{ fontSize:16,fontWeight:900,fontFamily:'-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,sans-serif',color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'28vw',letterSpacing:'-0.015em',background:'linear-gradient(135deg,var(--text),var(--text-secondary))',backgroundClip:'text',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent' }}>
+              {displayName}
+            </span>
+          </div>
+          <span style={{ fontSize:11,fontWeight:800,color:user?.isDeveloper ? '#FF8C42' : '#0071E3',background:user?.isDeveloper ? 'rgba(255,140,66,.12)' : 'rgba(0,113,227,.12)',border:user?.isDeveloper ? '0.5px solid rgba(255,140,66,.32)' : '0.5px solid rgba(0,113,227,.32)',borderRadius:6,padding:'3px 9px',whiteSpace:'nowrap',letterSpacing:'0.05em',textTransform:'uppercase',width:'fit-content',boxShadow: user?.isDeveloper ? '0 2px 6px rgba(255,140,66,.10)' : '0 2px 6px rgba(0,113,227,.10)' }}>
+            {user?.isDeveloper ? '⚡ Developer' : '👤 User'}
           </span>
         </div>
       </div>
-      <div style={{ display:'flex',alignItems:'center',gap:8,flexShrink:0 }}>
-        <button onClick={()=>updatePref('theme', dark?'light':'dark')} style={{ width:36,height:36,borderRadius:10,background:'var(--card2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,border:'1px solid var(--border)',boxShadow:'0 2px 8px rgba(0,0,0,.04)',transition:'all .2s',cursor:'pointer' }}
-          onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)'}}
-          onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.04)'}}>
-          {dark ? Icons.bell(ORANGE, 16) : Icons.sun(ORANGE, 16)}
+      <div style={{ display:'flex',alignItems:'center',gap:10,flexShrink:0 }}>
+        <button onClick={()=>updatePref('theme', dark?'light':'dark')} className="tactile-btn" style={{ width:40,height:40,borderRadius:12,background:'var(--card2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,border:'1px solid var(--border)',boxShadow:'0 3px 12px rgba(0,0,0,.08)',transition:'all .25s cubic-bezier(.34,.1,.64,.88)',cursor:'pointer' }}
+          onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 6px 20px rgba(0,0,0,.12)';e.currentTarget.style.transform='scale(1.08)'}}
+          onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 3px 12px rgba(0,0,0,.08)';e.currentTarget.style.transform='scale(1)'}}>
+          {dark ? Icons.bell(ORANGE, 17) : Icons.sun(ORANGE, 17)}
         </button>
-        <button onClick={()=>setScreen('profile')} style={{ display:'flex',alignItems:'center',boxShadow:'0 2px 8px rgba(0,0,0,.08)',borderRadius:10,transition:'all .2s',cursor:'pointer' }}
-          onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.12)';e.currentTarget.style.transform='scale(1.05)'}}
-          onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.08)';e.currentTarget.style.transform='scale(1)'}}>
-          <div style={{ width:36,height:36,borderRadius:10,background:BLUE,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:12 }}>
+        <button onClick={()=>setScreen('profile')} className="tactile-btn" style={{ display:'flex',alignItems:'center',boxShadow:'0 3px 12px rgba(0,113,227,.18)',borderRadius:12,transition:'all .25s cubic-bezier(.34,.1,.64,.88)',cursor:'pointer',border:'1.5px solid rgba(0,113,227,.22)' }}
+          onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 6px 20px rgba(0,113,227,.32)';e.currentTarget.style.transform='scale(1.08)'}}
+          onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 3px 12px rgba(0,113,227,.18)';e.currentTarget.style.transform='scale(1)'}}>
+          <div style={{ width:40,height:40,borderRadius:10,background:'linear-gradient(135deg,#0047CC,#0071E3)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:13,boxShadow:'inset 0 1px 0 rgba(255,255,255,.2)' }}>
             {getInitials(user)}
           </div>
         </button>
@@ -2588,12 +2690,19 @@ export default function AppPage() {
           const isShare = item.id === 'share';
           const isActive = active === item.id;
           return (
-            <button key={item.id} onClick={()=> isShare ? openShareModal() : setScreen(item.id as typeof screen)}
+            <button key={item.id} onClick={()=> {
+              if (isShare) {
+                if (showShareCoach) setShowShareCoach(false);
+                openShareModal();
+              } else {
+                setScreen(item.id as typeof screen);
+              }
+            }}
               style={{ padding:isShare?'0 0 12px':'12px 0 16px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,background:'none',borderTop: isActive ? `3px solid ${BLUE}` : 'none',paddingTop: isActive ? '9px' : (isShare ? '0' : '12px'),transition:'all .2s',opacity: isActive || isShare ? 1 : 0.65,cursor:'pointer' }}
               onMouseEnter={e=>{e.currentTarget.style.opacity='0.9'}}
               onMouseLeave={e=>{e.currentTarget.style.opacity = isActive || isShare ? '1' : '0.65'}}>
               {isShare ? (
-                <div ref={shareFabRef} style={{ width:54,height:54,borderRadius:999,marginTop:-18,background:'linear-gradient(135deg,#0047CC,#0071E3)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:showShareCoach?'0 14px 30px rgba(0,113,227,.5)':'0 12px 24px rgba(0,113,227,.35)',border:'3px solid var(--card)',animation:showShareCoach?'pulse 1.1s ease-in-out infinite':'none' }}>
+                <div ref={shareFabRef} style={{ width:54,height:54,borderRadius:999,marginTop:-18,background:'linear-gradient(135deg,#0047CC,#0071E3)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 12px 24px rgba(0,113,227,.35)',border:'3px solid var(--card)',animation:showShareCoach?'pulse 1.1s ease-in-out infinite':'none' }}>
                   {item.icon}
                 </div>
               ) : (
@@ -2618,20 +2727,7 @@ export default function AppPage() {
       {toast && <div className="fade-in" style={{ position:'fixed',top:60,left:'50%',transform:'translateX(-50%)',background:GREEN,color:'#fff',padding:'12px 24px',borderRadius:24,fontSize:15,fontWeight:600,zIndex:500,whiteSpace:'nowrap' }}>{toast}</div>}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
 
-      {showShareCoach && (
-        <div style={{ position:'fixed',inset:0,zIndex:560,background:'rgba(1,9,24,.48)',backdropFilter:'blur(6px)' }}>
-          <div style={{ position:'absolute',left:(shareFabAnchor?.x || 0) - 36,top:(shareFabAnchor?.y || 0) - 36,width:72,height:72,borderRadius:'50%',border:'2px solid rgba(90,200,250,.92)',boxShadow:'0 0 0 12px rgba(90,200,250,.15), 0 0 0 26px rgba(90,200,250,.08)',animation:'pulse 1.2s ease-in-out infinite',opacity:shareFabAnchor ? 1 : 0 }} />
-          <div style={{ position:'absolute',left:16,right:16,bottom:186,maxWidth:420,margin:'0 auto',background:dark?'#101A2D':'#FFFFFF',border:dark?'1px solid rgba(255,255,255,.12)':'1px solid rgba(0,0,0,.09)',borderRadius:16,padding:'16px 14px',boxShadow:dark?'0 18px 40px rgba(0,0,0,.45)':'0 16px 34px rgba(12,28,54,.16)' }}>
-            <div style={{ position:'absolute',left:'50%',transform:'translateX(-50%)',bottom:-8,width:16,height:16,background:dark?'#101A2D':'#FFFFFF',borderLeft:dark?'1px solid rgba(255,255,255,.12)':'1px solid rgba(0,0,0,.09)',borderBottom:dark?'1px solid rgba(255,255,255,.12)':'1px solid rgba(0,0,0,.09)',rotate:'-45deg' }} />
-            <p style={{ fontSize:13,fontWeight:900,color:BLUE,letterSpacing:'0.05em',textTransform:'uppercase',marginBottom:8 }}>Share SaukiMart</p>
-            <p style={{ fontSize:14,color:'var(--text)',lineHeight:1.55,marginBottom:14 }}>Please help us share SaukiMart on your WhatsApp status. Thank you.</p>
-            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
-              <button onClick={()=>setShowShareCoach(false)} style={{ height:40,borderRadius:11,border:'1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text)',fontSize:13,fontWeight:700 }}>Skip</button>
-              <button onClick={()=>{ setShowShareCoach(false); openShareModal(); }} style={{ height:40,borderRadius:11,border:'none',background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:13,fontWeight:800 }}>Share Now</button>
-            </div>
-          </div>
-        </div>
-      )}
+
       {redeemOpen && (
         <div style={{ position:'fixed',inset:0,zIndex:600,background:'rgba(0,0,0,.65)',display:'flex',alignItems:'center',justifyContent:'center',padding:16 }}>
           <div style={{ width:'100%',maxWidth:420,background:'var(--card)',borderRadius:24,padding:24,boxShadow:'0 28px 60px rgba(0,0,0,.35)' }}>
@@ -2689,11 +2785,15 @@ export default function AppPage() {
               <p style={{ color:'rgba(255,255,255,.6)',fontSize:9,fontWeight:800,margin:0 }}>Open Earn →</p>
             </button>
           </div>
-          {/* Account details: single line */}
-          <div style={{ background:'rgba(255,255,255,.1)',borderRadius:12,padding:'8px 10px',border:'1px solid rgba(255,255,255,.18)',position:'relative',zIndex:1,display:'flex',alignItems:'center',gap:8 }}>
-            <span style={{ color:'#FFFFFF',fontWeight:800,fontSize:13,fontFamily:'monospace',letterSpacing:'0.04em',flex:'0 0 auto' }}>Account Number: {user.accountNumber || 'N/A'}</span>
-            <span style={{ color:'rgba(255,255,255,.6)',fontSize:11,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>Bank: {user.bankName || 'No Bank'}</span>
-            <button onClick={() => { navigator.clipboard.writeText(user.accountNumber || ''); showToast('✓ Copied'); }} className="tactile-btn" style={{ background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.22)',borderRadius:999,padding:'5px 10px',cursor:'pointer',fontSize:10,fontWeight:800,color:'#FFFFFF',transition:'all .2s',flexShrink:0 }}>Copy</button>
+          {/* Account details: stacked rows */}
+          <div style={{ background:'rgba(255,255,255,.1)',borderRadius:12,padding:'10px 10px',border:'1px solid rgba(255,255,255,.18)',position:'relative',zIndex:1,display:'flex',flexDirection:'column',gap:8 }}>
+            <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+              <span style={{ color:'#FFFFFF',fontWeight:800,fontSize:12,fontFamily:'monospace',letterSpacing:'0.04em',flex:1,wordBreak:'break-word' }}>🔢 {user.accountNumber || 'N/A'}</span>
+              <button onClick={() => { navigator.clipboard.writeText(user.accountNumber || ''); showToast('✓ Copied'); }} className="tactile-btn" style={{ background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.22)',borderRadius:999,padding:'5px 10px',cursor:'pointer',fontSize:10,fontWeight:800,color:'#FFFFFF',transition:'all .2s',flexShrink:0 }}>Copy</button>
+            </div>
+            <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+              <span style={{ color:'rgba(255,255,255,.72)',fontSize:11,fontWeight:700 }}>🏦 {user.bankName || 'No Bank'}</span>
+            </div>
           </div>
         </div>
 
