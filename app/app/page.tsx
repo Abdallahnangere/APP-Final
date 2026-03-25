@@ -22,7 +22,17 @@ type Transaction = {
   productName?: string; createdAt: string; receipt?: Record<string,unknown>; amigoRef?: string;
 };
 type Deposit = { id: string; amount: number; senderName: string; createdAt: string; narration: string; };
-type Plan = { id: string; network: string; networkId: number; planId: number; dataSize: string; validity: string; price: number; };
+type Plan = {
+  id: string;
+  network: string;
+  networkId: number;
+  planId: number;
+  dataSize: string;
+  validity: string;
+  price: number;
+  efficiencyPercent?: number;
+  efficiencyLabel?: 'Excellent' | 'Good' | 'Fair';
+};
 type DeveloperPlan = {
   id: string;
   code: string;
@@ -3172,6 +3182,39 @@ export default function AppPage() {
                     <div>
                       <p style={{ fontWeight:800,fontSize:16,color:'var(--text)' }}>{plan.dataSize}</p>
                       <p style={{ color:'var(--text-secondary)',fontSize:13,marginTop:3 }}>{plan.validity}</p>
+                      {typeof plan.efficiencyPercent === 'number' && (
+                        <div
+                          style={{
+                            display:'inline-flex',
+                            alignItems:'center',
+                            gap:6,
+                            marginTop:7,
+                            padding:'4px 9px',
+                            borderRadius:999,
+                            fontSize:11,
+                            fontWeight:800,
+                            border: plan.efficiencyLabel === 'Excellent'
+                              ? '1px solid rgba(48,209,88,.35)'
+                              : plan.efficiencyLabel === 'Good'
+                                ? '1px solid rgba(0,113,227,.35)'
+                                : '1px solid rgba(255,159,10,.4)',
+                            background: plan.efficiencyLabel === 'Excellent'
+                              ? 'rgba(48,209,88,.12)'
+                              : plan.efficiencyLabel === 'Good'
+                                ? 'rgba(0,113,227,.12)'
+                                : 'rgba(255,159,10,.14)',
+                            color: plan.efficiencyLabel === 'Excellent'
+                              ? '#22A14A'
+                              : plan.efficiencyLabel === 'Good'
+                                ? BLUE
+                                : '#D97706',
+                            letterSpacing:'0.02em',
+                          }}
+                        >
+                          <span style={{ width:6,height:6,borderRadius:'50%',background:'currentColor' }} />
+                          <span>{plan.efficiencyLabel} {plan.efficiencyPercent.toFixed(1)}%</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div style={{ textAlign:'right' }}>

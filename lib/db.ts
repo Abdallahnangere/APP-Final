@@ -34,6 +34,63 @@ export const db = {
   },
 };
 
+async function seedDefaultDataPlans() {
+  await sql`
+    WITH seeded(network, network_id, plan_id, data_size, validity, selling_price, cost_price) AS (
+      VALUES
+        ('MTN', 1, 5000, '500MB', '30 days', 299.00, 299.00),
+        ('MTN', 1, 1001, '1GB', '30 days', 429.00, 429.00),
+        ('MTN', 1, 6666, '2GB', '30 days', 849.00, 849.00),
+        ('MTN', 1, 3333, '3GB', '30 days', 1329.00, 1329.00),
+        ('MTN', 1, 9999, '5GB', '30 days', 1799.00, 1799.00),
+        ('MTN', 1, 7777, '7GB', '30 days', 2499.00, 2499.00),
+        ('MTN', 1, 1110, '10GB', '30 days', 3899.00, 3899.00),
+        ('MTN', 1, 1515, '15GB', '30 days', 5690.00, 5690.00),
+        ('MTN', 1, 424, '20GB', '30 days', 7899.00, 7899.00),
+        ('MTN', 1, 379, '36GB', '30 days', 11900.00, 11900.00),
+        ('MTN', 1, 360, '75GB', '30 days', 18990.00, 18990.00),
+        ('GLO', 2, 218, '200MB', '30 days', 99.00, 99.00),
+        ('GLO', 2, 217, '500MB', '30 days', 199.00, 199.00),
+        ('GLO', 2, 206, '1GB', '30 days', 399.00, 399.00),
+        ('GLO', 2, 195, '2GB', '30 days', 799.00, 799.00),
+        ('GLO', 2, 196, '3GB', '30 days', 1199.00, 1199.00),
+        ('GLO', 2, 222, '5GB', '30 days', 1999.00, 1999.00),
+        ('GLO', 2, 512, '10GB', '30 days', 3990.00, 3990.00),
+        ('AIRTEL', 4, 539, '500MB', '7 days', 549.00, 549.00),
+        ('AIRTEL', 4, 400, '1GB', '30 days', 764.00, 764.00),
+        ('AIRTEL', 4, 401, '2GB', '30 days', 1430.00, 1430.00),
+        ('AIRTEL', 4, 532, '3GB', '30 days', 1950.00, 1950.00),
+        ('AIRTEL', 4, 391, '4GB', '30 days', 2419.00, 2419.00),
+        ('AIRTEL', 4, 392, '10GB', '30 days', 3899.00, 3899.00),
+        ('AIRTEL', 4, 405, '18GB', '30 days', 6450.00, 6450.00),
+        ('AIRTEL', 4, 404, '25GB', '30 days', 8499.00, 8499.00)
+    ),
+    updated AS (
+      UPDATE data_plans AS dp
+      SET
+        network = s.network,
+        data_size = s.data_size,
+        validity = s.validity,
+        selling_price = s.selling_price,
+        cost_price = s.cost_price,
+        is_active = TRUE
+      FROM seeded AS s
+      WHERE dp.network_id = s.network_id AND dp.plan_id = s.plan_id
+      RETURNING dp.network_id, dp.plan_id
+    )
+    INSERT INTO data_plans (network, network_id, plan_id, data_size, validity, selling_price, cost_price, is_active)
+    SELECT s.network, s.network_id, s.plan_id, s.data_size, s.validity, s.selling_price, s.cost_price, TRUE
+    FROM seeded AS s
+    LEFT JOIN updated AS u ON u.network_id = s.network_id AND u.plan_id = s.plan_id
+    WHERE u.network_id IS NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM data_plans AS dp
+        WHERE dp.network_id = s.network_id AND dp.plan_id = s.plan_id
+      );
+  `;
+}
+
 export async function initDB() {
   await sql`
     CREATE TABLE IF NOT EXISTS users (
@@ -239,5 +296,6 @@ export async function initDB() {
   `;
 
   const { ensureEarnSchema } = await import('@/lib/earn');
+  await seedDefaultDataPlans();
   await ensureEarnSchema();
 }

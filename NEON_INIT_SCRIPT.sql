@@ -174,35 +174,43 @@ INSERT INTO site_settings (key, value) VALUES
 ON CONFLICT (key) DO NOTHING;
 
 -- ==========================================
--- SEED 28 DATA PLANS (MTN, GLO, AIRTEL)
+-- SEED 26 DATA PLANS (MTN, GLO, AIRTEL)
 -- ==========================================
 
--- MTN Plans (7 plans)
+-- MTN Plans (11 plans)
 INSERT INTO data_plans (network, network_id, plan_id, data_size, validity, selling_price, cost_price) VALUES
-  ('MTN', 1, 5000, '500MB', '30 days', 350, 299),
-  ('MTN', 1, 1001, '1GB', '30 days', 500, 429),
-  ('MTN', 1, 6666, '2GB', '30 days', 950, 849),
-  ('MTN', 1, 3333, '3GB', '30 days', 1450, 1329),
-  ('MTN', 1, 9999, '5GB', '30 days', 1999, 1799),
-  ('MTN', 1, 7777, '7GB', '30 days', 2799, 2499),
-  ('MTN', 1, 1110, '10GB', '30 days', 4299, 3899);
+  ('MTN', 1, 5000, '500MB', '30 days', 299, 299),
+  ('MTN', 1, 1001, '1GB', '30 days', 429, 429),
+  ('MTN', 1, 6666, '2GB', '30 days', 849, 849),
+  ('MTN', 1, 3333, '3GB', '30 days', 1329, 1329),
+  ('MTN', 1, 9999, '5GB', '30 days', 1799, 1799),
+  ('MTN', 1, 7777, '7GB', '30 days', 2499, 2499),
+  ('MTN', 1, 1110, '10GB', '30 days', 3899, 3899),
+  ('MTN', 1, 1515, '15GB', '30 days', 5690, 5690),
+  ('MTN', 1, 424, '20GB', '30 days', 7899, 7899),
+  ('MTN', 1, 379, '36GB', '30 days', 11900, 11900),
+  ('MTN', 1, 360, '75GB', '30 days', 18990, 18990);
 
--- GLO Plans (6 plans)
+-- GLO Plans (7 plans)
 INSERT INTO data_plans (network, network_id, plan_id, data_size, validity, selling_price, cost_price) VALUES
-  ('GLO', 2, 218, '200MB', '30 days', 150, 99),
-  ('GLO', 2, 217, '500MB', '30 days', 250, 199),
-  ('GLO', 2, 206, '1GB', '30 days', 499, 399),
-  ('GLO', 2, 195, '2GB', '30 days', 999, 799),
-  ('GLO', 2, 196, '3GB', '30 days', 1399, 1199),
-  ('GLO', 2, 222, '5GB', '30 days', 2299, 1999);
+  ('GLO', 2, 218, '200MB', '30 days', 99, 99),
+  ('GLO', 2, 217, '500MB', '30 days', 199, 199),
+  ('GLO', 2, 206, '1GB', '30 days', 399, 399),
+  ('GLO', 2, 195, '2GB', '30 days', 799, 799),
+  ('GLO', 2, 196, '3GB', '30 days', 1199, 1199),
+  ('GLO', 2, 222, '5GB', '30 days', 1999, 1999),
+  ('GLO', 2, 512, '10GB', '30 days', 3990, 3990);
 
--- AIRTEL Plans (5 plans)
+-- AIRTEL Plans (8 plans)
 INSERT INTO data_plans (network, network_id, plan_id, data_size, validity, selling_price, cost_price) VALUES
-  ('AIRTEL', 4, 539, '500MB', '7 days', 649, 549),
-  ('AIRTEL', 4, 400, '1GB', '7 days', 849, 749),
-  ('AIRTEL', 4, 532, '3GB', '30 days', 2199, 1950),
-  ('AIRTEL', 4, 391, '4GB', '30 days', 2699, 2419),
-  ('AIRTEL', 4, 392, '10GB', '30 days', 4299, 3899);
+  ('AIRTEL', 4, 539, '500MB', '7 days', 549, 549),
+  ('AIRTEL', 4, 400, '1GB', '30 days', 764, 764),
+  ('AIRTEL', 4, 401, '2GB', '30 days', 1430, 1430),
+  ('AIRTEL', 4, 532, '3GB', '30 days', 1950, 1950),
+  ('AIRTEL', 4, 391, '4GB', '30 days', 2419, 2419),
+  ('AIRTEL', 4, 392, '10GB', '30 days', 3899, 3899),
+  ('AIRTEL', 4, 405, '18GB', '30 days', 6450, 6450),
+  ('AIRTEL', 4, 404, '25GB', '30 days', 8499, 8499);
 
 -- ==========================================
 -- VERIFICATION QUERIES
@@ -211,7 +219,7 @@ INSERT INTO data_plans (network, network_id, plan_id, data_size, validity, selli
 -- Verify all tables created
 SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename;
 
--- Verify data plans count (should be 18)
+-- Verify data plans count (should be 26)
 SELECT COUNT(*) as total_plans, network, COUNT(*) as per_network 
 FROM data_plans 
 GROUP BY network 
@@ -224,7 +232,7 @@ SELECT * FROM site_settings;
 -- SUMMARY
 -- ==========================================
 -- ✅ 12 tables created
--- ✅ 18 data plans seeded (7 MTN + 6 GLO + 5 AIRTEL)
+-- ✅ 26 data plans seeded (11 MTN + 7 GLO + 8 AIRTEL)
 -- ✅ 6 default site settings configured
 -- ✅ Ready for production!
 -- ==========================================
