@@ -2785,14 +2785,20 @@ export default function AppPage() {
               <p style={{ color:'rgba(255,255,255,.6)',fontSize:9,fontWeight:800,margin:0 }}>Open Earn →</p>
             </button>
           </div>
-          {/* Account details: stacked rows */}
-          <div style={{ background:'rgba(255,255,255,.1)',borderRadius:12,padding:'10px 10px',border:'1px solid rgba(255,255,255,.18)',position:'relative',zIndex:1,display:'flex',flexDirection:'column',gap:8 }}>
-            <div style={{ display:'flex',alignItems:'center',gap:8 }}>
-              <span style={{ color:'#FFFFFF',fontWeight:800,fontSize:12,fontFamily:'monospace',letterSpacing:'0.04em',flex:1,wordBreak:'break-word' }}>🔢 {user.accountNumber || 'N/A'}</span>
-              <button onClick={() => { navigator.clipboard.writeText(user.accountNumber || ''); showToast('✓ Copied'); }} className="tactile-btn" style={{ background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.22)',borderRadius:999,padding:'5px 10px',cursor:'pointer',fontSize:10,fontWeight:800,color:'#FFFFFF',transition:'all .2s',flexShrink:0 }}>Copy</button>
+          {/* Account details: two columns */}
+          <div style={{ background:'rgba(255,255,255,.1)',borderRadius:12,padding:'10px 10px',border:'1px solid rgba(255,255,255,.18)',position:'relative',zIndex:1,display:'flex',flexDirection:'column',gap:6 }}>
+            {/* Labels row */}
+            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
+              <span style={{ color:'rgba(255,255,255,.64)',fontSize:10,fontWeight:800,letterSpacing:'0.06em',textTransform:'uppercase' }}>Account Number</span>
+              <span style={{ color:'rgba(255,255,255,.64)',fontSize:10,fontWeight:800,letterSpacing:'0.06em',textTransform:'uppercase' }}>Bank Name</span>
             </div>
-            <div style={{ display:'flex',alignItems:'center',gap:8 }}>
-              <span style={{ color:'rgba(255,255,255,.72)',fontSize:11,fontWeight:700 }}>🏦 {user.bankName || 'No Bank'}</span>
+            {/* Values row */}
+            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,alignItems:'center' }}>
+              <div style={{ display:'flex',alignItems:'center',gap:6,minWidth:0 }}>
+                <span style={{ color:'#FFFFFF',fontWeight:800,fontSize:13,fontFamily:'monospace',letterSpacing:'0.04em',flex:1,wordBreak:'break-word' }}>{user.accountNumber || 'N/A'}</span>
+                <button onClick={() => { navigator.clipboard.writeText(user.accountNumber || ''); showToast('✓ Copied'); }} className="tactile-btn" style={{ background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.22)',borderRadius:999,padding:'4px 8px',cursor:'pointer',fontSize:9,fontWeight:800,color:'#FFFFFF',transition:'all .2s',flexShrink:0,whiteSpace:'nowrap' }}>Copy</button>
+              </div>
+              <span style={{ color:'rgba(255,255,255,.80)',fontSize:12,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{user.bankName || 'No Bank'}</span>
             </div>
           </div>
         </div>
