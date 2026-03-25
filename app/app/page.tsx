@@ -2543,73 +2543,73 @@ export default function AppPage() {
   if (screen === 'register') return (
     <>
       <GlobalStyle dark={dark} />
-      <div style={{ height:'100dvh',overflowY:'auto',background:`linear-gradient(135deg, ${dark?'#0a0a0a':'#fafafa'} 0%, ${dark?'#1a1a2e':'#f5f5f7'} 100%)` }}>
-        {/* Background decorations */}
-        <div style={{ position:'fixed',top:'-40%',right:'-15%',width:'350px',height:'350px',borderRadius:'50%',background:`radial-gradient(circle, ${BLUE}08, transparent)`,pointerEvents:'none' }} />
-        <div style={{ position:'fixed',bottom:'-20%',left:'-10%',width:'300px',height:'300px',borderRadius:'50%',background:`radial-gradient(circle, ${GREEN}06, transparent)`,pointerEvents:'none' }} />
-        
-        <div style={{ padding:'60px 24px 40px',maxWidth:420,margin:'0 auto',position:'relative',zIndex:1 }}>
-          <button onClick={()=>setScreen('login')} style={{ color:BLUE,fontSize:16,fontWeight:600,marginBottom:28,background:'none',border:'none',cursor:'pointer' }}>← Back</button>
-          
-          {/* Header */}
-          <div style={{ marginBottom:36,textAlign:'center',animation:'fadeUpScale .5s ease' }}>
-            <img src="/images/logo.png" alt="SaukiMart" style={{ width:52,height:52,borderRadius:14,objectFit:'cover',margin:'0 auto 16px',boxShadow:`0 8px 24px ${GREEN}40` }} />
-            <h1 style={{ fontSize:28,fontWeight:800,color:'var(--text)',letterSpacing:-0.6,marginBottom:8 }}>Create Account</h1>
-            <p style={{ color:'var(--text-secondary)',fontSize:16 }}>Begin your journey with SaukiMart</p>
-          </div>
-          
-          {error && <div style={{ width:'100%',padding:'12px 16px',borderRadius:14,background:'rgba(255,59,48,.12)',border:`1px solid ${RED}30`,color:RED,fontSize:15,marginBottom:20,animation:'fadeUpScale .3s ease' }}>{error}</div>}
-          
-          {/* Form */}
-          <div style={{ background:'var(--card)',borderRadius:18,padding:24,border:'1px solid var(--border)',boxShadow:'0 8px 32px rgba(0,0,0,.08)',marginBottom:24 }}>
-            {[
-            { key:'firstName', label:'First Name', placeholder:'Abubakar', type:'text' },
-            { key:'lastName', label:'Last Name', placeholder:'Musa', type:'text' },
-            { key:'phone', label:'Phone Number (11 digits)', placeholder:'08012345678', type:'tel' },
-            { key:'pin', label:'4-Digit PIN', placeholder:'••••', type:'password' },
-            { key:'confirmPin', label:'Confirm PIN', placeholder:'••••', type:'password' },
-            { key:'referralId', label:'Referral ID (Optional)', placeholder:'SMAB12CD34', type:'text' },
-          ].map((f,i) => (
-            <div key={f.key} style={{ marginBottom: i<5 ? 18 : 0 }}>
-              <label style={{ fontSize:13,fontWeight:700,color:'var(--text-secondary)',marginBottom:10,display:'block',textTransform:'uppercase',letterSpacing:.5 }}>{f.label}</label>
-              <input
-                type={f.type} value={regForm[f.key as keyof typeof regForm]} placeholder={f.placeholder}
-                inputMode={f.key==='phone'||f.key==='pin'||f.key==='confirmPin'?'numeric':undefined}
-                maxLength={f.key==='phone'?11:f.key==='pin'||f.key==='confirmPin'?4:f.key==='referralId'?12:undefined}
-                onChange={e => {
-                  const v = (f.key==='phone'||f.key==='pin'||f.key==='confirmPin')
-                    ? e.target.value.replace(/\D/g,'')
-                    : f.key === 'referralId'
-                      ? e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'')
-                      : e.target.value;
-                  setRegForm(prev => ({ ...prev, [f.key]: v }));
-                }}
-                style={{ width:'100%',padding:'14px 14px',borderRadius:10,background:'var(--bg-secondary)',border:'1px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:600,transition:'all .2s',outline:'none',boxSizing:'border-box' }}
-                onFocus={e=>{ e.currentTarget.style.borderColor = BLUE; e.currentTarget.style.background = dark?'#2a2a3e':'#fff'; }}
-                onBlur={e=>{ e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-              />
+      <div style={{ height:'100dvh',overflowY:'auto',background:`linear-gradient(135deg, ${BLUE} 0%, ${PURPLE} 50%, ${dark?'#1a1a2e':'#f5f5f7'} 100%)`,position:'relative' }}>
+        <div style={{ position:'fixed',top:'-20%',right:'-10%',width:'500px',height:'500px',borderRadius:'50%',background:'rgba(255,255,255,.08)',backdropFilter:'blur(40px)',pointerEvents:'none',animation:'float 20s ease-in-out infinite' }} />
+        <div style={{ position:'fixed',bottom:'-10%',left:'-15%',width:'420px',height:'420px',borderRadius:'50%',background:'rgba(90,200,250,.08)',backdropFilter:'blur(30px)',pointerEvents:'none',animation:'float 25s ease-in-out infinite reverse' }} />
+
+        <div style={{ width:'100%',maxWidth:420,margin:'0 auto',padding:'56px 24px 36px',position:'relative',zIndex:1 }}>
+          <button onClick={()=>setScreen('login')} style={{ color:'#fff',fontSize:16,fontWeight:700,marginBottom:24,background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.28)',cursor:'pointer',borderRadius:12,padding:'10px 12px',backdropFilter:'blur(10px)' }}>← Back</button>
+
+          <div style={{ marginBottom:24,textAlign:'center',animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) both' }}>
+            <div style={{ width:80,height:80,borderRadius:20,background:'rgba(255,255,255,.95)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 20px 60px rgba(0,0,0,.2)',margin:'0 auto 16px' }}>
+              <img src="/images/logo.png" alt="SaukiMart" style={{ width:58,height:58,borderRadius:16,objectFit:'cover',filter:'drop-shadow(0 10px 18px rgba(0,113,227,.18))' }} />
             </div>
-          ))}
+            <h1 style={{ fontSize:34,fontWeight:900,color:'#fff',letterSpacing:-0.8,marginBottom:10,textShadow:'0 2px 8px rgba(0,0,0,.2)' }}>Create Account</h1>
+            <p style={{ color:'rgba(255,255,255,.84)',fontSize:15,fontWeight:500 }}>Open your SaukiMart wallet in under 60 seconds</p>
           </div>
-          
-          {/* Terms checkbox */}
-          <div style={{ display:'flex',alignItems:'flex-start',gap:12,margin:'24px 0 28px',padding:'16px 14px',background:'var(--bg-secondary)',borderRadius:12,border:'1px solid var(--border)' }}>
-            <button onClick={()=>setAgreed(!agreed)} style={{ width:22,height:22,borderRadius:6,border:`2px solid ${agreed?BLUE:'var(--border)'}`,background:agreed?`linear-gradient(135deg, ${BLUE}, ${TEAL})`:' transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1,transition:'all .2s',cursor:'pointer' }}>
+
+          {error && <div style={{ width:'100%',padding:'14px 18px',borderRadius:14,background:'rgba(255,59,48,.2)',border:`1.5px solid ${RED}50`,color:'#fff',fontSize:14,fontWeight:600,marginBottom:20,animation:'fadeUpScale .3s ease',backdropFilter:'blur(10px)' }}>{error}</div>}
+
+          <div style={{ background:'rgba(255,255,255,.95)',backdropFilter:'blur(20px)',borderRadius:20,padding:24,border:'1px solid rgba(255,255,255,.2)',boxShadow:'0 8px 32px rgba(0,0,0,.1)',marginBottom:18,animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .1s both' }}>
+            {[
+              { key:'firstName', label:'First Name', placeholder:'Abubakar', type:'text', icon:'👤' },
+              { key:'lastName', label:'Last Name', placeholder:'Musa', type:'text', icon:'👤' },
+              { key:'phone', label:'Phone Number', placeholder:'08012345678', type:'tel', icon:'📱' },
+              { key:'pin', label:'4-Digit PIN', placeholder:'••••', type:'password', icon:'🔒' },
+              { key:'confirmPin', label:'Confirm PIN', placeholder:'••••', type:'password', icon:'🔐' },
+              { key:'referralId', label:'Referral ID (Optional)', placeholder:'SMAB12CD34', type:'text', icon:'🎁' },
+            ].map((f, i) => (
+              <div key={f.key} style={{ marginBottom:i < 5 ? 16 : 0 }}>
+                <label style={{ fontSize:12,fontWeight:700,color:'#6C6C70',marginBottom:10,display:'block',textTransform:'uppercase',letterSpacing:.5 }}>{f.icon} {f.label}</label>
+                <input
+                  type={f.type}
+                  value={regForm[f.key as keyof typeof regForm]}
+                  placeholder={f.placeholder}
+                  inputMode={f.key==='phone'||f.key==='pin'||f.key==='confirmPin'?'numeric':undefined}
+                  maxLength={f.key==='phone'?11:f.key==='pin'||f.key==='confirmPin'?4:f.key==='referralId'?12:undefined}
+                  onChange={e => {
+                    const v = (f.key==='phone'||f.key==='pin'||f.key==='confirmPin')
+                      ? e.target.value.replace(/\D/g,'')
+                      : f.key === 'referralId'
+                        ? e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'')
+                        : e.target.value;
+                    setRegForm(prev => ({ ...prev, [f.key]: v }));
+                  }}
+                  style={{ width:'100%',padding:'14px 0',borderRadius:0,background:'transparent',border:'none',color:'#1D1D1F',fontSize:16,fontWeight:700,outline:'none',boxSizing:'border-box',borderBottom:`2px solid ${regForm[f.key as keyof typeof regForm] ? BLUE : '#E5E5EA'}` }}
+                  onFocus={e=>{ e.currentTarget.style.borderBottomColor = BLUE; }}
+                  onBlur={e=>{ e.currentTarget.style.borderBottomColor = regForm[f.key as keyof typeof regForm] ? BLUE : '#E5E5EA'; }}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display:'flex',alignItems:'flex-start',gap:12,margin:'0 0 18px',padding:'14px 14px',background:'rgba(255,255,255,.16)',borderRadius:12,border:'1px solid rgba(255,255,255,.3)',backdropFilter:'blur(10px)',animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .15s both' }}>
+            <button onClick={()=>setAgreed(!agreed)} style={{ width:22,height:22,borderRadius:6,border:`2px solid ${agreed ? '#fff' : 'rgba(255,255,255,.55)'}`,background:agreed?`linear-gradient(135deg, ${BLUE}, ${TEAL})`:'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1,cursor:'pointer' }}>
               {agreed && <span style={{ color:'#fff',fontSize:12,fontWeight:900 }}>✓</span>}
             </button>
-            <p style={{ fontSize:14,color:'var(--text-secondary)',lineHeight:1.6 }}>
-              I agree to SaukiMart's{' '}
-              <a href="/privacy" style={{ color:BLUE,fontWeight:600 }}>Terms</a> and{' '}
-              <a href="/privacy" style={{ color:BLUE,fontWeight:600 }}>Privacy Policy</a>
+            <p style={{ fontSize:13,color:'rgba(255,255,255,.86)',lineHeight:1.6 }}>
+              I agree to SaukiMart's <a href="/privacy" style={{ color:'#fff',fontWeight:700,textDecoration:'underline' }}>Terms</a> and <a href="/privacy" style={{ color:'#fff',fontWeight:700,textDecoration:'underline' }}>Privacy Policy</a>
             </p>
           </div>
-          
-          {/* Buttons */}
-          <button onClick={handleRegister} disabled={!agreed||loading}
-            style={{ width:'100%',padding:'16px',borderRadius:12,background:agreed&&!loading?`linear-gradient(135deg, ${GREEN}, ${TEAL})`:'var(--card2)',color:agreed&&!loading?'#fff':'var(--text-secondary)',fontSize:16,fontWeight:700,transition:'all .3s cubic-bezier(.16,.1,0,1)',marginBottom:16,boxShadow:agreed&&!loading?`0 12px 32px ${GREEN}40`:'none',cursor:agreed&&!loading?'pointer':'not-allowed',border:'none' }}>
+
+          <button onClick={handleRegister} disabled={!agreed || loading}
+            style={{ width:'100%',padding:'16px',borderRadius:14,background:agreed&&!loading?`linear-gradient(135deg, ${BLUE}, ${TEAL})`:'rgba(255,255,255,.2)',color:agreed&&!loading?'#fff':'rgba(255,255,255,.55)',fontSize:16,fontWeight:700,transition:'all .3s',marginBottom:14,boxShadow:agreed&&!loading?`0 12px 32px ${BLUE}60`:'none',cursor:agreed&&!loading?'pointer':'not-allowed',border:'none',textShadow:'0 1px 2px rgba(0,0,0,.1)',backdropFilter:'blur(20px)',animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .2s both' }}>
             {loading ? 'Creating account…' : 'Create Account'}
           </button>
-          <button onClick={()=>setScreen('login')} style={{ width:'100%',color:BLUE,fontSize:15,fontWeight:600,background:'none',border:'none',cursor:'pointer' }}>Already have an account? Sign In</button>
+
+          <button onClick={()=>setScreen('login')} style={{ width:'100%',padding:'14px',borderRadius:14,background:'rgba(255,255,255,.15)',color:'#fff',fontSize:15,fontWeight:600,border:'1px solid rgba(255,255,255,.3)',cursor:'pointer',backdropFilter:'blur(20px)',animation:'slideUp .6s cubic-bezier(.34,.1,.68,.55) .24s both' }}>
+            Already have an account? Sign In
+          </button>
         </div>
       </div>
     </>
