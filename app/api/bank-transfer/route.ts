@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { verifyPin, generateReceiptRef } from '@/lib/utils';
-import { initiateTransfer } from '@/lib/flutterwave';
+import { getBalances, initiateTransfer } from '@/lib/flutterwave';
 import {
   BANK_TRANSFER_DAILY_LIMIT,
   BANK_TRANSFER_HOURLY_LIMIT_COUNT,
@@ -10,6 +10,7 @@ import {
   BANK_TRANSFER_MIN_AMOUNT,
   BANK_TRANSFER_SERVICE_CHARGE,
   ensureBankTransferSchema,
+  isTemporaryTransferError,
   mapTransferStatus,
   normalizeTransferError,
 } from '@/lib/bankTransfer';
@@ -60,6 +61,23 @@ export async function POST(req: NextRequest) {
     if (!bank) return NextResponse.json({ error: 'Selected bank is not supported' }, { status: 400 });
 
     totalDeducted = Number((amount + BANK_TRANSFER_SERVICE_CHARGE).toFixed(2));
+
+    const balanceRes = await getBalances();
+    const balances = Array.isArray(balanceRes?.data) ? balanceRes.data : [];
+    const ngn = balances.find((row: Record<string, unknown>) => String(row.currency || '').toUpperCase() === 'NGN');
+    const availableProviderBalance = Number(ngn?.available_balance || 0);
+
+    if (isTemporaryTransferError(balanceRes?.message, balanceRes)) {
+      return NextResponse.json({
+        error: 'Transfer service is temporarily unavailable. Please try again shortly.',
+      }, { status: 503 });
+    }
+
+    if (!ngn || availableProviderBalance < amount) {
+      return NextResponse.json({
+        error: 'Bank transfer is temporarily unavailable. Please try again shortly.',
+      }, { status: 503 });
+    }
 
     const [daily] = await sql`
       SELECT COALESCE(SUM(amount), 0) AS daily_amount
@@ -204,6 +222,7 @@ export async function POST(req: NextRequest) {
     const providerOk = String(flw?.status || '').toLowerCase() === 'success' && !!flw?.data;
     if (!providerOk) {
       const providerError = normalizeTransferError(flw?.message);
+      const responseStatus = isTemporaryTransferError(flw?.message, flw) ? 503 : 400;
 
       await sql`
         UPDATE users
@@ -237,7 +256,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         error: `Transfer failed: ${providerError}. Amount refunded to your wallet.`,
-      }, { status: 400 });
+      }, { status: responseStatus });
     }
 
     const mappedStatus = mapTransferStatus(flw.data.status);
@@ -309,6 +328,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     const message = normalizeTransferError(err instanceof Error ? err.message : 'Transfer failed');
+    const responseStatus = isTemporaryTransferError(err instanceof Error ? err.message : '', err) ? 503 : 500;
     console.error('Bank transfer error:', err);
 
     if (debited && payload?.userId && totalDeducted > 0) {
@@ -346,6 +366,6 @@ export async function POST(req: NextRequest) {
       `;
     }
 
-    return NextResponse.json({ error: `${message}. Amount refunded to your wallet.` }, { status: 500 });
+    return NextResponse.json({ error: `${message}. Amount refunded to your wallet.` }, { status: responseStatus });
   }
 }

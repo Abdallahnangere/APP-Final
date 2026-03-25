@@ -72,3 +72,22 @@ export function normalizeTransferError(message: unknown) {
   if (lower.includes('service unavailable')) return 'Transfer service is temporarily unavailable. Please try again shortly.';
   return raw;
 }
+
+export function isTemporaryTransferError(message: unknown, response?: unknown) {
+  const normalized = normalizeTransferError(message).toLowerCase();
+  const responseRecord = response && typeof response === 'object' ? response as Record<string, unknown> : null;
+  const raw = String(responseRecord?.raw || '').toLowerCase();
+  const statusCode = Number(responseRecord?.statusCode || 0);
+
+  if (statusCode >= 500) return true;
+  if (statusCode === 401 || statusCode === 403 || statusCode === 429) return true;
+  if (normalized.includes('temporarily unavailable')) return true;
+  if (normalized.includes('service unavailable')) return true;
+  if (normalized.includes('timed out')) return true;
+  if (normalized.includes('network error')) return true;
+  if (normalized.includes('provider returned invalid json')) return true;
+  if (raw.includes('ip whitelisting')) return true;
+  if (raw.includes('service unavailable')) return true;
+
+  return false;
+}

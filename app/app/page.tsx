@@ -258,6 +258,10 @@ const GlobalStyle = ({ dark }: { dark: boolean }) => (
     @keyframes softPulse{0%,100%{transform:scale(1);opacity:.08}50%{transform:scale(1.06);opacity:.14}}
     @keyframes listRise{0%{opacity:0;transform:translateY(10px) scale(.992)}100%{opacity:1;transform:translateY(0) scale(1)}}
     .slide-up{animation:slideUp .32s cubic-bezier(.32,.72,0,1) both}
+      @keyframes coachPop{0%{opacity:0;transform:translateY(8px) scale(.85)}100%{opacity:1;transform:translateY(0) scale(1)}}
+      @keyframes coachRing{0%,100%{box-shadow:0 0 0 0 rgba(0,113,227,.6),0 4px 14px rgba(0,113,227,.22)}65%{box-shadow:0 0 0 9px rgba(0,113,227,.0),0 4px 14px rgba(0,113,227,.22)}}
+      @keyframes coachBadgePop{0%{opacity:0;transform:scale(.55) rotate(-10deg)}70%{transform:scale(1.14) rotate(3deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+      .contact-btn-coach{animation:coachRing 1.8s ease-in-out infinite !important;background:linear-gradient(135deg,#0047CC,#0071E3) !important;border-color:transparent !important}
     .fade-in{animation:fadeIn .2s ease both}
     .fade-up-scale{animation:fadeUpScale .4s cubic-bezier(.16,.1,0,1) both}
     .receipt-shell{animation:sheetRise .36s cubic-bezier(.16,.84,.25,1) both}
@@ -863,6 +867,9 @@ export default function AppPage() {
   const [selectedNetwork, setSelectedNetwork] = useState<typeof NETWORKS[0]|null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan|null>(null);
   const [buyPhone, setBuyPhone] = useState('');
+    const [contactPickerOpen, setContactPickerOpen] = useState(false);
+    const [recentRecipients, setRecentRecipients] = useState<string[]>([]);
+    const [showContactCoach, setShowContactCoach] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product|null>(null);
 
   // UI states
@@ -986,6 +993,67 @@ export default function AppPage() {
     setShareModalGuardUntil(Date.now() + 280);
   }, []);
 
+  const requestNativeFcmToken = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const nativeHost = window as Window & {
+      SaukiMartAndroid?: {
+        requestFcmToken?: () => void;
+        getFcmToken?: () => string | null;
+        onLoginSuccess?: () => void;
+      };
+      Android?: {
+        requestFcmToken?: () => void;
+        getFcmToken?: () => string | null;
+        onLoginSuccess?: () => void;
+      };
+      webkit?: {
+        messageHandlers?: {
+          saukiMartRequestFcmToken?: { postMessage?: (message: unknown) => void };
+        };
+      };
+    };
+
+    try { nativeHost.SaukiMartAndroid?.onLoginSuccess?.(); } catch {}
+    try { nativeHost.Android?.onLoginSuccess?.(); } catch {}
+    try { nativeHost.SaukiMartAndroid?.requestFcmToken?.(); } catch {}
+    try { nativeHost.Android?.requestFcmToken?.(); } catch {}
+    try { nativeHost.webkit?.messageHandlers?.saukiMartRequestFcmToken?.postMessage?.({ type: 'request-fcm-token' }); } catch {}
+
+    try {
+      const token = nativeHost.SaukiMartAndroid?.getFcmToken?.() || nativeHost.Android?.getFcmToken?.();
+      if (token && token.length >= 20) {
+        localStorage.setItem('sm_fcm_token', token);
+      }
+    } catch {}
+  }, []);
+
+  const syncPushTokenToBackend = useCallback(async (authTokenOverride?: string, tokenOverride?: string) => {
+    const authToken = authTokenOverride || localStorage.getItem('sm_token') || token;
+    const devicePushToken = tokenOverride
+      || localStorage.getItem('sm_fcm_token')
+      || localStorage.getItem('sm_push_token')
+      || localStorage.getItem('device_push_token');
+
+    if (!authToken || !devicePushToken || devicePushToken.length < 20) return;
+
+    try {
+      await fetch('/api/push-token', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token: devicePushToken,
+          platform: 'android',
+          appVersion: 'webview',
+        }),
+      });
+    } catch {
+      // Silent: this should not block auth/screen transitions.
+    }
+  }, [token]);
+
   const markShareCompleted = useCallback(() => {
     if (typeof window !== 'undefined') localStorage.setItem('sm_share_completed', '1');
     setShowShareCoach(false);
@@ -1033,6 +1101,53 @@ export default function AppPage() {
     window.addEventListener('popstate', handleBackButton);
     return () => window.removeEventListener('popstate', handleBackButton);
   }, [goBack]);
+
+  useEffect(() => {
+    const handlePushToken = (value: unknown) => {
+      const raw = typeof value === 'string'
+        ? value
+        : typeof value === 'object' && value !== null && 'token' in (value as Record<string, unknown>)
+        ? String((value as Record<string, unknown>).token || '')
+        : '';
+      const resolved = raw.trim();
+      if (!resolved || resolved.length < 20) return;
+      localStorage.setItem('sm_fcm_token', resolved);
+      void syncPushTokenToBackend(undefined, resolved);
+    };
+
+    const onCustom = (event: Event) => {
+      handlePushToken((event as CustomEvent).detail);
+    };
+
+    const nativeWindow = window as Window & {
+      __setSaukiMartFcmToken?: (value: string) => void;
+    };
+
+    nativeWindow.__setSaukiMartFcmToken = (value: string) => {
+      handlePushToken(value);
+    };
+
+    window.addEventListener('sm-fcm-token-available', onCustom as EventListener);
+    window.addEventListener('sm-push-token-available', onCustom as EventListener);
+
+    return () => {
+      window.removeEventListener('sm-fcm-token-available', onCustom as EventListener);
+      window.removeEventListener('sm-push-token-available', onCustom as EventListener);
+      try { delete nativeWindow.__setSaukiMartFcmToken; } catch {}
+    };
+  }, [syncPushTokenToBackend]);
+
+  useEffect(() => {
+    if (!token) return;
+    requestNativeFcmToken();
+    void syncPushTokenToBackend();
+    const t1 = setTimeout(() => { requestNativeFcmToken(); void syncPushTokenToBackend(); }, 500);
+    const t2 = setTimeout(() => { void syncPushTokenToBackend(); }, 1800);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [token, requestNativeFcmToken, syncPushTokenToBackend]);
 
   // Initialize database on app load
   useEffect(() => {
@@ -1454,6 +1569,20 @@ export default function AppPage() {
 
   // Note: Chat system removed. Will be replaced with alternative solution.
 
+  useEffect(() => {
+    if (screen === 'data-networks' || screen === 'data-phone') {
+      try {
+        const seen = localStorage.getItem('dataBuyContactCoachSeen');
+        if (!seen) setTimeout(() => setShowContactCoach(true), 700);
+        const saved = localStorage.getItem('recentDataRecipients');
+        if (saved) setRecentRecipients(JSON.parse(saved));
+      } catch {}
+    } else {
+      setShowContactCoach(false);
+    }
+  }, [screen]);
+
+
   /* ── REGISTER ── */
   const handleRegister = async () => {
     if (!agreed) return;
@@ -1497,6 +1626,92 @@ export default function AppPage() {
   };
 
   /* ── BUY DATA ── */
+  /* ── CONTACT PICKER ── */
+  const openContactPicker = async () => {
+    if (showContactCoach) {
+      setShowContactCoach(false);
+      try { localStorage.setItem('dataBuyContactCoachSeen', '1'); } catch {}
+    }
+    if (typeof window !== 'undefined' && 'contacts' in navigator && typeof (navigator as any).contacts?.select === 'function') {
+      try {
+        const selected = await (navigator as any).contacts.select(['name', 'tel'], { multiple: false });
+        if (selected?.length > 0) {
+          const raw: string = selected[0].tel?.[0] ?? '';
+          const tel = raw.replace(/\D/g, '').slice(-11);
+          if (tel.length > 0) setBuyPhone(tel.slice(0, 11));
+          return;
+        }
+      } catch { /* user cancelled or permission denied */ }
+    }
+    try {
+      const saved = localStorage.getItem('recentDataRecipients');
+      if (saved) setRecentRecipients(JSON.parse(saved));
+    } catch {}
+    setContactPickerOpen(true);
+  };
+
+  const renderContactPickerSheet = () => (
+    contactPickerOpen && (
+      <div onClick={()=>setContactPickerOpen(false)} style={{ position:'fixed',inset:0,zIndex:8000,background:'rgba(0,0,0,0.55)',backdropFilter:'blur(5px)',WebkitBackdropFilter:'blur(5px)',display:'flex',flexDirection:'column',justifyContent:'flex-end' }}>
+        <div onClick={e=>e.stopPropagation()} style={{ background:'var(--card)',borderRadius:'24px 24px 0 0',paddingBottom:44,boxShadow:'0 -16px 60px rgba(0,0,0,.28)',animation:'sheetRise .35s cubic-bezier(.32,.72,0,1) both',maxHeight:'72vh',display:'flex',flexDirection:'column' }}>
+          <div style={{ padding:'14px 0 0',display:'flex',justifyContent:'center' }}>
+            <div style={{ width:40,height:4,borderRadius:4,background:'var(--border)',opacity:.7 }} />
+          </div>
+          <div style={{ padding:'14px 20px 14px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid var(--border-subtle)' }}>
+            <div>
+              <h3 style={{ fontSize:18,fontWeight:900,color:'var(--text)',letterSpacing:-0.3 }}>Recent Recipients</h3>
+              <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:3 }}>Tap a number to fill it in automatically</p>
+            </div>
+            <button onClick={()=>setContactPickerOpen(false)} style={{ width:32,height:32,borderRadius:10,background:'var(--bg-secondary)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round"/></svg>
+            </button>
+          </div>
+          <div style={{ flex:1,overflowY:'auto',padding:'8px 16px 0' }}>
+            {recentRecipients.length === 0 ? (
+              <div style={{ textAlign:'center',padding:'36px 20px' }}>
+                <div style={{ width:64,height:64,borderRadius:20,background:'rgba(0,113,227,.07)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px' }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={BLUE} strokeWidth="2" strokeLinecap="round"/>
+                    <circle cx="9" cy="7" r="4" stroke={BLUE} strokeWidth="2"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke={BLUE} strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <p style={{ fontSize:14,fontWeight:700,color:'var(--text)',marginBottom:6 }}>No recent recipients</p>
+                <p style={{ fontSize:13,color:'var(--text-secondary)',lineHeight:1.55 }}>Numbers you buy data for will<br/>appear here for quick access.</p>
+              </div>
+            ) : (
+              <div style={{ display:'flex',flexDirection:'column',gap:2,paddingTop:4 }}>
+                {recentRecipients.map((num, idx) => (
+                  <button key={num} onClick={()=>{ setBuyPhone(num); setContactPickerOpen(false); }} className="haptic-pulse"
+                    style={{ display:'flex',alignItems:'center',gap:14,padding:'12px 8px',borderRadius:14,background:'none',border:'none',cursor:'pointer',width:'100%',textAlign:'left',transition:'background .15s' }}>
+                    <div style={{ width:44,height:44,borderRadius:14,background:idx===0?'rgba(0,113,227,.1)':'rgba(0,113,227,.05)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={BLUE} strokeWidth="2" strokeLinecap="round"/>
+                        <circle cx="9" cy="7" r="4" stroke={BLUE} strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <p style={{ fontSize:16,fontWeight:700,color:'var(--text)',letterSpacing:'0.03em' }}>{num}</p>
+                      <p style={{ fontSize:12,color:'var(--text-secondary)',marginTop:2 }}>{idx===0?'Most recent':'Recent purchase'}</p>
+                    </div>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div style={{ padding:'14px 16px 0',borderTop:'1px solid var(--border-subtle)',marginTop:6 }}>
+            <button onClick={()=>setContactPickerOpen(false)} className="tactile-btn"
+              style={{ width:'100%',padding:'14px',borderRadius:14,background:'var(--bg-secondary)',color:'var(--text)',fontWeight:700,fontSize:15,border:'none',cursor:'pointer' }}>
+              Enter number manually
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  );
+
+  /* ── BUY DATA ── */
   const handleBuyData = async (pin: string) => {
     if (!selectedPlan || !buyPhone) return;
     setIsBuyingData(true);
@@ -1516,6 +1731,12 @@ export default function AppPage() {
       }
       setReceipt({ ...data.receipt, type:'data' });
       setPurchaseIdempotencyKey(null); // Clear for next purchase
+        try {
+          const prev: string[] = JSON.parse(localStorage.getItem('recentDataRecipients') || '[]');
+          const updated = [buyPhone, ...prev.filter(n => n !== buyPhone)].slice(0, 8);
+          localStorage.setItem('recentDataRecipients', JSON.stringify(updated));
+          setRecentRecipients(updated);
+        } catch {}
       await refreshUser();
       await loadHomeData();
       playSound('cash');
@@ -2470,8 +2691,8 @@ export default function AppPage() {
           </div>
           {/* Account details: single line */}
           <div style={{ background:'rgba(255,255,255,.1)',borderRadius:12,padding:'8px 10px',border:'1px solid rgba(255,255,255,.18)',position:'relative',zIndex:1,display:'flex',alignItems:'center',gap:8 }}>
-            <span style={{ color:'#FFFFFF',fontWeight:800,fontSize:13,fontFamily:'monospace',letterSpacing:'0.04em',flex:'0 0 auto' }}>{user.accountNumber || 'N/A'}</span>
-            <span style={{ color:'rgba(255,255,255,.6)',fontSize:11,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{user.bankName || 'No Bank'}</span>
+            <span style={{ color:'#FFFFFF',fontWeight:800,fontSize:13,fontFamily:'monospace',letterSpacing:'0.04em',flex:'0 0 auto' }}>Account Number: {user.accountNumber || 'N/A'}</span>
+            <span style={{ color:'rgba(255,255,255,.6)',fontSize:11,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>Bank: {user.bankName || 'No Bank'}</span>
             <button onClick={() => { navigator.clipboard.writeText(user.accountNumber || ''); showToast('✓ Copied'); }} className="tactile-btn" style={{ background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.22)',borderRadius:999,padding:'5px 10px',cursor:'pointer',fontSize:10,fontWeight:800,color:'#FFFFFF',transition:'all .2s',flexShrink:0 }}>Copy</button>
           </div>
         </div>
@@ -2667,15 +2888,39 @@ export default function AppPage() {
         </div>
         <div style={{ flex:1,overflowY:'auto',padding:'12px 16px 16px' }}>
           <div style={{ width:'100%',background:'var(--card)',border:'1px solid var(--border)',borderRadius:16,padding:'12px 14px',boxShadow:dark ? '0 8px 18px rgba(0,0,0,.18)' : '0 8px 18px rgba(12,28,54,.06)',marginBottom:10 }}>
-            <label style={{ display:'block',fontSize:11,fontWeight:800,color:'var(--text-secondary)',marginBottom:6,letterSpacing:'0.06em',textTransform:'uppercase' }}>Recipient Number</label>
-            <input
-              value={buyPhone}
-              onChange={e=>setBuyPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
-              placeholder="Enter 11-digit phone number"
-              inputMode="numeric"
-              maxLength={11}
-              style={{ width:'100%',padding:'13px 12px',borderRadius:12,background:'var(--bg-secondary)',border:'1.5px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:700,letterSpacing:'0.04em' }}
-            />
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6 }}>
+              <label style={{ fontSize:11,fontWeight:800,color:'var(--text-secondary)',letterSpacing:'0.06em',textTransform:'uppercase' }}>Recipient Number</label>
+              {showContactCoach && <div style={{ background:'linear-gradient(135deg,#0047CC,#0071E3)',color:'#fff',fontSize:9,fontWeight:900,padding:'2px 8px',borderRadius:20,letterSpacing:'0.05em',animation:'coachBadgePop 0.5s cubic-bezier(0.34,1.56,0.64,1) both',whiteSpace:'nowrap' }}>✨ NEW</div>}
+            </div>
+            <div style={{ position:'relative' }}>
+              <input
+                value={buyPhone}
+                onChange={e=>setBuyPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
+                placeholder="Enter 11-digit phone number"
+                inputMode="numeric"
+                maxLength={11}
+                style={{ width:'100%',padding:'13px 52px 13px 12px',borderRadius:12,background:'var(--bg-secondary)',border:'1.5px solid var(--border)',color:'var(--text)',fontSize:16,fontWeight:700,letterSpacing:'0.04em' }}
+              />
+              <button
+                onClick={openContactPicker}
+                className={showContactCoach ? 'contact-btn-coach' : ''}
+                style={{ position:'absolute',right:7,top:'50%',transform:'translateY(-50%)',width:36,height:36,borderRadius:10,background:showContactCoach ? 'linear-gradient(135deg,#0047CC,#0071E3)' : 'var(--card)',border:showContactCoach ? 'none' : '1.5px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',transition:'all .2s ease',zIndex:2,flexShrink:0 }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={showContactCoach ? '#fff' : BLUE} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="9" cy="7" r="4" stroke={showContactCoach ? '#fff' : BLUE} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke={showContactCoach ? '#fff' : BLUE} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke={showContactCoach ? '#fff' : BLUE} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              {showContactCoach && (
+                <div style={{ position:'absolute',top:'calc(100% + 12px)',right:0,background:dark?'#1D1D1F':'#FFFFFF',border:'1.5px solid rgba(0,113,227,.25)',borderRadius:16,padding:'12px 16px',zIndex:400,boxShadow:dark?'0 10px 36px rgba(0,0,0,.55)':'0 10px 36px rgba(0,113,227,.22)',animation:'coachPop 0.45s cubic-bezier(0.34,1.56,0.64,1) both',minWidth:210,maxWidth:270 }}>
+                  <div style={{ position:'absolute',top:-7,right:13,width:13,height:13,background:dark?'#1D1D1F':'#FFFFFF',border:'1.5px solid rgba(0,113,227,.25)',transform:'rotate(45deg)',borderBottom:'none',borderRight:'none' }} />
+                  <p style={{ fontSize:13,fontWeight:800,color:'var(--text)',marginBottom:4 }}>📒 Pick from Contacts</p>
+                  <p style={{ fontSize:12,color:'var(--text-secondary)',lineHeight:1.55 }}>Tap the icon to select a contact or pick from your recent purchases.</p>
+                  <button onClick={()=>{ setShowContactCoach(false); try{localStorage.setItem('dataBuyContactCoachSeen','1')}catch{} }} style={{ marginTop:9,fontSize:12,fontWeight:700,color:BLUE,background:'none',border:'none',cursor:'pointer',padding:0 }}>Got it ✓</button>
+                </div>
+              )}
+            </div>
             <div style={{ display:'flex',justifyContent:'space-between',fontSize:11,color:'var(--text-secondary)',marginTop:5 }}>
               <span>Format: 08012345678</span>
               <span>{buyPhone.length}/11</span>
@@ -2720,6 +2965,7 @@ export default function AppPage() {
           </button>
         </div>
       </div>
+      {renderContactPickerSheet()}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
     </>
   );
@@ -2752,9 +2998,21 @@ export default function AppPage() {
           </div>
           <div style={{ width:'100%',background:'var(--card)',border:'1px solid var(--border)',borderRadius:22,padding:'18px',boxShadow:dark ? '0 14px 34px rgba(0,0,0,.22)' : '0 14px 34px rgba(12,28,54,.08)' }}>
             <label style={{ display:'block',fontSize:12,fontWeight:800,color:'var(--text-secondary)',marginBottom:10,letterSpacing:'0.08em',textTransform:'uppercase' }}>Phone number</label>
-            <input value={buyPhone} onChange={e=>setBuyPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
-              placeholder="Enter 11-digit phone number" inputMode="numeric" maxLength={11}
-              style={{ width:'100%',padding:'16px 16px',borderRadius:14,background:'var(--bg-secondary)',border:'1.5px solid var(--border)',color:'var(--text)',fontSize:18,fontWeight:700,marginBottom:14,letterSpacing:'0.04em' }} />
+            <div style={{ position:'relative',marginBottom:14 }}>
+              <input value={buyPhone} onChange={e=>setBuyPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
+                placeholder="Enter 11-digit phone number" inputMode="numeric" maxLength={11}
+                style={{ width:'100%',padding:'16px 56px 16px 16px',borderRadius:14,background:'var(--bg-secondary)',border:'1.5px solid var(--border)',color:'var(--text)',fontSize:18,fontWeight:700,letterSpacing:'0.04em' }} />
+              <button
+                onClick={openContactPicker}
+                style={{ position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',width:40,height:40,borderRadius:12,background:'var(--card)',border:'1.5px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',transition:'all .2s ease',zIndex:2 }}>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={BLUE} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="9" cy="7" r="4" stroke={BLUE} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke={BLUE} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke={BLUE} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
             <div style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text-secondary)',marginBottom:16 }}>
               <span>Supported format: 08012345678</span>
               <span>{buyPhone.length}/11</span>
@@ -2768,6 +3026,7 @@ export default function AppPage() {
           </div>
         </div>
       </div>
+      {renderContactPickerSheet()}
       {error && <div className="fade-in" style={{ position:'fixed',top:60,left:16,right:16,background:RED,color:'#fff',padding:'12px 16px',borderRadius:14,fontSize:15,fontWeight:600,zIndex:500 }}>{error}</div>}
     </>
   );

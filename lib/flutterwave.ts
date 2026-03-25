@@ -1,16 +1,35 @@
 const FLW_BASE = 'https://api.flutterwave.com/v3';
 
+function flwHeaders(json = false): Record<string, string> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+  };
+
+  if (json) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  return headers;
+}
+
 async function parseFlutterwaveResponse(res: Response) {
   const contentType = res.headers.get('content-type') || '';
   const text = await res.text();
 
   if (contentType.toLowerCase().includes('application/json')) {
     try {
-      return JSON.parse(text);
+      const parsed = JSON.parse(text);
+      return {
+        ...parsed,
+        statusCode: res.status,
+        statusText: res.statusText,
+      };
     } catch {
       return {
         status: 'error',
         message: 'Provider returned invalid JSON response',
+        statusCode: res.status,
+        statusText: res.statusText,
         raw: text.slice(0, 200),
       };
     }
@@ -19,6 +38,8 @@ async function parseFlutterwaveResponse(res: Response) {
   return {
     status: 'error',
     message: 'Provider service unavailable. Please try again shortly.',
+    statusCode: res.status,
+    statusText: res.statusText,
     raw: text.slice(0, 200),
   };
 }
@@ -53,10 +74,7 @@ export async function createVirtualAccount(
 ): Promise<FLWVirtualAccountResponse> {
   const res = await fetch(`${FLW_BASE}/virtual-account-numbers`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-      'Content-Type': 'application/json',
-    },
+    headers: flwHeaders(true),
     body: JSON.stringify(payload),
   });
   return res.json();
@@ -64,14 +82,14 @@ export async function createVirtualAccount(
 
 export async function verifyTransaction(txId: string) {
   const res = await fetch(`${FLW_BASE}/transactions/${txId}/verify`, {
-    headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
+    headers: flwHeaders(),
   });
   return res.json();
 }
 
 export async function listBanks(country = 'NG') {
   const res = await fetch(`${FLW_BASE}/banks/${country}`, {
-    headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
+    headers: flwHeaders(),
   });
   return res.json();
 }
@@ -79,10 +97,7 @@ export async function listBanks(country = 'NG') {
 export async function resolveAccountNumber(accountNumber: string, accountBank: string) {
   const res = await fetch(`${FLW_BASE}/accounts/resolve`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-      'Content-Type': 'application/json',
-    },
+    headers: flwHeaders(true),
     body: JSON.stringify({ account_number: accountNumber, account_bank: accountBank }),
   });
   return parseFlutterwaveResponse(res);
@@ -105,7 +120,7 @@ export interface FLWTransferPayload {
 
 export async function getBalances() {
   const res = await fetch(`${FLW_BASE}/balances`, {
-    headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
+    headers: flwHeaders(),
   });
   return parseFlutterwaveResponse(res);
 }
@@ -113,10 +128,7 @@ export async function getBalances() {
 export async function initiateTransfer(payload: FLWTransferPayload) {
   const res = await fetch(`${FLW_BASE}/transfers`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-      'Content-Type': 'application/json',
-    },
+    headers: flwHeaders(true),
     body: JSON.stringify({
       account_bank: payload.accountBank,
       account_number: payload.accountNumber,
@@ -133,7 +145,7 @@ export async function initiateTransfer(payload: FLWTransferPayload) {
 
 export async function getTransferById(transferId: string | number) {
   const res = await fetch(`${FLW_BASE}/transfers/${transferId}`, {
-    headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
+    headers: flwHeaders(),
   });
   return parseFlutterwaveResponse(res);
 }
@@ -167,7 +179,7 @@ export interface FLWElectricityPurchasePayload {
 
 export async function listElectricityBillers() {
   const res = await fetch(`${FLW_BASE}/bill-categories/BIL099/billers`, {
-    headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
+    headers: flwHeaders(),
   });
   return parseFlutterwaveResponse(res);
 }
@@ -175,10 +187,7 @@ export async function listElectricityBillers() {
 export async function validateElectricityMeter(itemCode: string, meterNumber: string) {
   const res = await fetch(`${FLW_BASE}/bill-items/${itemCode}/validate`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-      'Content-Type': 'application/json',
-    },
+    headers: flwHeaders(true),
     body: JSON.stringify({
       item_code: itemCode,
       code: meterNumber,
@@ -192,10 +201,7 @@ export async function purchaseElectricityBill(payload: FLWElectricityPurchasePay
   const type = `${payload.discoName} ${payload.meterType.toUpperCase()}`;
   const res = await fetch(`${FLW_BASE}/bills`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-      'Content-Type': 'application/json',
-    },
+    headers: flwHeaders(true),
     body: JSON.stringify({
       country: 'NG',
       customer: payload.meterNumber,
@@ -219,10 +225,7 @@ export interface FLWAirtimePurchasePayload {
 export async function purchaseAirtime(payload: FLWAirtimePurchasePayload) {
   const res = await fetch(`${FLW_BASE}/bills`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-      'Content-Type': 'application/json',
-    },
+    headers: flwHeaders(true),
     body: JSON.stringify({
       country: 'NG',
       customer: payload.phoneNumber,
